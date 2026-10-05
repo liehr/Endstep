@@ -1,6 +1,7 @@
 import { HeartBreakIcon, TrophyIcon } from '@phosphor-icons/react'
 import { useMemo } from 'react'
 import { FOCUS_RATINGS, SKILLS, WHY_CATEGORIES, WIPE_OPTIONS } from '../lib/content'
+import { deckCardNames } from '../lib/decklist'
 import { tallyCards } from '../lib/stats'
 import { useData } from '../lib/store'
 import type { Bracket, GameInput } from '../lib/types'
@@ -12,7 +13,8 @@ const SKILL_OPTIONS = SKILLS.map((s) => ({ id: s.id, label: s.name, icon: SKILL_
 
 /** Alle Felder einer Runde auf einer Seite (zum nachträglichen Bearbeiten). */
 export function GameForm({ value, onChange }: { value: GameInput; onChange: (value: GameInput) => void }) {
-  const { games } = useData()
+  const { games, decklist } = useData()
+  const deckNames = useMemo(() => deckCardNames(decklist), [decklist])
   const set = <K extends keyof GameInput>(key: K, v: GameInput[K]) => onChange({ ...value, [key]: v })
 
   const cardSuggestions = useMemo(
@@ -56,10 +58,10 @@ export function GameForm({ value, onChange }: { value: GameInput; onChange: (val
           <Choice options={SKILL_OPTIONS} value={value.decisionSkill} allowNone onChange={(v) => set('decisionSkill', v)} />
         </Group>
         <Group label="Tote Karten">
-          <ChipInput values={value.deadCards} onChange={(v) => set('deadCards', v)} suggestions={cardSuggestions} placeholder="Kartenname" />
+          <ChipInput values={value.deadCards} onChange={(v) => set('deadCards', v)} suggestions={cardSuggestions} catalog={deckNames} placeholder="Kartenname" />
         </Group>
         <Group label="Überperformer">
-          <ChipInput values={value.starCards} onChange={(v) => set('starCards', v)} suggestions={cardSuggestions} placeholder="Kartenname" />
+          <ChipInput values={value.starCards} onChange={(v) => set('starCards', v)} suggestions={cardSuggestions} catalog={deckNames} placeholder="Kartenname" />
         </Group>
       </section>
 
@@ -81,6 +83,9 @@ export function GameForm({ value, onChange }: { value: GameInput; onChange: (val
             <Stepper label="Mulligans" value={value.mulligans} min={0} max={7} onChange={(v) => set('mulligans', v)} />
           </Group>
         </div>
+        <Group label="Züge gesamt">
+          <Stepper label="Züge" value={value.turns} min={1} max={40} onChange={(v) => set('turns', v)} />
+        </Group>
         <Group label="Board Wipe?">
           <Choice layout="list" options={WIPE_OPTIONS} value={value.wipe} allowNone onChange={(v) => set('wipe', v)} />
         </Group>

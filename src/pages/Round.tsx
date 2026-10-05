@@ -1,6 +1,7 @@
 import {
   ArrowRightIcon,
   BookOpenIcon,
+  CaretDoubleRightIcon,
   CardsIcon,
   CrosshairIcon,
   FireIcon,
@@ -21,6 +22,7 @@ import { haptic } from '../lib/haptics'
 import { navigate } from '../lib/route'
 import { weekStreak } from '../lib/streak'
 import { actions, useData } from '../lib/store'
+import { toast } from '../lib/toast'
 import type { SkillId } from '../lib/types'
 
 /** Vor dem Spiel: Fokus und Ansage am Tisch, ein großer Start-Button. */
@@ -108,7 +110,12 @@ export function Round() {
         </p>
       </div>
 
-      <GhaltaCalculator />
+      <TurnCard />
+
+      <GhaltaCalculator
+        value={draft.tracker}
+        onChange={({ power, casts }) => actions.updateTracker({ ...draft.tracker, power, casts })}
+      />
 
       <div className="tiles">
         <button type="button" className="tile" onClick={() => setSheet('attack')}>
@@ -122,7 +129,14 @@ export function Round() {
       </div>
 
       <footer className="flow-footer">
-        <Button block onClick={() => navigate('/runde/ende')}>
+        <Button
+          block
+          onClick={() => {
+            const { form, tracker } = draft
+            if (form.turns === null && tracker.turn > 1) actions.updateDraft({ ...form, turns: tracker.turn })
+            navigate('/runde/ende')
+          }}
+        >
           Spiel beendet
         </Button>
       </footer>
@@ -145,6 +159,46 @@ export function Round() {
         onClose={() => setSheet(null)}
       />
     </div>
+  )
+}
+
+/** Zug-Zähler: „Nächster Zug“ und „Ghalta gecastet!“ tragen Zahlen fürs Notieren gleich mit ein. */
+function TurnCard() {
+  const { draft } = useData()
+  if (!draft) return null
+  const { tracker, form } = draft
+
+  const nextTurn = () => {
+    const turn = tracker.turn + 1
+    haptic(10)
+    actions.updateDraft({ ...form, turns: turn }, { ...tracker, turn })
+    toast(`Zug ${turn}: Was passiert, wenn jetzt ein Wrath kommt?`)
+  }
+
+  const ghaltaCast = () => {
+    haptic([12, 50, 12])
+    actions.updateDraft(
+      { ...form, ghaltaTurn: form.ghaltaTurn ?? tracker.turn, turns: Math.max(form.turns ?? 1, tracker.turn) },
+      { ...tracker, casts: tracker.casts + 1 },
+    )
+    toast(form.ghaltaTurn === null ? `Ghalta in Zug ${tracker.turn}! Notiert.` : 'Ghalta erneut gecastet: Steuer +2.')
+  }
+
+  return (
+    <section className="turn-card" aria-label="Zug-Zähler">
+      <div className="turn-number">
+        <span className="eyebrow">Zug</span>
+        <strong aria-live="polite">{tracker.turn}</strong>
+      </div>
+      <div className="turn-actions">
+        <Button icon={CaretDoubleRightIcon} onClick={nextTurn}>
+          Nächster Zug
+        </Button>
+        <Button variant="secondary" size="sm" onClick={ghaltaCast}>
+          {form.ghaltaTurn === null ? 'Ghalta gecastet!' : `Ghalta: Zug ${form.ghaltaTurn} · nochmal?`}
+        </Button>
+      </div>
+    </section>
   )
 }
 

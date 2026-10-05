@@ -104,6 +104,7 @@ export function GameDetail({ id }: { id: string }) {
   const rating = FOCUS_RATINGS.find((r) => r.id === game.focusRating)?.label
   const facts = [
     game.ghaltaTurn !== null && `Ghalta in Zug ${game.ghaltaTurn}`,
+    game.turns !== null && `${game.turns} Züge`,
     game.mulligans !== null && `${game.mulligans} Mulligan${game.mulligans === 1 ? '' : 's'}`,
     game.wipe && WIPE_LABEL[game.wipe],
     `${game.players} Spieler`,

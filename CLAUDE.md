@@ -16,6 +16,11 @@ UI-Texte und Kommentare sind auf Deutsch.
 - Logik gehört nach `src/lib/` und bekommt Vitest-Tests (`*.test.ts`); Seiten bleiben dünn.
 - Inhalte aus dem Lernplan (Skills, Regeln, Schwellen) stehen zentral in `src/lib/content.ts`.
 - Routing per Hash (`#/verlauf`), siehe `src/lib/route.ts`.
+- Kartendaten nur über `src/lib/scryfall.ts` (Collection-Endpoint, max. 75 pro Anfrage, 100 ms Abstand,
+  `Accept`-Header). Druckversionen (`set`/`number`) immer mitschicken; Fallback wird über `requestedSet`
+  markiert. Tests nutzen `scryfall.fixture.ts` statt echter API.
+- Simulation (`src/lib/sim/`) und Quiz (`src/lib/quiz/`) sind deterministisch über einen Seed (`mulberry32`);
+  neue Fragen in Tests über viele Seeds auf korrekte Antworten prüfen.
 - Versionen nicht von Hand ändern: Der Release-Workflow (`.github/workflows/release.yml`) erhöht
   die Version, taggt und deployt.
 

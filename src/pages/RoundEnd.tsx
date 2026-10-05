@@ -18,6 +18,7 @@ import { SKILL_ICON, skillStyle } from '../components/skills'
 import { Button, ChipInput, Choice, Group, IconButton, ProgressBar, Stepper } from '../components/ui'
 import { SKILLS, SKILL_BY_ID, WHY_CATEGORIES, WIPE_OPTIONS } from '../lib/content'
 import { haptic } from '../lib/haptics'
+import { deckCardNames } from '../lib/decklist'
 import { navigate } from '../lib/route'
 import { tallyCards } from '../lib/stats'
 import { actions, useData } from '../lib/store'
@@ -75,7 +76,7 @@ function isEmpty(step: StepId, form: GameInput): boolean {
 
 /** Nach dem Spiel: eine Frage pro Bildschirm, wie bei Duolingo. */
 export function RoundEnd() {
-  const { draft, games } = useData()
+  const { draft, games, decklist } = useData()
   const [index, setIndex] = useState(0)
   const [resultPicked, setResultPicked] = useState(false)
   const advanceTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -89,8 +90,9 @@ export function RoundEnd() {
     () => ({
       cards: tallyCards(games.flatMap((g) => [g.deadCards, g.starCards])).map((t) => t.name),
       winners: [...new Set(games.map((g) => g.winner.trim()).filter(Boolean))].slice(0, 8),
+      deck: deckCardNames(decklist),
     }),
-    [games],
+    [games, decklist],
   )
 
   if (!draft) return null
@@ -244,6 +246,7 @@ export function RoundEnd() {
               values={form.deadCards}
               onChange={(v) => set({ deadCards: v })}
               suggestions={suggestions.cards}
+              catalog={suggestions.deck}
               placeholder="Kartenname"
             />
           </Group>
@@ -252,6 +255,7 @@ export function RoundEnd() {
               values={form.starCards}
               onChange={(v) => set({ starCards: v })}
               suggestions={suggestions.cards}
+              catalog={suggestions.deck}
               placeholder="Kartenname"
             />
           </Group>
@@ -284,6 +288,9 @@ export function RoundEnd() {
               <Stepper label="Mulligans" value={form.mulligans} min={0} max={7} onChange={(v) => set({ mulligans: v })} />
             </Group>
           </div>
+          <Group label="Wie viele Züge lief die Partie?" hint="Eigene Züge. Bracket 2 erwartet mindestens 8.">
+            <Stepper label="Züge" value={form.turns} min={1} max={40} onChange={(v) => set({ turns: v })} />
+          </Group>
           <Group label="Board Wipe?">
             <Choice layout="list" options={WIPE_OPTIONS} value={form.wipe} allowNone onChange={(v) => set({ wipe: v })} />
           </Group>

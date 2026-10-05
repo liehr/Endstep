@@ -1,6 +1,7 @@
 import {
   BookOpenIcon,
   CalculatorIcon,
+  CardsIcon,
   CaretLeftIcon,
   CaretRightIcon,
   ChatCircleDotsIcon,
@@ -19,6 +20,7 @@ import { SkillBadge } from '../components/skills'
 import { BottomSheet, Button, Choice, Field, Group, IconButton, Stepper } from '../components/ui'
 import { createBackup, parseBackup, shareOrDownload } from '../lib/backup'
 import { SKILLS } from '../lib/content'
+import { deckSize } from '../lib/decklist'
 import { isStandalone } from '../lib/install'
 import { navigate } from '../lib/route'
 import { actions, useData } from '../lib/store'
@@ -91,7 +93,8 @@ export function More() {
       <section className="list-group">
         <h2 className="list-title">Dein Deck</h2>
         <ul className="list settings">
-          <Row icon={StackIcon} color="var(--skill-combat)" label="Standard-Deck" value={settings.defaultDeck} onClick={() => open('deck')} />
+          <Row icon={CardsIcon} color="var(--skill-mulligan)" label="Deckliste & Swaps" value={`${deckSize(data.decklist)} + 1`} onClick={() => navigate('/mehr/deck')} />
+          <Row icon={StackIcon} color="var(--skill-combat)" label="Deckname" value={settings.defaultDeck} onClick={() => open('deck')} />
           <Row
             icon={UsersThreeIcon}
             color="var(--skill-sequencing)"
@@ -151,7 +154,7 @@ export function More() {
         Endstep v{__APP_VERSION__} ({__APP_COMMIT__})
       </p>
 
-      <BottomSheet open={sheet === 'deck'} onClose={() => setSheet(null)} title="Standard-Deck">
+      <BottomSheet open={sheet === 'deck'} onClose={() => setSheet(null)} title="Deckname">
         <Field label="Name" hint="Für neue Runden und die Upgrade-Truhe">
           <input value={draft.defaultDeck} onChange={(e) => setDraft({ ...draft, defaultDeck: e.target.value })} />
         </Field>

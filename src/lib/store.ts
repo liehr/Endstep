@@ -1,7 +1,9 @@
 import { useSyncExternalStore } from 'react'
-import { emptyInput, loadData, mergeGames, saveData } from './data'
+import { emptyInput, emptyTracker, loadData, mergeImport, saveData } from './data'
+import { applySwap } from './decklist'
+import { today } from './dates'
 import { nextFocus } from './focus'
-import type { AppData, Game, GameInput, Settings, SkillId } from './types'
+import type { AppData, DeckEntry, Game, GameInput, LessonId, Settings, SkillId, Swap, Tracker } from './types'
 
 // Ein kleiner globaler Speicher: Daten liegen nur auf dem Gerät (localStorage).
 
@@ -36,13 +38,22 @@ export const actions = {
   startDraft(focus: SkillId = nextFocus(data.games)) {
     commit({
       ...data,
-      draft: { startedAt: new Date().toISOString(), form: emptyInput(data.settings, focus) },
+      draft: {
+        startedAt: new Date().toISOString(),
+        form: emptyInput(data.settings, focus),
+        tracker: emptyTracker(),
+      },
     })
   },
 
-  updateDraft(form: GameInput) {
+  updateDraft(form: GameInput, tracker?: Tracker) {
     if (!data.draft) return
-    commit({ ...data, draft: { ...data.draft, form } })
+    commit({ ...data, draft: { ...data.draft, form, tracker: tracker ?? data.draft.tracker } })
+  },
+
+  updateTracker(tracker: Tracker) {
+    if (!data.draft) return
+    commit({ ...data, draft: { ...data.draft, tracker } })
   },
 
   discardDraft() {
@@ -75,13 +86,35 @@ export const actions = {
     commit({ ...data, settings })
   },
 
-  /** Backup einspielen: Spiele werden zusammengeführt, nichts geht verloren. Gibt die Anzahl neuer/aktualisierter Spiele zurück. */
+  /** Backup einspielen: nichts geht verloren. Gibt die Anzahl neuer/aktualisierter Spiele zurück. */
   importData(imported: AppData): number {
-    const merged = mergeGames(data.games, imported.games)
-    const before = new Map(data.games.map((g) => [g.id, g.updatedAt]))
-    const changed = merged.filter((g) => before.get(g.id) !== g.updatedAt).length
-    commit({ ...data, games: merged })
+    const { data: merged, changedGames } = mergeImport(data, imported)
+    commit(merged)
     requestPersistence()
-    return changed
+    return changedGames
+  },
+
+  setDecklist(commander: string, decklist: DeckEntry[], commanderSet: string | null = null) {
+    commit({ ...data, commander, commanderSet, decklist })
+  },
+
+  /** Swap-Runde eintragen: Deckliste anpassen und Tausch protokollieren. */
+  addSwap(out: string[], into: string[], note = '', date = today()) {
+    const swap: Swap = { id: crypto.randomUUID(), date, out, in: into, note, createdAt: new Date().toISOString() }
+    commit({ ...data, decklist: applySwap(data.decklist, out, into), swaps: [...data.swaps, swap] })
+  },
+
+  /** Letzte Swap-Runde zurücknehmen (Deckliste wieder zurücktauschen). */
+  undoLastSwap() {
+    const last = data.swaps.at(-1)
+    if (!last) return
+    commit({ ...data, decklist: applySwap(data.decklist, last.in, last.out), swaps: data.swaps.slice(0, -1) })
+  },
+
+  addTrainingResult(lessonId: LessonId, correct: number, total: number) {
+    commit({
+      ...data,
+      training: [...data.training, { lessonId, correct, total, date: today(), createdAt: new Date().toISOString() }],
+    })
   },
 }

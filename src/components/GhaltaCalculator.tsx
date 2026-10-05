@@ -24,10 +24,17 @@ function Counter({ label, value, onChange, max }: { label: string; value: number
   )
 }
 
-export function GhaltaCalculator() {
-  const [power, setPower] = useState(0)
-  const [casts, setCasts] = useState(0)
-  const cost = ghaltaCost(power, casts)
+export interface GhaltaValue {
+  power: number
+  casts: number
+}
+
+/** Ghalta-Rechner. Ohne value/onChange merkt er sich die Werte selbst. */
+export function GhaltaCalculator({ value, onChange }: { value?: GhaltaValue; onChange?: (v: GhaltaValue) => void }) {
+  const [local, setLocal] = useState<GhaltaValue>({ power: 0, casts: 0 })
+  const current = value ?? local
+  const update = onChange ?? setLocal
+  const cost = ghaltaCost(current.power, current.casts)
   const ready = cost.generic === 0
 
   return (
@@ -40,8 +47,8 @@ export function GhaltaCalculator() {
         <span className="ghalta-sub">{ready ? 'Nur noch GG. Los!' : `Noch ${cost.missingPowerForGG} Stärke bis GG`}</span>
       </div>
       <div className="ghalta-counters">
-        <Counter label="Stärke auf dem Feld" value={power} onChange={setPower} max={99} />
-        <Counter label="Schon gecastet" value={casts} onChange={setCasts} max={10} />
+        <Counter label="Stärke auf dem Feld" value={current.power} onChange={(power) => update({ ...current, power })} max={99} />
+        <Counter label="Schon gecastet" value={current.casts} onChange={(casts) => update({ ...current, casts })} max={10} />
       </div>
     </section>
   )

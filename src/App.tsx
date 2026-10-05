@@ -1,10 +1,11 @@
-import { ChartBarIcon, ClockCounterClockwiseIcon, GearSixIcon, HouseIcon, type Icon } from '@phosphor-icons/react'
-import { useEffect } from 'react'
+import { BarbellIcon, ChartBarIcon, ClockCounterClockwiseIcon, GearSixIcon, HouseIcon, type Icon } from '@phosphor-icons/react'
+import { lazy, Suspense, useEffect } from 'react'
 import { UpdateBanner } from './components/UpdateBanner'
 import { SKILLS } from './lib/content'
 import { useRoute } from './lib/route'
 import { useToast } from './lib/toast'
-import type { SkillId } from './lib/types'
+import type { LessonId, SkillId } from './lib/types'
+import { LESSON_BY_ID } from './lib/quiz/quiz'
 import { GameDetail, GameEdit, History } from './pages/History'
 import { Home } from './pages/Home'
 import { CheatSheet, GhaltaPage, More } from './pages/More'
@@ -12,8 +13,15 @@ import { Round, RoundDone, RoundStart } from './pages/Round'
 import { RoundEnd } from './pages/RoundEnd'
 import { Stats } from './pages/Stats'
 
+// Training und Deck erst bei Bedarf laden (kleinerer Start); offline liegen sie im Service-Worker-Cache.
+const Training = lazy(() => import('./pages/Training').then((m) => ({ default: m.Training })))
+const Lesson = lazy(() => import('./pages/Lesson').then((m) => ({ default: m.Lesson })))
+const DeckPage = lazy(() => import('./pages/Deck').then((m) => ({ default: m.DeckPage })))
+const SwapFlow = lazy(() => import('./pages/Deck').then((m) => ({ default: m.SwapFlow })))
+
 const TABS: { path: string; label: string; icon: Icon }[] = [
   { path: '/', label: 'Start', icon: HouseIcon },
+  { path: '/training', label: 'Training', icon: BarbellIcon },
   { path: '/verlauf', label: 'Verlauf', icon: ClockCounterClockwiseIcon },
   { path: '/statistik', label: 'Statistik', icon: ChartBarIcon },
   { path: '/mehr', label: 'Mehr', icon: GearSixIcon },
@@ -27,6 +35,7 @@ function Page({ route }: { route: string }) {
   if ((m = route.match(/^\/spiel\/([^/]+)$/))) return <GameDetail id={m[1]} />
   if ((m = route.match(/^\/runde\/neu\/([^/]+)$/)) && SKILL_IDS.has(m[1])) return <RoundStart skill={m[1] as SkillId} />
   if ((m = route.match(/^\/runde\/fertig\/([^/]+)$/))) return <RoundDone id={m[1]} />
+  if ((m = route.match(/^\/training\/([^/]+)$/)) && m[1] in LESSON_BY_ID) return <Lesson id={m[1] as LessonId} />
 
   switch (route) {
     case '/runde':
@@ -43,17 +52,25 @@ function Page({ route }: { route: string }) {
       return <CheatSheet />
     case '/mehr/ghalta':
       return <GhaltaPage />
+    case '/mehr/deck':
+      return <DeckPage />
+    case '/mehr/deck/swap':
+      return <SwapFlow />
+    case '/training':
+      return <Training />
     default:
       return <Home />
   }
 }
 
 /** Während einer Runde gibt es keine Tab-Leiste: volle Konzentration auf eine Sache. */
-const isFlow = (route: string) => route.startsWith('/runde') || route.endsWith('/bearbeiten')
+const isFlow = (route: string) =>
+  route.startsWith('/runde') || route.endsWith('/bearbeiten') || route.startsWith('/training/') || route === '/mehr/deck/swap'
 
 function activeTab(route: string): string {
   if (route.startsWith('/spiel') || route === '/verlauf') return '/verlauf'
   if (route === '/statistik') return route
+  if (route.startsWith('/training')) return '/training'
   if (route.startsWith('/mehr')) return '/mehr'
   return '/'
 }
@@ -72,7 +89,9 @@ export function App() {
     <>
       <UpdateBanner />
       <main className={flow ? 'flow-main' : ''}>
-        <Page key={route} route={route} />
+        <Suspense fallback={null}>
+          <Page key={route} route={route} />
+        </Suspense>
       </main>
       {message && (
         <div className={`toast ${flow ? 'flow' : ''}`} role="status">
