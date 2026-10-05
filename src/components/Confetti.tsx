@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { prefersReducedMotion } from '../lib/haptics'
+import { useData } from '../lib/store'
 
 const COLORS = ['#58cc02', '#1cb0f6', '#ff9600', '#ff4b4b', '#ce82ff', '#ffc800']
 
 /** A little confetti to celebrate, without an external library. */
 export function Confetti() {
   const canvas = useRef<HTMLCanvasElement>(null)
+  const { celebrations } = useData().settings
 
   useEffect(() => {
     const el = canvas.current
@@ -55,5 +57,6 @@ export function Confetti() {
     return () => cancelAnimationFrame(raf)
   }, [])
 
+  if (!celebrations) return null
   return <canvas ref={canvas} className="confetti" aria-hidden="true" />
 }

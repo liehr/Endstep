@@ -102,6 +102,15 @@ export const BRACKET_CHECK_GAMES = 64
 /** Only when the same problem shows up for the third time is it a pattern. */
 export const PATTERN_THRESHOLD = 3
 
+// Choices on the settings page (More → Settings). The constants above are the defaults.
+export const UPGRADE_EVERY_OPTIONS = [4, 6, 8, 10, 12] as const
+/** 0 turns the bracket check off. */
+export const BRACKET_CHECK_OPTIONS = [0, 32, 64, 96] as const
+export const PATTERN_OPTIONS = [2, 3, 4, 5] as const
+export const LESSON_LENGTHS = [5, 8, 10] as const
+export const MISTAKE_DAY_OPTIONS = [7, 14, 30] as const
+export const EXAM_HEART_OPTIONS = [3, 5] as const
+
 export const DEFAULT_DECK = 'Tramplesaurus Rex (Ghalta)'
 
 export const DEFAULT_TABLE_INTRO =
@@ -183,9 +192,13 @@ export const RANKS: Rank[] = [
 /** Games to play in a rank before its exam unlocks (same rhythm as the upgrade chest). */
 export const RANK_GAMES = UPGRADE_EVERY_GAMES
 
-/** Lessons with at least RANK_LESSON_SCORE correct answers needed in a rank before its exam. */
+/**
+ * Lessons needed in a rank before its exam: at least RANK_LESSON_SCORE correct answers and
+ * RANK_LESSON_SHARE of the lesson (4 of 5, 7 of 8, 8 of 10).
+ */
 export const RANK_LESSONS = 5
 export const RANK_LESSON_SCORE = 4
+export const RANK_LESSON_SHARE = 0.8
 
 /** The rank exam: this many questions, and you may get this many wrong (hearts). */
 export const EXAM_QUESTIONS = 12

@@ -101,7 +101,7 @@ function average(values: (number | null)[]): number | null {
 
 const normalize = (s: string) => s.trim().toLowerCase()
 
-export function upgradeStatus(deckGames: Game[], swaps: Swap[], bonus = 0): UpgradeStatus {
+export function upgradeStatus(deckGames: Game[], swaps: Swap[], bonus = 0, every = UPGRADE_EVERY_GAMES): UpgradeStatus {
   const sorted = [...swaps].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt))
   const bounds = [null, ...sorted.map((s) => s.date)]
   const phases = bounds.map((from, i) => {
@@ -115,7 +115,7 @@ export function upgradeStatus(deckGames: Game[], swaps: Swap[], bonus = 0): Upgr
     }
   })
   const gamesSince = phases[phases.length - 1].games
-  const target = UPGRADE_EVERY_GAMES
+  const target = every
   return { gamesSince, target, ready: gamesSince >= target, round: swaps.length + 1, cards: swapCards(swaps.length) + bonus, bonus, phases }
 }
 
@@ -124,15 +124,21 @@ export function swapCards(done: number): number {
   return UPGRADE_CARDS[Math.min(done, UPGRADE_CARDS.length - 1)]
 }
 
-/** "Bracket check" milestone: ask once after enough games with the deck. */
-export function bracketCheck(deckGames: number, done: boolean): BracketCheck {
-  return { games: deckGames, target: BRACKET_CHECK_GAMES, due: !done && deckGames >= BRACKET_CHECK_GAMES, done }
+/** "Bracket check" milestone: ask once after enough games with the deck (`target` 0 = off). */
+export function bracketCheck(deckGames: number, done: boolean, target = BRACKET_CHECK_GAMES): BracketCheck {
+  return { games: deckGames, target, due: target > 0 && !done && deckGames >= target, done }
 }
 
 export function computeStats(
   allGames: Game[],
   deck: string,
-  { swaps = [], decklist, promotions = [] }: { swaps?: Swap[]; decklist?: DeckEntry[]; promotions?: Promotion[] } = {},
+  {
+    swaps = [],
+    decklist,
+    promotions = [],
+    upgradeEvery = UPGRADE_EVERY_GAMES,
+    patternThreshold = PATTERN_THRESHOLD,
+  }: { swaps?: Swap[]; decklist?: DeckEntry[]; promotions?: Promotion[]; upgradeEvery?: number; patternThreshold?: number } = {},
 ): Stats {
   const games = sortGames(allGames)
   const wins = games.filter((g) => g.result === 'win').length
@@ -153,7 +159,7 @@ export function computeStats(
   })
 
   const deckSwaps = swapsOf(swaps, deck)
-  const upgrade = upgradeStatus(deckGames, deckSwaps, swapBonus(promotions, deckSwaps))
+  const upgrade = upgradeStatus(deckGames, deckSwaps, swapBonus(promotions, deckSwaps), upgradeEvery)
   const upgradeReady = upgrade.ready
   // Candidates only from cards that are still in the deck.
   const inDeck = decklist ? new Set(decklist.map((e) => normalize(e.name))) : null
@@ -167,10 +173,10 @@ export function computeStats(
     upgradeReady,
     deadCards,
     starCards,
-    upgradeCandidates: deadCards.filter((c) => c.count >= PATTERN_THRESHOLD && (!inDeck || inDeck.has(normalize(c.name)))),
+    upgradeCandidates: deadCards.filter((c) => c.count >= patternThreshold && (!inDeck || inDeck.has(normalize(c.name)))),
     skills,
     patterns: skills
-      .filter((s) => s.mistakes >= PATTERN_THRESHOLD)
+      .filter((s) => s.mistakes >= patternThreshold)
       .sort((a, b) => b.mistakes - a.mistakes),
     whyCounts: WHY_CATEGORIES.map(({ id }) => ({
       id,

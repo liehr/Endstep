@@ -294,12 +294,14 @@ function mulliganLesson(ctx: QuizContext): Question[] {
   const library = deckLibrary(ctx).filter((c) => c.info)
   const rule = handRuleFor(commanderOf(ctx))
   const questions: Question[] = []
+  const count = ctx.count ?? QUESTIONS_PER_LESSON
+  const maxKeeps = Math.round(count * 0.6)
   let keeps = 0
-  for (let attempt = 0; questions.length < QUESTIONS_PER_LESSON && attempt < 200; attempt++) {
+  for (let attempt = 0; questions.length < count && attempt < 200; attempt++) {
     const hand = shuffle(library, ctx.rng).slice(0, 7)
     const report = evaluateHand(hand.map((c) => c.info), rule)
-    // Keep it balanced: 2–3 hands to keep, the rest mulligans.
-    const wantKeep = keeps < 3 && (questions.length - keeps >= 2 || ctx.rng() < 0.5)
+    // Keep it balanced: 2–3 of 5 hands to keep, the rest mulligans.
+    const wantKeep = keeps < maxKeeps && (questions.length - keeps >= 2 || ctx.rng() < 0.5)
     if (report.keep !== wantKeep && attempt < 150) continue
     if (report.keep) keeps++
     questions.push({
@@ -391,7 +393,7 @@ function goldfishLesson(ctx: QuizContext): Question[] {
   if (!commander) return []
   const library = deckLibrary(ctx)
   const qs: Question[] = [0, 1, 2].map((i) => whenQuestion(ctx, library, commander, i))
-  for (let i = 0; qs.length < QUESTIONS_PER_LESSON && i < 10; i++) {
+  for (let i = 0; qs.length < (ctx.count ?? QUESTIONS_PER_LESSON) && i < 10; i++) {
     const q = castNowQuestion(ctx, library, commander, i)
     if (q) qs.splice(int(1, qs.length, ctx.rng), 0, q)
   }
@@ -825,9 +827,17 @@ export const LESSONS: Lesson[] = [
 
 export const LESSON_BY_ID = Object.fromEntries(LESSONS.map((l) => [l.id, l])) as Record<LessonId, Lesson>
 
+/** Lesson settings (More → Settings). */
+export interface LessonOptions {
+  /** Questions per lesson. */
+  count?: number
+  /** How far back the mistakes lesson looks. */
+  mistakeDays?: number
+}
+
 /**
  * Build a lesson: generate the candidates with the seed, then let the question memory pick
- * 5 (due reviews first, then new questions, spread across topics and cards).
+ * `count` (due reviews first, then new questions, spread across topics and cards).
  */
 export function buildLesson(
   id: LessonId,
@@ -837,12 +847,13 @@ export function buildLesson(
   today: string = todayIso(),
   /** Your rank: only questions up to this level (see ranks.ts). */
   maxLevel: number = Infinity,
+  { count = QUESTIONS_PER_LESSON, mistakeDays = MISTAKE_DAYS }: LessonOptions = {},
 ): Question[] {
   const lesson = LESSON_BY_ID[id]
-  if (lesson.reviewOnly) return mistakesLesson(ctx, seed, memory, today, maxLevel)
-  const candidates = filterByLevel(lesson.build({ ...ctx, rng: mulberry32(seed) }), maxLevel, 2 * QUESTIONS_PER_LESSON)
-  if (!lesson.remember) return candidates.slice(0, QUESTIONS_PER_LESSON)
-  return selectQuestions(candidates, memory, today, QUESTIONS_PER_LESSON)
+  if (lesson.reviewOnly) return mistakesLesson(ctx, seed, memory, today, maxLevel, count, mistakeDays)
+  const candidates = filterByLevel(lesson.build({ ...ctx, count, rng: mulberry32(seed) }), maxLevel, 2 * count)
+  if (!lesson.remember) return candidates.slice(0, count)
+  return selectQuestions(candidates, memory, today, count)
 }
 
 
@@ -887,8 +898,8 @@ const gameKey = (game: Game) => `game-review:${game.id}`
  * mistake): each brings questions about that skill into the mistakes lesson, until you
  * get one right.
  */
-export function gamesToReview(games: Game[], memory: QuizMemory, today: string): Game[] {
-  const since = addDays(today, -MISTAKE_DAYS)
+export function gamesToReview(games: Game[], memory: QuizMemory, today: string, days = MISTAKE_DAYS): Game[] {
+  const since = addDays(today, -days)
   return games
     .filter((g) => g.playedAt >= since && (g.decisionSkill !== null || g.whyCategory === 'mistake'))
     .filter((g) => (memory[gameKey(g)]?.box ?? 0) === 0)
@@ -896,7 +907,8 @@ export function gamesToReview(games: Game[], memory: QuizMemory, today: string):
 }
 
 /** Your mistakes from the question memory (without the game reviews, which count per game). */
-const questionMistakes = (memory: QuizMemory, today: string) => mistakeKeys(memory, today).filter((k) => topicOf(k) !== 'game-review')
+const questionMistakes = (memory: QuizMemory, today: string, days = MISTAKE_DAYS) =>
+  mistakeKeys(memory, today, days).filter((k) => topicOf(k) !== 'game-review')
 
 /** Up to 2 questions about the skill from a game's decision. */
 function gameReviewQuestions(ctx: Omit<QuizContext, 'rng'>, game: Game, seed: number, memory: QuizMemory, today: string, maxLevel: number): Question[] {
@@ -920,13 +932,21 @@ const MISTAKE_SEEDS = 12
  * random numbers (Ghalta Math, combat) may not come up again exactly; then a question of the
  * same kind stands in for them.
  */
-function mistakesLesson(ctx: Omit<QuizContext, 'rng'>, seed: number, memory: QuizMemory, today: string, maxLevel = Infinity): Question[] {
+function mistakesLesson(
+  ctx: Omit<QuizContext, 'rng'>,
+  seed: number,
+  memory: QuizMemory,
+  today: string,
+  maxLevel = Infinity,
+  count = QUESTIONS_PER_LESSON,
+  days = MISTAKE_DAYS,
+): Question[] {
   // Your games first: one decision per game, two questions each, at most 2 games.
-  const fromGames = gamesToReview(ctx.games ?? [], memory, today)
+  const fromGames = gamesToReview(ctx.games ?? [], memory, today, days)
     .slice(0, 2)
     .flatMap((g, i) => gameReviewQuestions(ctx, g, seed + i, memory, today, maxLevel))
-  const wanted = questionMistakes(memory, today)
-  if (wanted.length === 0) return fromGames.slice(0, QUESTIONS_PER_LESSON)
+  const wanted = questionMistakes(memory, today, days)
+  if (wanted.length === 0) return fromGames.slice(0, count)
   const topics = new Set(wanted.map(topicOf))
   const byKey = new Map<string, Question>()
   const byTopic = new Map<string, Question[]>()
@@ -947,12 +967,12 @@ function mistakesLesson(ctx: Omit<QuizContext, 'rng'>, seed: number, memory: Qui
     lessons = relevant
   }
 
-  const out: Question[] = fromGames.slice(0, QUESTIONS_PER_LESSON - 1)
+  const out: Question[] = fromGames.slice(0, count - 1)
   const used = new Set(out.map((q) => q.key))
   const groups = new Set(out.flatMap((q) => (q.group !== undefined ? [q.group] : [])))
   const free = (q: Question) => !used.has(q.key) && (q.group === undefined || !groups.has(q.group))
   for (const key of wanted) {
-    if (out.length >= QUESTIONS_PER_LESSON) break
+    if (out.length >= count) break
     const exact = byKey.get(key)
     const q = exact && free(exact) ? exact : (byTopic.get(topicOf(key)) ?? []).find((c) => free(c) && !wanted.includes(c.key))
     if (!q) continue
@@ -964,6 +984,11 @@ function mistakesLesson(ctx: Omit<QuizContext, 'rng'>, seed: number, memory: Qui
 }
 
 /** What the mistakes lesson has for you right now. */
-export function reviewCount(memory: QuizMemory, games: Game[], today: string = todayIso()): { questions: number; games: number } {
-  return { questions: questionMistakes(memory, today).length, games: gamesToReview(games, memory, today).length }
+export function reviewCount(
+  memory: QuizMemory,
+  games: Game[],
+  today: string = todayIso(),
+  days = MISTAKE_DAYS,
+): { questions: number; games: number } {
+  return { questions: questionMistakes(memory, today, days).length, games: gamesToReview(games, memory, today, days).length }
 }

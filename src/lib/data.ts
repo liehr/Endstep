@@ -1,4 +1,24 @@
-import { DEFAULT_DECK, DEFAULT_TABLE_INTRO, RANKS, SKILLS, tableIntroFor, WHY_CATEGORIES, WIPE_OPTIONS } from './content'
+import {
+  BRACKET_CHECK_GAMES,
+  BRACKET_CHECK_OPTIONS,
+  DEFAULT_DECK,
+  DEFAULT_TABLE_INTRO,
+  EXAM_HEART_OPTIONS,
+  EXAM_HEARTS,
+  LESSON_LENGTHS,
+  MISTAKE_DAY_OPTIONS,
+  PATTERN_OPTIONS,
+  PATTERN_THRESHOLD,
+  RANKS,
+  SKILLS,
+  tableIntroFor,
+  UPGRADE_EVERY_GAMES,
+  UPGRADE_EVERY_OPTIONS,
+  WHY_CATEGORIES,
+  WIPE_OPTIONS,
+} from './content'
+import { MISTAKE_DAYS } from './quiz/memory'
+import { QUESTIONS_PER_LESSON } from './quiz/question'
 import { DAILY_GOALS } from './trainingStreak'
 import { today } from './dates'
 import { cardKey } from './cards'
@@ -18,6 +38,7 @@ import type {
   Settings,
   SkillId,
   Swap,
+  Theme,
   Tracker,
   TrainingResult,
   WhyCategory,
@@ -34,7 +55,25 @@ export function defaultSettings(): Settings {
     tableIntro: DEFAULT_TABLE_INTRO,
     bracketCheckDone: false,
     dailyGoal: 1,
+    theme: 'system',
+    haptics: true,
+    celebrations: true,
+    diceButton: true,
+    showDailyGoal: true,
+    lessonLength: QUESTIONS_PER_LESSON,
+    warmUps: true,
+    mistakeDays: MISTAKE_DAYS,
+    examHearts: EXAM_HEARTS,
+    upgradeEvery: UPGRADE_EVERY_GAMES,
+    bracketCheckGames: BRACKET_CHECK_GAMES,
+    patternThreshold: PATTERN_THRESHOLD,
   }
+}
+
+/** Settings from the settings page, back to their defaults (deck, table and progress stay). */
+export function resetPreferences(settings: Settings): Settings {
+  const { defaultDeck, defaultBracket, defaultPlayers, tableIntro, bracketCheckDone } = settings
+  return { ...defaultSettings(), defaultDeck, defaultBracket, defaultPlayers, tableIntro, bracketCheckDone }
 }
 
 export function emptyData(): AppData {
@@ -95,6 +134,8 @@ const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !
 
 const str = (v: unknown, fallback = ''): string => (typeof v === 'string' ? v : fallback)
 
+const bool = (v: unknown, fallback: boolean): boolean => (typeof v === 'boolean' ? v : fallback)
+
 function oneOf<T>(v: unknown, allowed: readonly T[], fallback: T): T {
   return allowed.includes(v as T) ? (v as T) : fallback
 }
@@ -112,6 +153,7 @@ const SKILL_IDS = SKILLS.map((s) => s.id)
 const WHY_IDS = WHY_CATEGORIES.map((c) => c.id)
 const WIPE_IDS = WIPE_OPTIONS.map((o) => o.id)
 const BRACKETS: Bracket[] = [1, 2, 3, 4, 5]
+const THEMES: Theme[] = ['system', 'light', 'dark']
 const RATINGS: FocusRating[] = [1, 2, 3]
 const RESULTS: Result[] = ['win', 'loss']
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -166,6 +208,18 @@ function sanitizeSettings(raw: unknown): Settings {
     tableIntro: str(raw.tableIntro, defaults.tableIntro),
     bracketCheckDone: raw.bracketCheckDone === true,
     dailyGoal: oneOf(raw.dailyGoal, DAILY_GOALS, defaults.dailyGoal),
+    theme: oneOf(raw.theme, THEMES, defaults.theme),
+    haptics: bool(raw.haptics, defaults.haptics),
+    celebrations: bool(raw.celebrations, defaults.celebrations),
+    diceButton: bool(raw.diceButton, defaults.diceButton),
+    showDailyGoal: bool(raw.showDailyGoal, defaults.showDailyGoal),
+    lessonLength: oneOf(raw.lessonLength, LESSON_LENGTHS, defaults.lessonLength),
+    warmUps: bool(raw.warmUps, defaults.warmUps),
+    mistakeDays: oneOf(raw.mistakeDays, MISTAKE_DAY_OPTIONS, defaults.mistakeDays),
+    examHearts: oneOf(raw.examHearts, EXAM_HEART_OPTIONS, defaults.examHearts),
+    upgradeEvery: oneOf(raw.upgradeEvery, UPGRADE_EVERY_OPTIONS, defaults.upgradeEvery),
+    bracketCheckGames: oneOf(raw.bracketCheckGames, BRACKET_CHECK_OPTIONS, defaults.bracketCheckGames),
+    patternThreshold: oneOf(raw.patternThreshold, PATTERN_OPTIONS, defaults.patternThreshold),
   }
 }
 

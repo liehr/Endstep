@@ -11,6 +11,7 @@ import {
   mergeGames,
   mergeImport,
   removeDeck,
+  resetPreferences,
   sanitizeData,
   STORAGE_KEY,
   swapsOf,
@@ -78,6 +79,29 @@ describe('Backup', () => {
   it('rejects foreign files with a clear message', () => {
     expect(() => parseBackup('nope')).toThrow('not JSON')
     expect(() => parseBackup('{"foo": 1}')).toThrow('not an Endstep backup')
+  })
+})
+
+describe('settings page', () => {
+  it('loads older settings with today’s behaviour as the default', () => {
+    const s = sanitizeData({ settings: { defaultDeck: 'Mine', dailyGoal: 2 } }).settings
+    expect(s).toEqual({ ...defaultSettings(), defaultDeck: 'Mine', dailyGoal: 2 })
+    expect(s).toMatchObject({ theme: 'system', haptics: true, celebrations: true, lessonLength: 5, mistakeDays: 7, examHearts: 3, upgradeEvery: 8, bracketCheckGames: 64, patternThreshold: 3 })
+  })
+
+  it('keeps valid choices and drops values the page doesn’t offer', () => {
+    const s = sanitizeData({
+      settings: { theme: 'dark', haptics: false, diceButton: false, lessonLength: 10, upgradeEvery: 6, bracketCheckGames: 0, patternThreshold: 7, examHearts: 'many', mistakeDays: 14 },
+    }).settings
+    expect(s).toMatchObject({ theme: 'dark', haptics: false, diceButton: false, lessonLength: 10, upgradeEvery: 6, bracketCheckGames: 0, mistakeDays: 14 })
+    expect(s.patternThreshold).toBe(3)
+    expect(s.examHearts).toBe(3)
+    expect(sanitizeData({ settings: { theme: 'neon', celebrations: 'yes' } }).settings).toMatchObject({ theme: 'system', celebrations: true })
+  })
+
+  it('resets the page but keeps deck and table', () => {
+    const tuned = { ...defaultSettings(), defaultDeck: 'Mine', defaultBracket: 3 as const, tableIntro: 'Hi', bracketCheckDone: true, theme: 'dark' as const, lessonLength: 10, dailyGoal: 3 }
+    expect(resetPreferences(tuned)).toEqual({ ...defaultSettings(), defaultDeck: 'Mine', defaultBracket: 3, tableIntro: 'Hi', bracketCheckDone: true })
   })
 })
 

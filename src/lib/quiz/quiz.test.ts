@@ -332,6 +332,24 @@ describe('Mistakes lesson', () => {
   })
 })
 
+describe('Lesson length setting', () => {
+  for (const count of [8, 10]) {
+    it(`builds ${count} valid questions for the main lessons`, () => {
+      for (const id of ['rules', 'combat', 'ghalta', 'mulligan', 'goldfish', 'cards'] as const) {
+        for (let seed = 1; seed <= 10; seed++) {
+          const qs = buildLesson(id, ctx, seed, {}, undefined, Infinity, { count })
+          expect(qs.length, `${id} seed ${seed}`).toBe(count)
+          qs.forEach(checkShape)
+        }
+      }
+    })
+  }
+
+  it('keeps the old lessons for the default', () => {
+    expect(buildLesson('mulligan', ctx, 3)).toEqual(buildLesson('mulligan', ctx, 3, {}, undefined, Infinity, { count: 5 }))
+  })
+})
+
 describe('Link to real games', () => {
   const today = '2026-10-05'
   const all = () => true
@@ -368,5 +386,12 @@ describe('Link to real games', () => {
     memory = recordAnswer(memory, 'game-review:g1', true, today)
     expect(gamesToReview(games, memory, today).map((g) => g.id)).toEqual(['g3'])
     expect(reviewCount(memory, games, today)).toEqual({ questions: 0, games: 1 })
+  })
+
+  it('looks further back when Your Mistakes covers more days', () => {
+    const older = makeGame({ id: 'g4', playedAt: '2026-09-25', decisionSkill: 'combat' })
+    expect(gamesToReview([older], {}, today)).toEqual([])
+    expect(gamesToReview([older], {}, today, 14).map((g) => g.id)).toEqual(['g4'])
+    expect(reviewCount({}, [older], today, 14).games).toBe(1)
   })
 })

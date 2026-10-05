@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { RANK_GAMES, RANK_LESSONS, RANKS, SKILLS } from './content'
 import { sanitizeData } from './data'
-import { currentRank, filterByLevel, levelOf, promote, rankProgress, rankStart, skillRank, swapBonus, TOP_RANK, unlockedSkills } from './ranks'
+import { currentRank, filterByLevel, goodLesson, levelOf, promote, rankProgress, rankStart, skillRank, swapBonus, TOP_RANK, unlockedSkills } from './ranks'
 import { upgradeStatus } from './stats'
 import { makeGame } from './test-utils'
 import type { Promotion, Swap, TrainingResult } from './types'
@@ -59,6 +59,18 @@ describe('ranks', () => {
     const p = rankProgress(silver, games, lessons)
     expect(p).toMatchObject({ rank: 1, games: 3, lessons: 0, examReady: false, top: false })
     expect(rankProgress([promo(TOP_RANK, 1)], games, lessons)).toMatchObject({ top: true, examReady: false })
+  })
+
+  it('counts longer lessons by share: 4 of 5, 7 of 8, 8 of 10', () => {
+    const r = (correct: number, total: number): TrainingResult => ({ ...lesson(1, correct), total })
+    expect(goodLesson(r(4, 5))).toBe(true)
+    expect(goodLesson(r(3, 5))).toBe(false)
+    expect(goodLesson(r(7, 8))).toBe(true)
+    expect(goodLesson(r(6, 8))).toBe(false)
+    expect(goodLesson(r(8, 10))).toBe(true)
+    expect(goodLesson(r(7, 10))).toBe(false)
+    // A short mistakes lesson doesn't count, as before.
+    expect(goodLesson(r(2, 2))).toBe(false)
   })
 
   it('gives one bonus swap card after a promotion, until the next swap', () => {
