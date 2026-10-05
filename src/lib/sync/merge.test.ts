@@ -128,6 +128,13 @@ describe('mergeSync', () => {
     expect(mergeSync(local, chosen()).draft).toBe(local.draft)
     expect(mergeSync(chosen(), local).draft).toBeNull()
   })
+
+  it('keeps the wheel’s pick on its device', () => {
+    const spun = chosen({ spin: 'combat' })
+    expect(mergeSync(spun, chosen()).spin).toBe('combat')
+    expect(mergeSync(chosen(), spun).spin).toBeNull()
+    expect(sameSyncData(spun, chosen())).toBe(true)
+  })
 })
 
 describe('trackChanges', () => {

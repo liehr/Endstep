@@ -28,6 +28,8 @@ export interface Game {
   bracket: Bracket
   players: number
   focus: SkillId
+  /** Focus came from the wheel: the rotation skips this game. */
+  spun: boolean
   focusRating: FocusRating | null
   result: Result
   /** Who won (name or commander). */
@@ -218,4 +220,6 @@ export interface AppData {
   /** Deleted games, swaps and decks ("game:<id>" → ISO time), so cloud sync doesn't bring them back. */
   deleted: Record<string, string>
   stamps: SyncStamps
+  /** Focus the wheel picked for the next game; null = follow the rotation. */
+  spin: SkillId | null
 }

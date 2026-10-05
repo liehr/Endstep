@@ -33,9 +33,9 @@ export function stableStringify(value: unknown): string {
 
 const same = (a: unknown, b: unknown) => a === b || stableStringify(a) === stableStringify(b)
 
-/** What goes to the cloud: everything except the game in progress, which stays on its device. */
-export function syncable(data: AppData): Omit<AppData, 'draft'> {
-  const { draft: _draft, ...rest } = data
+/** What goes to the cloud: everything except the game in progress and the wheel's pick, which stay on their device. */
+export function syncable(data: AppData): Omit<AppData, 'draft' | 'spin'> {
+  const { draft: _draft, spin: _spin, ...rest } = data
   return rest
 }
 
@@ -184,6 +184,7 @@ export function mergeSync(local: AppData, remote: AppData): AppData {
     games,
     settings,
     draft: local.draft,
+    spin: local.spin,
     deckChosen: deckWin.deckChosen,
     precon: deckWin.precon,
     commander: deckWin.commander,
