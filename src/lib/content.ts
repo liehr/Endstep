@@ -151,3 +151,74 @@ export const RULES = [
     text: 'Beginning → attackers → blockers → combat damage → end. Sorcery-speed pump effects go in the main phase before combat.',
   },
 ]
+
+// --- Ranks ----------------------------------------------------------------------
+// Like Duolingo's sections: each rank unlocks a few focus skills for your games and harder
+// question kinds for the lessons. Order follows the usual way Magic is learned: technique
+// first, then timing, then reading the table, then planning and deckbuilding.
+
+export type RankId = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'master' | 'grandmaster'
+
+export interface Rank {
+  id: RankId
+  name: string
+  /** The question this rank answers. */
+  motto: string
+  /** What you learn here, one line. */
+  learn: string
+  /** Focus skills this rank adds to the rotation. */
+  skills: SkillId[]
+}
+
+export const RANKS: Rank[] = [
+  { id: 'bronze', name: 'Bronze', motto: 'How do I play my turn?', learn: 'Your cards, keywords, simple blocks, commander basics.', skills: ['mulligan', 'sequencing'] },
+  { id: 'silver', name: 'Silver', motto: 'How do I win a fight?', learn: 'Trample, first strike, deathtouch, double blocks, commander tax and damage.', skills: ['combat'] },
+  { id: 'gold', name: 'Gold', motto: 'When do I play what?', learn: 'Combat tricks, removal and wipe timing, rulings, the role of each card.', skills: ['removal', 'wipe'] },
+  { id: 'platinum', name: 'Platinum', motto: 'Who is the threat at the table?', learn: 'Who to attack, staying off the archenemy spot, brackets.', skills: ['threat', 'politics'] },
+  { id: 'diamond', name: 'Diamond', motto: 'Can I win this turn?', learn: 'Lethal across the table and alpha strikes.', skills: [] },
+  { id: 'master', name: 'Master', motto: 'How do I make my deck better?', learn: 'Everything at full difficulty, with your swap rounds.', skills: [] },
+  { id: 'grandmaster', name: 'Grandmaster', motto: 'Everything, mixed.', learn: 'All lessons at full difficulty. The top of the ladder.', skills: [] },
+]
+
+/** Games to play in a rank before its exam unlocks (same rhythm as the upgrade chest). */
+export const RANK_GAMES = UPGRADE_EVERY_GAMES
+
+/** Lessons with at least RANK_LESSON_SCORE correct answers needed in a rank before its exam. */
+export const RANK_LESSONS = 5
+export const RANK_LESSON_SCORE = 4
+
+/** The rank exam: this many questions, and you may get this many wrong (hearts). */
+export const EXAM_QUESTIONS = 12
+export const EXAM_HEARTS = 3
+
+/**
+ * Rank (index into RANKS) of each question topic, the part of the question key before ":".
+ * Keys ending in "*" match every topic that starts with that text. Topics missing here count
+ * as Bronze; a test makes sure every generated topic is listed.
+ */
+export const QUESTION_LEVELS: Record<string, number> = {
+  // Bronze: your cards, simple blocks, commander basics
+  'card-name': 0, 'card-cost': 0, 'card-type': 0, 'card-which-type': 0, 'card-pt': 0, 'card-keyword': 0, 'card-art': 0, 'card-mv': 0,
+  'block-outcome': 0, 'can-block': 0, 'summoning-sick': 0, vigilance: 0,
+  'ghalta-cost': 0, mulligan: 0,
+  'rule-free-mulligan': 0, 'rule-commander-damage-21': 0, 'rule-tax': 0, 'rule-combat-steps': 0,
+  'order-turn': 0, 'tap-type': 0,
+  // Silver: combat keywords, commander tax and damage, when your commander lands
+  trample: 1, deathtouch: 1, 'trample-assign': 1, 'first-strike-block': 1, 'deathtouch-block': 1, 'double-strike': 1,
+  'double-strike-block': 1, lifelink: 1, 'indestructible-block': 1, 'double-block': 1, 'gang-block': 1,
+  'cmd-damage': 1, 'cmd-hits': 1, 'cmd-tally': 1,
+  'ghalta-threshold': 1, 'ghalta-tax-story': 1, 'ghalta-gg-casts': 1, 'ghalta-turn-mana': 1, 'ghalta-counts': 1, 'ghalta-fits': 1,
+  'ghalta-mana-left': 1, 'tap-ghalta': 1, when: 1, 'cast-now': 1,
+  'card-text': 1, 'card-compare': 1, 'card-gap': 1, 'card-build': 1,
+  'rule-commander-damage-kind': 1, 'rule-stack': 1, 'rule-declare-attack': 1, 'rule-trample-assign': 1,
+  'order-stack': 1, 'order-combat': 1, 'order-play': 1, 'tap-blockers': 1,
+  // Gold: timing, tricks, rulings, the role of a card
+  'combat-trick': 2, 'marked-damage': 2, 'trample-marked': 2, 'trample-pump': 2, 'blocker-gone': 2, fight: 2, 'best-block': 2,
+  'card-role': 2, 'ruling-*': 2,
+  'rule-pump-timing': 2, 'rule-removal': 2, 'rule-wipe': 2,
+  'ghalta-boost': 2, 'ghalta-response': 2, 'ghalta-first': 2, 'ghalta-order': 2, 'ghalta-cheapest': 2, 'ghalta-savings': 2, 'ghalta-missing': 2, 'ghalta-reverse': 2,
+  // Platinum: reading the table
+  'cmd-vs-life': 3, 'rule-threat': 3, 'rule-bracket-2': 3, 'rule-upgrade': 3, 'ghalta-opponents': 3,
+  // Diamond: lethal
+  'alpha-strike': 4, 'lethal-check': 4, 'tap-lethal': 4,
+}

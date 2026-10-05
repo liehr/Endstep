@@ -24,6 +24,7 @@ import { combatQuestions } from './combatQuiz'
 import { ghaltaMathQuestions } from './ghaltaMath'
 import { orderQuestions, tapCardQuestions, tapCombatQuestions, tapGhaltaQuestion } from './interactive'
 import { MISTAKE_DAYS, mistakeKeys, selectQuestions, topicOf } from './memory'
+import { filterByLevel } from '../ranks'
 import { RULES_BANK } from './rulesBank'
 
 // Duolingo-style quiz: each lesson generates a pool of candidate questions, and the question
@@ -834,10 +835,12 @@ export function buildLesson(
   seed: number,
   memory: QuizMemory = {},
   today: string = todayIso(),
+  /** Your rank: only questions up to this level (see ranks.ts). */
+  maxLevel: number = Infinity,
 ): Question[] {
   const lesson = LESSON_BY_ID[id]
-  if (lesson.reviewOnly) return mistakesLesson(ctx, seed, memory, today)
-  const candidates = lesson.build({ ...ctx, rng: mulberry32(seed) })
+  if (lesson.reviewOnly) return mistakesLesson(ctx, seed, memory, today, maxLevel)
+  const candidates = filterByLevel(lesson.build({ ...ctx, rng: mulberry32(seed) }), maxLevel, 2 * QUESTIONS_PER_LESSON)
   if (!lesson.remember) return candidates.slice(0, QUESTIONS_PER_LESSON)
   return selectQuestions(candidates, memory, today, QUESTIONS_PER_LESSON)
 }
@@ -896,7 +899,7 @@ export function gamesToReview(games: Game[], memory: QuizMemory, today: string):
 const questionMistakes = (memory: QuizMemory, today: string) => mistakeKeys(memory, today).filter((k) => topicOf(k) !== 'game-review')
 
 /** Up to 2 questions about the skill from a game's decision. */
-function gameReviewQuestions(ctx: Omit<QuizContext, 'rng'>, game: Game, seed: number, memory: QuizMemory, today: string): Question[] {
+function gameReviewQuestions(ctx: Omit<QuizContext, 'rng'>, game: Game, seed: number, memory: QuizMemory, today: string, maxLevel: number): Question[] {
   const skill = game.decisionSkill ?? game.focus
   const lessons = reviewable(ctx)
   const id = warmUpLesson(skill, (l) => lessons.some((x) => x.id === l))
@@ -904,7 +907,8 @@ function gameReviewQuestions(ctx: Omit<QuizContext, 'rng'>, game: Game, seed: nu
   if (!lessons.includes(lesson)) return []
   const said = game.decision.trim()
   const note = `From your game on ${formatDate(game.playedAt)}${said ? `: you’d change “${said}”` : ''}.`
-  return selectQuestions(lesson.build({ ...ctx, rng: mulberry32(seed) }), memory, today, 2).map((q) => ({ ...q, reviewOf: gameKey(game), note }))
+  const candidates = filterByLevel(lesson.build({ ...ctx, rng: mulberry32(seed) }), maxLevel, 2 * QUESTIONS_PER_LESSON)
+  return selectQuestions(candidates, memory, today, 2).map((q) => ({ ...q, reviewOf: gameKey(game), note }))
 }
 
 
@@ -916,11 +920,11 @@ const MISTAKE_SEEDS = 12
  * random numbers (Ghalta Math, combat) may not come up again exactly; then a question of the
  * same kind stands in for them.
  */
-function mistakesLesson(ctx: Omit<QuizContext, 'rng'>, seed: number, memory: QuizMemory, today: string): Question[] {
+function mistakesLesson(ctx: Omit<QuizContext, 'rng'>, seed: number, memory: QuizMemory, today: string, maxLevel = Infinity): Question[] {
   // Your games first: one decision per game, two questions each, at most 2 games.
   const fromGames = gamesToReview(ctx.games ?? [], memory, today)
     .slice(0, 2)
-    .flatMap((g, i) => gameReviewQuestions(ctx, g, seed + i, memory, today))
+    .flatMap((g, i) => gameReviewQuestions(ctx, g, seed + i, memory, today, maxLevel))
   const wanted = questionMistakes(memory, today)
   if (wanted.length === 0) return fromGames.slice(0, QUESTIONS_PER_LESSON)
   const topics = new Set(wanted.map(topicOf))

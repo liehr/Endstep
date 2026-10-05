@@ -60,6 +60,29 @@
   --skill-politics: #4a3aa7;
   --skill-politics-ink: #ffffff;
 
+  /* Ranks: every rank also has its own emblem shape and is always shown with its name. */
+  --rank-bronze: #d08a4c;
+  --rank-bronze-lip: #96592a;
+  --rank-bronze-ink: #ffffff;
+  --rank-silver: #b9c4cd;
+  --rank-silver-lip: #7f8c96;
+  --rank-silver-ink: #ffffff;
+  --rank-gold: #ffc800;
+  --rank-gold-lip: #c99a00;
+  --rank-gold-ink: #ffffff;
+  --rank-platinum: #3fc8b6;
+  --rank-platinum-lip: #22897c;
+  --rank-platinum-ink: #ffffff;
+  --rank-diamond: #49b6f2;
+  --rank-diamond-lip: #1f7fb8;
+  --rank-diamond-ink: #ffffff;
+  --rank-master: #a46ae8;
+  --rank-master-lip: #6e3bb0;
+  --rank-master-ink: #ffffff;
+  --rank-grandmaster: #f05454;
+  --rank-grandmaster-lip: #ad2e2e;
+  --rank-grandmaster-ink: #ffe27a;
+
   --radius: 16px;
   --tabbar-h: 68px;
   --footer-h: 92px;
@@ -116,6 +139,21 @@
     --skill-removal: #d55181;
     --skill-removal-ink: #ffffff;
     --skill-politics: #9085e9;
+
+    --rank-bronze: #c47d40;
+    --rank-bronze-lip: #7d4820;
+    --rank-silver: #a3afb9;
+    --rank-silver-lip: #66727c;
+    --rank-gold: #f0bb00;
+    --rank-gold-lip: #a87f00;
+    --rank-platinum: #2fb3a2;
+    --rank-platinum-lip: #1b7066;
+    --rank-diamond: #3aa6e2;
+    --rank-diamond-lip: #186a9a;
+    --rank-master: #9a62de;
+    --rank-master-lip: #5e3196;
+    --rank-grandmaster: #e04848;
+    --rank-grandmaster-lip: #922626;
     color-scheme: dark;
   }
 }
@@ -1929,6 +1967,249 @@ main.with-dice .screen.flow {
   list-style: none;
   color: var(--muted);
   font-size: 14px;
+}
+
+/* ==========================================================================
+   Ranks
+   ========================================================================== */
+
+.rank-emblem {
+  flex-shrink: 0;
+  overflow: visible;
+}
+.rank-lip {
+  fill: var(--lip);
+}
+.rank-face {
+  fill: var(--c);
+}
+.rank-shine {
+  fill: #ffffff;
+  opacity: 0.18;
+}
+.rank-glyph {
+  fill: var(--c-ink);
+}
+.rank-emblem.locked .rank-lip {
+  fill: color-mix(in oklab, var(--border), black 18%);
+}
+.rank-emblem.locked .rank-face {
+  fill: var(--border);
+}
+.rank-emblem.locked .rank-glyph {
+  fill: var(--subtle);
+}
+.rank-emblem.locked .rank-shine {
+  opacity: 0;
+}
+
+/* Home: the rank you're in, instead of the plain unit header */
+.rank-unit {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px 16px;
+  border-radius: var(--radius);
+  background: var(--c);
+  color: #ffffff;
+  text-align: left;
+  box-shadow: 0 4px 0 var(--lip);
+}
+.rank-unit-badge {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+}
+.rank-unit-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  color: #1d1d1d;
+}
+.rank-unit h1 {
+  font-size: 21px;
+}
+.rank-unit .unit-eyebrow {
+  opacity: 0.8;
+}
+.rank-meter {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.rank-meter span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+}
+.rank-meter span.met {
+  background: rgba(255, 255, 255, 0.9);
+}
+.path-step.exam {
+  --c: var(--border);
+  --c-ink: var(--subtle);
+  --lip: color-mix(in oklab, var(--border), black 18%);
+}
+.path-step.exam .path-node {
+  background: none;
+  box-shadow: none;
+}
+.path-step.exam .path-label {
+  min-width: 120px;
+}
+.path-step.exam.ready .path-node {
+  animation: pulse 2s ease-in-out infinite;
+}
+.path-step.skill-locked .path-node {
+  --lip: color-mix(in oklab, var(--border), black 18%);
+  background: var(--border);
+  color: var(--subtle);
+}
+
+/* The ladder, like Duolingo's league row */
+.rank-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 0 4px;
+  list-style: none;
+}
+.rank-row li {
+  display: grid;
+  place-items: center;
+  transition: transform 120ms ease-out;
+}
+.rank-row li.current {
+  transform: scale(1.25);
+}
+.rank-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 0 4px;
+  text-align: center;
+}
+.rank-hero h1 {
+  font-size: 26px;
+}
+.rank-goals {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rank-goal {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rank-goal-head {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 800;
+}
+.rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rank-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+}
+.rank-item.current {
+  border-color: var(--c);
+  background: color-mix(in oklab, var(--c) 10%, var(--surface));
+}
+.rank-item > div {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.rank-item-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rank-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.rank-skill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Exam */
+.hearts {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--danger);
+  font-size: 22px;
+}
+.hearts .lost {
+  color: var(--border);
+}
+.promotion .rank-emblem {
+  animation: pop 700ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.reward-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.reward-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  text-align: left;
+}
+.reward-list li > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.reward-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--warn-soft);
+  color: var(--warn-text);
+  font-size: 24px;
 }
 
 /* ==========================================================================

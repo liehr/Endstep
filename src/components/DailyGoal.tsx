@@ -2,6 +2,7 @@ import { BarbellIcon, CheckIcon, LightningIcon } from '@phosphor-icons/react'
 import { useState, type CSSProperties } from 'react'
 import { today } from '../lib/dates'
 import { nextFocus } from '../lib/focus'
+import { currentRank, unlockedSkills } from '../lib/ranks'
 import { LESSON_BY_ID, lessonOpen, reviewCount, warmUpLesson } from '../lib/quiz/quiz'
 import { useDeckCards } from '../lib/useDeckCards'
 import { navigate } from '../lib/route'
@@ -13,14 +14,14 @@ const lessons = (n: number) => `${n} lesson${n === 1 ? '' : 's'}`
 
 /** Today's training goal and the training streak, on the home page. */
 export function DailyGoal() {
-  const { training, settings, quiz, games } = useData()
+  const { training, settings, quiz, games, promotions } = useData()
   const deck = useDeckCards({ autoLoad: false })
   const [open, setOpen] = useState(false)
   const day = trainingDay(training, today(), settings.dailyGoal)
   const progress = Math.min(1, day.done / day.goal)
   // Mistakes first, otherwise a warm-up for the next game's focus skill.
   const review = reviewCount(quiz, games)
-  const next = review.questions + review.games > 0 ? 'mistakes' : warmUpLesson(nextFocus(games), (id) => lessonOpen(LESSON_BY_ID[id], deck))
+  const next = review.questions + review.games > 0 ? 'mistakes' : warmUpLesson(nextFocus(games, unlockedSkills(currentRank(promotions))), (id) => lessonOpen(LESSON_BY_ID[id], deck))
   const nextLabel = next === 'mistakes' ? 'Your Mistakes' : `${LESSON_BY_ID[next].title} (warm-up)`
 
   return (

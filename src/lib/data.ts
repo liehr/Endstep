@@ -1,4 +1,4 @@
-import { DEFAULT_DECK, DEFAULT_TABLE_INTRO, SKILLS, tableIntroFor, WHY_CATEGORIES, WIPE_OPTIONS } from './content'
+import { DEFAULT_DECK, DEFAULT_TABLE_INTRO, RANKS, SKILLS, tableIntroFor, WHY_CATEGORIES, WIPE_OPTIONS } from './content'
 import { DAILY_GOALS } from './trainingStreak'
 import { today } from './dates'
 import { cardKey } from './cards'
@@ -11,6 +11,7 @@ import type {
   FocusRating,
   Game,
   GameInput,
+  Promotion,
   QuizMemory,
   Result,
   SavedDeck,
@@ -52,6 +53,7 @@ export function emptyData(): AppData {
     decks: [],
     training: [],
     quiz: {},
+    promotions: [],
   }
 }
 
@@ -255,6 +257,14 @@ function sanitizeTraining(raw: unknown): TrainingResult | null {
   }
 }
 
+function sanitizePromotion(raw: unknown): Promotion | null {
+  if (!isObj(raw)) return null
+  const rank = intOrNull(raw.rank, 1, RANKS.length - 1)
+  const createdAt = str(raw.createdAt)
+  if (rank === null || !createdAt) return null
+  return { rank, date: DATE_RE.test(str(raw.date)) ? str(raw.date) : createdAt.slice(0, 10), createdAt }
+}
+
 function sanitizeQuiz(raw: unknown): QuizMemory {
   if (!isObj(raw)) return {}
   const out: QuizMemory = {}
@@ -320,6 +330,7 @@ export function sanitizeData(raw: unknown): AppData {
     decks: otherDecks(listOf(raw.decks, (d) => sanitizeSavedDeck(d, settings)), settings.defaultDeck),
     training: listOf(raw.training, sanitizeTraining),
     quiz: sanitizeQuiz(raw.quiz),
+    promotions: listOf(raw.promotions, sanitizePromotion),
   }
 }
 
@@ -385,6 +396,7 @@ export function mergeImport(current: AppData, imported: AppData): { data: AppDat
       swaps: mergeBy(current.swaps, imported.swaps, (s) => s.id),
       training: mergeBy(current.training, imported.training, (t) => `${t.lessonId}|${t.createdAt}`),
       quiz: mergeQuiz(current.quiz, imported.quiz),
+      promotions: mergeBy(current.promotions, imported.promotions, (p) => String(p.rank)),
       commander: takeDeck ? imported.commander : current.commander,
       commanderSet: takeDeck ? imported.commanderSet : current.commanderSet,
       decklist: takeDeck ? imported.decklist : current.decklist,

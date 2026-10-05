@@ -19,6 +19,7 @@ import { BottomSheet, Button, ConfirmSheet, IconButton } from '../components/ui'
 import { SKILL_BY_ID } from '../lib/content'
 import { today } from '../lib/dates'
 import { nextFocus } from '../lib/focus'
+import { currentRank, unlockedSkills } from '../lib/ranks'
 import { haptic } from '../lib/haptics'
 import { navigate } from '../lib/route'
 import { weekStreak } from '../lib/streak'
@@ -208,7 +209,7 @@ function TurnCard() {
 
 /** After saving: celebrate briefly, show the streak, announce the next focus. */
 export function RoundDone({ id }: { id: string }) {
-  const { games } = useData()
+  const { games, promotions } = useData()
   const game = games.find((g) => g.id === id)
 
   useEffect(() => {
@@ -219,7 +220,7 @@ export function RoundDone({ id }: { id: string }) {
   if (!game) return null
 
   const streak = weekStreak(games, today())
-  const next = SKILL_BY_ID[nextFocus(games)]
+  const next = SKILL_BY_ID[nextFocus(games, unlockedSkills(currentRank(promotions)))]
   const won = game.result === 'win'
 
   return (

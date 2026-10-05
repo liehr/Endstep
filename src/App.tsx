@@ -12,6 +12,7 @@ import { GameDetail, GameEdit, History } from './pages/History'
 import { Home } from './pages/Home'
 import { CheatSheet, GhaltaPage, More } from './pages/More'
 import { Round, RoundDone, RoundStart } from './pages/Round'
+import { Ranks } from './pages/Ranks'
 import { RoundEnd } from './pages/RoundEnd'
 import { Stats } from './pages/Stats'
 
@@ -67,6 +68,10 @@ function Page({ route }: { route: string }) {
       return <DeckPicker />
     case '/training':
       return <Training />
+    case '/raenge':
+      return <Ranks />
+    case '/pruefung':
+      return <Lesson exam />
     default:
       return <Home />
   }
@@ -74,7 +79,7 @@ function Page({ route }: { route: string }) {
 
 /** No tab bar during a game: full focus on one thing. */
 const isFlow = (route: string) =>
-  route.startsWith('/runde') || route.endsWith('/bearbeiten') || route.startsWith('/training/') || route === '/mehr/deck/swap'
+  route.startsWith('/runde') || route.endsWith('/bearbeiten') || route.startsWith('/training/') || route === '/pruefung' || route === '/mehr/deck/swap'
 
 function activeTab(route: string): string {
   if (route.startsWith('/spiel') || route === '/verlauf') return '/verlauf'
@@ -91,8 +96,8 @@ export function App() {
   const tab = activeTab(route)
   // First launch: pick a deck before anything else, without the tab bar.
   const flow = isFlow(route) || !deckChosen
-  // Dice are one tap away everywhere, except inside a quiz lesson and before a deck is chosen.
-  const dice = deckChosen && !route.startsWith('/training/')
+  // Dice are one tap away everywhere, except inside a quiz lesson or exam and before a deck is chosen.
+  const dice = deckChosen && !route.startsWith('/training/') && route !== '/pruefung'
 
   useEffect(() => {
     window.scrollTo(0, 0)

@@ -136,6 +136,14 @@ export interface QuestionStat {
 /** Question key → review state. */
 export type QuizMemory = Record<string, QuestionStat>
 
+/** Passed rank exam: from this moment on you hold `rank` (index into RANKS). */
+export interface Promotion {
+  rank: number
+  /** YYYY-MM-DD */
+  date: string
+  createdAt: string
+}
+
 /** A deck you played before and can switch back to, as you left it. */
 export interface SavedDeck {
   name: string
@@ -170,4 +178,6 @@ export interface AppData {
   training: TrainingResult[]
   /** Which quiz questions you've seen and when they're due again. */
   quiz: QuizMemory
+  /** Rank promotions, oldest first. Empty = Bronze. */
+  promotions: Promotion[]
 }

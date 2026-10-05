@@ -1,7 +1,7 @@
 {
   "name": "endstep",
   "private": true,
-  "version": "0.5.7",
+  "version": "0.5.8",
   "description": "Commander-Runden tracken und mit jedem Spiel besser werden.",
   "type": "module",
   "scripts": {

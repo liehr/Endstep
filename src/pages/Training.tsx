@@ -21,7 +21,8 @@ import { Button, EmptyState } from '../components/ui'
 import { shortName } from '../lib/commander'
 import { SKILL_BY_ID } from '../lib/content'
 import { nextFocus } from '../lib/focus'
-import { LESSON_BY_ID, LESSONS, lessonOpen, MIN_COVERAGE, reviewCount, warmUpLesson } from '../lib/quiz/quiz'
+import { currentRank, unlockedSkills } from '../lib/ranks'
+import { LESSON_BY_ID, LESSONS, lessonOpen, MIN_COVERAGE, reviewCount, warmUpLesson, type Lesson } from '../lib/quiz/quiz'
 import { navigate } from '../lib/route'
 import { buildLibrary, seedFor, simCommander, simulateGame, summarize, type Distribution } from '../lib/sim/goldfish'
 import { randomSeed } from '../lib/sim/rng'
@@ -61,13 +62,24 @@ const LESSON_SKILL: Record<LessonId, SkillId> = {
 
 export const lessonStyle = (id: LessonId): CSSProperties => skillStyle(LESSON_SKILL[id])
 
-/** At least this share of deck cards must be loaded for simulations to make sense. */
+type DeckCards = ReturnType<typeof useDeckCards>
+
+/** Lesson can't be played yet: card data or rulings still missing. */
+export function lessonLocked(lesson: Lesson, deck: DeckCards): boolean {
+  const ready = deck.coverage >= MIN_COVERAGE
+  return (lesson.needsCards && !ready) || (ready && lesson.ready !== undefined && !lesson.ready(deck))
+}
+
+/** Question lessons for your deck that can be played right now (for the rank exam). */
+export function openLessons(deck: DeckCards): LessonId[] {
+  return LESSONS.filter((l) => !l.page && !l.reviewOnly && (!l.forCommander || l.forCommander(deck.commander)) && !lessonLocked(l, deck)).map((l) => l.id)
+}
 
 export function Training() {
-  const { training, quiz, games } = useData()
+  const { training, quiz, games, promotions } = useData()
   const review = reviewCount(quiz, games)
   const mistakes = review.questions + review.games
-  const focus = nextFocus(games)
+  const focus = nextFocus(games, unlockedSkills(currentRank(promotions)))
   const deck = useDeckCards()
   const ready = deck.coverage >= MIN_COVERAGE
   const warmUp = warmUpLesson(focus, (id) => lessonOpen(LESSON_BY_ID[id], deck))
@@ -123,7 +135,7 @@ export function Training() {
           const results = training.filter((t) => t.lessonId === lesson.id)
           const best = results.reduce((m, t) => Math.max(m, t.correct), 0)
           const needsRulings = ready && lesson.ready !== undefined && !lesson.ready(deck)
-          const locked = (lesson.needsCards && !ready) || needsRulings
+          const locked = lessonLocked(lesson, deck)
           return (
             <li key={lesson.id}>
               <button

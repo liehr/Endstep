@@ -57,8 +57,8 @@ function TallyList({ items, empty }: { items: Tally[]; empty: string }) {
 }
 
 export function Stats() {
-  const { games, settings, swaps, decklist } = useData()
-  const s = computeStats(games, settings.defaultDeck, { swaps, decklist })
+  const { games, settings, swaps, decklist, promotions } = useData()
+  const s = computeStats(games, settings.defaultDeck, { swaps, decklist, promotions })
   const streak = weekStreak(games, today())
 
   if (s.total === 0) {

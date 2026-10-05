@@ -1,12 +1,15 @@
-import { ArrowsLeftRightIcon, BookOpenIcon, CheckIcon, FlagCheckeredIcon, PlayIcon, TreasureChestIcon } from '@phosphor-icons/react'
+import { ArrowsLeftRightIcon, CheckIcon, FlagCheckeredIcon, LockIcon, PlayIcon, TreasureChestIcon } from '@phosphor-icons/react'
 import { useState, type CSSProperties } from 'react'
 import { DailyGoal } from '../components/DailyGoal'
 import { InstallHint } from '../components/InstallHint'
 import { SKILL_ICON, SkillBadge, skillStyle } from '../components/skills'
 import { TopStats } from '../components/TopStats'
 import { BottomSheet, Button, Card, ProgressBar } from '../components/ui'
-import { SKILLS, SKILL_BY_ID } from '../lib/content'
+import { RankEmblem } from '../components/RankEmblem'
+import { RANKS, SKILL_BY_ID } from '../lib/content'
 import { nextFocus } from '../lib/focus'
+import { rankProgress, SKILL_PATH, skillRank, unlockedSkills } from '../lib/ranks'
+import { RankUnit } from './Ranks'
 import { navigate } from '../lib/route'
 import { swapsOf } from '../lib/data'
 import { bracketCheck, computeStats } from '../lib/stats'
@@ -17,15 +20,20 @@ import type { Bracket, SkillId } from '../lib/types'
 const OFFSETS = [0, 52, 76, 52, 0, -52, -76, -52]
 
 export function Home() {
-  const { games, draft, settings, swaps: allSwaps, decklist } = useData()
+  const { games, draft, settings, swaps: allSwaps, decklist, promotions, training } = useData()
   const swaps = swapsOf(allSwaps, settings.defaultDeck)
   const [sheet, setSheet] = useState<SkillId | 'chest' | 'bracket' | null>(null)
-  const current = nextFocus(games)
-  const currentIndex = SKILLS.findIndex((s) => s.id === current)
-  const stats = computeStats(games, settings.defaultDeck, { swaps, decklist })
+  const progress = rankProgress(promotions, games, training)
+  const unlocked = unlockedSkills(progress.rank)
+  const current = nextFocus(games, unlocked)
+  const currentIndex = unlocked.indexOf(current)
+  // Your skills, plus a preview of what the next rank unlocks.
+  const pathSkills = SKILL_PATH.filter((id) => skillRank(id) <= progress.rank + 1)
+  const stats = computeStats(games, settings.defaultDeck, { swaps, decklist, promotions })
   const chest = stats.upgrade
   const bracket = bracketCheck(stats.deckGames, settings.bracketCheckDone)
   const cardsLabel = `${chest.cards} card${chest.cards === 1 ? '' : 's'}`
+  const bonusNote = chest.bonus ? ' (one is your rank bonus)' : ''
 
   return (
     <div className="screen">
@@ -46,19 +54,13 @@ export function Home() {
         </Card>
       )}
 
-      <section className="unit" aria-label="Focus rotation">
-        <div>
-          <span className="unit-eyebrow">Focus rotation</span>
-          <h1>One skill per game</h1>
-        </div>
-        <button type="button" className="unit-btn" aria-label="View all skills" onClick={() => navigate('/mehr/spickzettel')}>
-          <BookOpenIcon weight="fill" />
-        </button>
-      </section>
+      <RankUnit progress={progress} />
 
       <ol className="path">
-        {SKILLS.map((skill, i) => {
-          const state = i < currentIndex ? 'done' : i === currentIndex ? 'current' : 'idle'
+        {pathSkills.map((id, i) => {
+          const skill = SKILL_BY_ID[id]
+          const open = unlocked.indexOf(id)
+          const state = open < 0 ? 'skill-locked' : open < currentIndex ? 'done' : open === currentIndex ? 'current' : 'idle'
           const IconCmp = SKILL_ICON[skill.id]
           const offset = OFFSETS[i % OFFSETS.length]
           return (
@@ -71,20 +73,39 @@ export function Home() {
               <button
                 type="button"
                 className="path-node"
-                aria-label={`${skill.name}${state === 'done' ? ' (done)' : state === 'current' ? ' (up next)' : ''}`}
+                aria-label={`${skill.name}${state === 'done' ? ' (done)' : state === 'current' ? ' (up next)' : state === 'skill-locked' ? ' (locked)' : ''}`}
                 onClick={() => (state === 'current' && !draft ? navigate(`/runde/neu/${skill.id}`) : setSheet(skill.id))}
               >
-                <IconCmp weight="fill" />
+                {state === 'skill-locked' ? <LockIcon weight="fill" /> : <IconCmp weight="fill" />}
                 {state === 'done' && (
                   <span className="path-check" aria-hidden="true">
                     <CheckIcon weight="bold" />
                   </span>
                 )}
               </button>
-              <span className={`path-label ${offset > 0 ? 'left' : 'right'}`}>{skill.name}</span>
+              <span className={`path-label ${offset > 0 ? 'left' : 'right'}`}>
+                {skill.name}
+                {state === 'skill-locked' && <small>Unlocks in {RANKS[skillRank(id)].name}</small>}
+              </span>
             </li>
           )
         })}
+        {!progress.top && (
+          <li className={`path-step exam ${progress.examReady ? 'ready' : ''}`} style={{ '--offset': `${OFFSETS[pathSkills.length % OFFSETS.length]}px` } as CSSProperties}>
+            <button
+              type="button"
+              className="path-node"
+              aria-label={`Exam for ${RANKS[progress.rank + 1].name}${progress.examReady ? ' (ready)' : ''}`}
+              onClick={() => navigate(progress.examReady ? '/pruefung' : '/raenge')}
+            >
+              <RankEmblem rank={progress.rank + 1} size={68} locked={!progress.examReady} />
+            </button>
+            <span className={`path-label ${OFFSETS[pathSkills.length % OFFSETS.length] > 0 ? 'left' : 'right'}`}>
+              Exam for {RANKS[progress.rank + 1].name}
+              <small>{progress.examReady ? 'Ready!' : `${Math.min(progress.games, progress.gamesTarget)}/${progress.gamesTarget} games · ${Math.min(progress.lessons, progress.lessonsTarget)}/${progress.lessonsTarget} lessons`}</small>
+            </span>
+          </li>
+        )}
         <li className={`path-step chest ${stats.upgradeReady ? 'ready' : ''}`} style={{ '--offset': '0px' } as CSSProperties}>
           <button type="button" className="path-node" aria-label="Upgrade chest" onClick={() => setSheet('chest')}>
             <TreasureChestIcon weight="fill" />
@@ -118,7 +139,9 @@ export function Home() {
       <InstallHint compact />
 
       <BottomSheet open={sheet !== null && sheet !== 'chest' && sheet !== 'bracket'} onClose={() => setSheet(null)}>
-        {sheet && sheet !== 'chest' && sheet !== 'bracket' && <SkillSheet id={sheet} disabled={!!draft} />}
+        {sheet && sheet !== 'chest' && sheet !== 'bracket' && (
+          <SkillSheet id={sheet} disabled={!!draft} lockedUntil={unlocked.includes(sheet) ? null : skillRank(sheet)} />
+        )}
       </BottomSheet>
 
       <BottomSheet open={sheet === 'chest'} onClose={() => setSheet(null)} title="Upgrade chest">
@@ -127,7 +150,7 @@ export function Home() {
           <>
             <p>
               <strong>{chest.gamesSince} games</strong> {swaps.length ? 'since the last swap' : `with ${settings.defaultDeck}`}. Time for
-              swap round {chest.round} with at most {cardsLabel}. Interaction and protection against wipes first, not another dino.
+              swap round {chest.round} with at most {cardsLabel}{bonusNote}. Interaction and protection against wipes first, not another dino.
             </p>
             {stats.upgradeCandidates.length > 0 ? (
               <p>
@@ -140,7 +163,7 @@ export function Home() {
         ) : (
           <p>
             Game {chest.gamesSince} of {chest.target}
-            {swaps.length ? ' since the last swap' : ''}. Then you can swap {cardsLabel}. Leave the deck unchanged until
+            {swaps.length ? ' since the last swap' : ''}. Then you can swap {cardsLabel}{bonusNote}. Leave the deck unchanged until
             then and collect notes, so you’ll know which cards really should go out.
           </p>
         )}
@@ -198,7 +221,7 @@ export function Home() {
   )
 }
 
-function SkillSheet({ id, disabled }: { id: SkillId; disabled: boolean }) {
+function SkillSheet({ id, disabled, lockedUntil }: { id: SkillId; disabled: boolean; lockedUntil: number | null }) {
   const skill = SKILL_BY_ID[id]
   return (
     <div className="skill-sheet" style={skillStyle(id)}>
@@ -208,10 +231,16 @@ function SkillSheet({ id, disabled }: { id: SkillId; disabled: boolean }) {
       <p className="muted">
         <strong>Task:</strong> {skill.task}
       </p>
-      <Button block icon={PlayIcon} disabled={disabled} onClick={() => navigate(`/runde/neu/${id}`)}>
-        Play with this focus
-      </Button>
-      {disabled && <p className="muted small center">Finish the game in progress first.</p>}
+      {lockedUntil !== null ? (
+        <p className="muted small center">Unlocks in {RANKS[lockedUntil].name}. Master the skills before it first.</p>
+      ) : (
+        <>
+          <Button block icon={PlayIcon} disabled={disabled} onClick={() => navigate(`/runde/neu/${id}`)}>
+            Play with this focus
+          </Button>
+          {disabled && <p className="muted small center">Finish the game in progress first.</p>}
+        </>
+      )}
     </div>
   )
 }
