@@ -14,11 +14,13 @@ import {
   type TurnLog,
 } from '../sim/goldfish'
 import { evaluateHand, ruleText } from '../sim/mulligan'
-import { mulberry32, shuffle, type Rng } from '../sim/rng'
+import { mulberry32, shuffle } from '../sim/rng'
 import { today as todayIso } from '../dates'
 import type { Ruling } from '../scryfall'
-import type { DeckEntry, LessonId, QuizMemory } from '../types'
-import { classify, costVariants, faceOf, findGap, hideSelfName, ptVariants, ROLES, typeLabel, type CardFace, type FieldId, type Role } from './cardQuiz'
+import type { LessonId, QuizMemory } from '../types'
+import { classify, costVariants, faceOf, findGap, hideSelfName, KEYWORDS, ptVariants, ROLES, typeLabel, type Role } from './cardQuiz'
+import { combatQuestions } from './combatQuiz'
+import { ghaltaMathQuestions } from './ghaltaMath'
 import { selectQuestions } from './memory'
 import { RULES_BANK } from './rulesBank'
 
@@ -26,81 +28,10 @@ import { RULES_BANK } from './rulesBank'
 // memory (memory.ts) picks 5 of them: due reviews first, then new ones. Many questions are
 // built from real cards in your deck (Scryfall data) and from simulated turns.
 
-export interface QuizOption {
-  id: string
-  label: string
-}
-
-export interface QuizCard {
-  name: string
-  /** Small caption under the image, e.g. “5/4”. */
-  caption?: string
-}
-
-export interface Blank {
-  field: FieldId
-  answer: string
-}
-
-export interface Question {
-  id: string
-  /**
-   * Stable key for the question memory, e.g. "card-cost:Llanowar Elves". The part before
-   * the first ":" is the topic; a lesson spreads its questions across topics.
-   */
-  key: string
-  /** Questions of the same group (e.g. about the same card) don't appear together. */
-  group?: string
-  /** “choice”: pick one answer; “build”: fill the blanks from the tile bank. */
-  kind?: 'choice' | 'build'
-  prompt: string
-  /** Self-drawn card with hidden fields (card quiz). */
-  face?: CardFace
-  hidden?: FieldId[]
-  /** For “build”: blanks in order and the tiles to choose from. */
-  blanks?: Blank[]
-  bank?: string[]
-  cardsLabel?: string
-  cards?: QuizCard[]
-  /** Short text above the cards, e.g. the game situation. */
-  context?: string
-  options: QuizOption[]
-  correct: string
-  explanation: string
-  /** Optional extra after the answer (e.g. turn log). */
-  details?: { title: string; lines: string[] }
-}
-
-export interface QuizContext {
-  rng: Rng
-  decklist: DeckEntry[]
-  commander: string
-  lookup: (name: string) => CardInfo | undefined
-  /** Rulings per card (loaded in the background); missing for older callers and tests. */
-  rulings?: (name: string) => Ruling[] | undefined
-}
-
-export const QUESTIONS_PER_LESSON = 5
+export * from './question'
+import { choice, int, ordered, pick, QUESTIONS_PER_LESSON, type Blank, type Question, type QuizCard, type QuizContext } from './question'
 
 // --- Helpers ----------------------------------------------------------------
-
-const pick = <T>(items: readonly T[], rng: Rng): T => items[Math.floor(rng() * items.length)]
-const int = (min: number, max: number, rng: Rng) => min + Math.floor(rng() * (max - min + 1))
-
-/** Shuffle answer options; remember the correct answer by ID. */
-function choice(rng: Rng, correctLabel: string, wrongLabels: string[]): { options: QuizOption[]; correct: string } {
-  const unique = [...new Set(wrongLabels.filter((l) => l !== correctLabel))].slice(0, 3)
-  const options = shuffle(
-    [{ id: 'a', label: correctLabel }, ...unique.map((label, i) => ({ id: `w${i}`, label }))],
-    rng,
-  )
-  return { options, correct: 'a' }
-}
-
-/** Options in a fixed order (e.g. turn 3, 4, 5 …). */
-function ordered(labels: string[], correctIndex: number): { options: QuizOption[]; correct: string } {
-  return { options: labels.map((label, i) => ({ id: `o${i}`, label })), correct: `o${correctIndex}` }
-}
 
 const costLabel = (generic: number) => (generic > 0 ? `${generic}GG` : 'GG')
 const castText = (n: number) =>
@@ -179,9 +110,10 @@ function ghaltaThresholdQuestion(ctx: QuizContext, n: number): Question {
 }
 
 function ghaltaLesson(ctx: QuizContext): Question[] {
-  const qs = Array.from({ length: 12 }, (_, i) => ghaltaCostQuestion(ctx, i))
-  qs.splice(int(1, 4, ctx.rng), 0, ghaltaThresholdQuestion(ctx, 0))
-  return qs
+  return shuffle(
+    [...Array.from({ length: 8 }, (_, i) => ghaltaCostQuestion(ctx, i)), ghaltaThresholdQuestion(ctx, 0), ...ghaltaMathQuestions(ctx)],
+    ctx.rng,
+  )
 }
 
 // --- Lesson 2: Combat & Trample ---------------------------------------------------
@@ -325,6 +257,7 @@ function combatLesson(ctx: QuizContext): Question[] {
       blockerGoneQuestion(ctx, true),
       blockerGoneQuestion(ctx, false),
       fightQuestion(ctx),
+      ...combatQuestions(ctx),
     ],
     ctx.rng,
   )
@@ -569,11 +502,161 @@ function buildQuestion(ctx: QuizContext, card: CardInfo, pool: CardInfo[], n: nu
   }
 }
 
+/** Which card has this artwork? Only the art is shown. */
+function artQuestion(ctx: QuizContext, card: CardInfo, pool: CardInfo[], n: number): Question | null {
+  if (!card.art) return null
+  const others = pool.filter((c) => c.name !== card.name && c.art).map((c) => c.name)
+  if (others.length < 3) return null
+  return {
+    id: `card-art-${n}`,
+    key: `card-art:${card.name}`,
+    group: card.name,
+    prompt: 'Which card has this artwork?',
+    face: { name: '', manaCost: '', typeLine: '', text: '', pt: null, art: card.art, frame: faceOf(card).frame },
+    ...choice(ctx.rng, card.name, shuffle(others, ctx.rng)),
+    explanation: `That’s the art of ${card.name}.`,
+  }
+}
+
+/** Which card has this rules text? No art, no name, just the text. */
+function textQuestion(ctx: QuizContext, card: CardInfo, pool: CardInfo[], n: number): Question | null {
+  if (card.oracleText.length < 25) return null
+  // Same kind of card where possible, so "this creature" in the text doesn't give it away.
+  const candidates = pool.filter((c) => c.name !== card.name && c.oracleText !== card.oracleText && isLand(c) === isLand(card))
+  const sameKind = candidates.filter((c) => isCreature(c) === isCreature(card))
+  const others = (sameKind.length >= 3 ? sameKind : candidates).map((c) => c.name)
+  if (others.length < 3) return null
+  return {
+    id: `card-text-${n}`,
+    key: `card-text:${card.name}`,
+    group: card.name,
+    prompt: 'Which of your cards has this text?',
+    context: `“${hideSelfName(card.oracleText, card.name).replace(/~/g, 'this card').replace(/\n/g, ' ')}”`,
+    ...choice(ctx.rng, card.name, shuffle(others, ctx.rng)),
+    explanation: `That’s ${card.name}.`,
+  }
+}
+
+function ptQuestion(ctx: QuizContext, card: CardInfo, pool: CardInfo[], n: number): Question | null {
+  if (!isCreature(card) || !isNumericPt(card)) return null
+  const pt = `${card.powerText}/${card.toughness}`
+  const fromDeck = pool.filter((c) => isCreature(c) && isNumericPt(c)).map((c) => `${c.powerText}/${c.toughness}`)
+  const wrong = shuffle([...new Set([...ptVariants(pt), ...fromDeck])].filter((v) => v !== pt), ctx.rng)
+  if (wrong.length < 2) return null
+  return {
+    id: `card-pt-${n}`,
+    key: `card-pt:${card.name}`,
+    group: card.name,
+    prompt: 'How big is this creature?',
+    face: faceOf(card),
+    hidden: ['pt'],
+    ...choice(ctx.rng, pt, wrong),
+    explanation: `${card.name} is a ${pt}.`,
+  }
+}
+
+const TYPE_CHOICES = ['Creature', 'Instant', 'Sorcery', 'Enchantment', 'Artifact', 'Land', 'Planeswalker']
+
+function typeQuestion(ctx: QuizContext, card: CardInfo, n: number): Question | null {
+  const t = typeLabel(card)
+  if (t === 'Other') return null
+  return {
+    id: `card-type-${n}`,
+    key: `card-type:${card.name}`,
+    group: card.name,
+    prompt: 'What kind of card is this?',
+    face: faceOf(card),
+    hidden: ['type'],
+    ...choice(ctx.rng, t, shuffle(TYPE_CHOICES.filter((x) => x !== t), ctx.rng)),
+    explanation: `${card.name} is ${withArticle(t)} (${card.typeLine}).`,
+  }
+}
+
+/** Which keyword does this card have? Asked by name only, so the text doesn't give it away. */
+function keywordQuestion(ctx: QuizContext, card: CardInfo, n: number): Question | null {
+  // Only keywords the card has itself (a line like "Flying, trample"), not ones it grants.
+  const isKeyword = (part: string, k: string) => part.startsWith(k.toLowerCase()) && part.length <= k.length + 6
+  const keywordLines = card.oracleText
+    .split('\n')
+    .map((line) => line.replace(/\s*\([^)]*\)/g, '').split(/,\s*/).map((part) => part.trim().toLowerCase()))
+    .filter((parts) => parts.every((part) => KEYWORDS.some((k) => isKeyword(part, k))))
+  const has = (k: string) => keywordLines.some((parts) => parts.some((part) => isKeyword(part, k)))
+  const mentioned = (k: string) => new RegExp(`\\b${k}\\b`, 'i').test(card.oracleText)
+  const own = KEYWORDS.filter(has)
+  if (own.length === 0) return null
+  const answer = pick(own, ctx.rng)
+  return {
+    id: `card-keyword-${n}`,
+    key: `card-keyword:${card.name}:${answer}`,
+    group: card.name,
+    prompt: `Which keyword does ${card.name} have?`,
+    ...choice(ctx.rng, answer, shuffle(KEYWORDS.filter((k) => !mentioned(k)), ctx.rng)),
+    explanation: `${card.name} has ${answer}.`,
+    details: { title: card.name, lines: card.oracleText.split('\n') },
+  }
+}
+
+/** Mana value, asked by name only. */
+function manaValueQuestion(ctx: QuizContext, card: CardInfo, n: number): Question | null {
+  if (isLand(card) || card.manaCost === '' || /\{X\}/.test(card.manaCost)) return null
+  const mv = card.cmc
+  const wrong = [mv - 2, mv - 1, mv + 1, mv + 2].filter((v) => v >= 0).map(String)
+  return {
+    id: `card-mv-${n}`,
+    key: `card-mv:${card.name}`,
+    group: card.name,
+    prompt: `What’s the mana value of ${card.name}?`,
+    ...choice(ctx.rng, String(mv), shuffle(wrong, ctx.rng)),
+    explanation: `${card.name} costs ${card.manaCost}, that’s mana value ${mv}.`,
+  }
+}
+
+/** Which of these four cards costs the most (or the least)? */
+function compareCostQuestion(ctx: QuizContext, card: CardInfo, pool: CardInfo[], n: number): Question | null {
+  if (isLand(card) || card.manaCost === '' || /\{X\}/.test(card.manaCost)) return null
+  const most = ctx.rng() < 0.5
+  const others = shuffle(
+    pool.filter((c) => !isLand(c) && c.manaCost !== '' && !/\{X\}/.test(c.manaCost) && (most ? c.cmc < card.cmc : c.cmc > card.cmc)),
+    ctx.rng,
+  )
+  // Distinct mana values, so the answer is clear.
+  const wrong: CardInfo[] = []
+  for (const c of others) if (wrong.length < 3 && !wrong.some((w) => w.cmc === c.cmc)) wrong.push(c)
+  if (wrong.length < 3) return null
+  return {
+    id: `card-compare-${n}`,
+    key: `card-compare:${most ? 'most' : 'least'}:${card.name}`,
+    group: card.name,
+    prompt: `Which of these cards has the ${most ? 'highest' : 'lowest'} mana value?`,
+    ...choice(ctx.rng, card.name, wrong.map((c) => c.name)),
+    explanation: [card, ...wrong].map((c) => `${c.name}: ${c.cmc}`).join(' · '),
+  }
+}
+
+/** Which of these four cards is an instant (creature, artifact …)? */
+function whichTypeQuestion(ctx: QuizContext, card: CardInfo, pool: CardInfo[], n: number): Question | null {
+  const t = typeLabel(card)
+  if (t === 'Other' || t === 'Land') return null
+  const english = { Creature: 'Creature', Instant: 'Instant', Sorcery: 'Sorcery', Enchantment: 'Enchantment', Artifact: 'Artifact', Planeswalker: 'Planeswalker' }[t]
+  // Wrong options must not have that type at all (an artifact creature is also an artifact).
+  const others = shuffle(pool.filter((c) => !new RegExp(`\\b${english}\\b`).test(c.typeLine)), ctx.rng)
+  if (others.length < 3) return null
+  return {
+    id: `card-which-type-${n}`,
+    key: `card-which-type:${card.name}`,
+    group: card.name,
+    prompt: `Which of these is ${withArticle(t)}?`,
+    ...choice(ctx.rng, card.name, others.map((c) => c.name)),
+    explanation: `${card.name} is ${withArticle(t)} (${card.typeLine}).`,
+  }
+}
+
 function cardsLesson(ctx: QuizContext): Question[] {
   const all = deckCards(ctx)
   const qs: Question[] = []
-  // Every card can come up in every question type; the memory picks, and a card shows up
-  // at most once per lesson (group), so one question can't give away another's answer.
+  // Every card can come up in every question type. The memory picks the cards you haven't
+  // seen for the longest time, and a card shows up at most once per lesson (group), so one
+  // question can't give away another's answer.
   shuffle(all, ctx.rng).forEach((card, n) => {
     qs.push(nameQuestion(ctx, card, all, n))
     if (!isLand(card) && card.manaCost !== '' && costVariants(card.manaCost).length >= 3) qs.push(costQuestion(ctx, card, n))
@@ -581,6 +664,17 @@ function cardsLesson(ctx: QuizContext): Question[] {
     if (gap) qs.push(gap)
     if (classify(card).confident && !isLand(card)) qs.push(roleQuestion(ctx, card, n))
     if (!isLand(card) && card.manaCost !== '' && costVariants(card.manaCost).length >= 2) qs.push(buildQuestion(ctx, card, all, n))
+    for (const q of [
+      artQuestion(ctx, card, all, n),
+      textQuestion(ctx, card, all, n),
+      ptQuestion(ctx, card, all, n),
+      typeQuestion(ctx, card, n),
+      keywordQuestion(ctx, card, n),
+      manaValueQuestion(ctx, card, n),
+      compareCostQuestion(ctx, card, all, n),
+      whichTypeQuestion(ctx, card, all, n),
+    ])
+      if (q) qs.push(q)
   })
   return shuffle(qs, ctx.rng)
 }
@@ -661,7 +755,7 @@ export interface Lesson {
 
 export const LESSONS: Lesson[] = [
   { id: 'ghalta', title: 'Ghalta Math', description: 'What does Ghalta cost with your board?', needsCards: false, forCommander: isGhalta, remember: true, build: ghaltaLesson },
-  { id: 'combat', title: 'Combat & Trample', description: 'Blockers, trample and commander damage.', needsCards: false, remember: true, build: combatLesson },
+  { id: 'combat', title: 'Combat & Trample', description: 'Blocks, first strike, trample and commander damage.', needsCards: false, remember: true, build: combatLesson },
   { id: 'rules', title: 'Commander Rules', description: 'Mulligan, stack, combat, brackets.', needsCards: false, remember: true, build: rulesLesson },
   { id: 'mulligan', title: 'Mulligan Trainer', description: 'Real opening hands from your deck.', needsCards: true, remember: false, build: mulliganLesson },
   {

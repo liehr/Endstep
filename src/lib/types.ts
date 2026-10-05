@@ -125,6 +125,10 @@ export interface QuestionStat {
   wrong: number
   /** Last answered (YYYY-MM-DD). */
   last: string
+  /** Last answered (ms timestamp), to rotate through topics and cards within a day. */
+  at?: number
+  /** Group of the question (e.g. the card it was about). */
+  group?: string
 }
 
 /** Question key → review state. */

@@ -130,7 +130,7 @@ export const actions = {
   },
 
   /** Remember a first-try answer for the review schedule. */
-  recordQuizAnswer(key: string, correct: boolean) {
-    commit({ ...data, quiz: recordAnswer(data.quiz, key, correct, today()) })
+  recordQuizAnswer(key: string, correct: boolean, group?: string) {
+    commit({ ...data, quiz: recordAnswer(data.quiz, key, correct, today(), { at: Date.now(), group }) })
   },
 }
