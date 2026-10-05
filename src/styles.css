@@ -140,6 +140,17 @@ body {
   overscroll-behavior-y: none;
 }
 
+/* iOS-Fehler: Als installierte App mit durchsichtiger Statusleiste meldet iOS bei Seiten,
+   die kürzer als der Bildschirm sind, eine um die Statusleiste (~62 pt) zu kleine Höhe.
+   Unten fixierte Leisten (Tabs, Weiter-Button) rutschen dann nach oben. Mit mindestens
+   voller Bildschirmhöhe bleibt alles am unteren Rand. Nur im App-Modus, damit im
+   Browser-Tab nichts unnötig scrollt. */
+@media (display-mode: standalone) {
+  body {
+    min-height: 100lvh;
+  }
+}
+
 body.sheet-open {
   overflow: hidden;
 }
