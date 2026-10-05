@@ -1,6 +1,6 @@
-import { PATTERN_THRESHOLD, SKILLS, UPGRADE_AFTER_GAMES, WHY_CATEGORIES } from './content'
+import { PATTERN_THRESHOLD, SKILLS, UPGRADE_AFTER_GAMES, UPGRADE_AFTER_SWAP_GAMES, WHY_CATEGORIES } from './content'
 import { sortGames } from './focus'
-import type { Game, Result, SkillId, WhyCategory } from './types'
+import type { DeckEntry, Game, Result, SkillId, Swap, WhyCategory } from './types'
 
 export interface Tally {
   name: string
@@ -35,6 +35,24 @@ export interface SkillStat {
   mistakes: number
 }
 
+export interface DeckPhase {
+  /** „Original“ oder „Nach Swap 1“ … */
+  label: string
+  from: string | null
+  games: number
+  wins: number
+}
+
+export interface UpgradeStatus {
+  /** Spiele seit der letzten Swap-Runde (bzw. insgesamt, wenn es noch keine gab). */
+  gamesSince: number
+  /** Ab so vielen Spielen ist die nächste Swap-Runde dran. */
+  target: number
+  ready: boolean
+  /** Spielstand je Deckversion, älteste zuerst. */
+  phases: DeckPhase[]
+}
+
 export interface Stats {
   total: number
   wins: number
@@ -53,7 +71,9 @@ export interface Stats {
   patterns: SkillStat[]
   whyCounts: { id: WhyCategory; count: number }[]
   avgGhaltaTurn: number | null
+  avgTurns: number | null
   avgMulligans: number | null
+  upgrade: UpgradeStatus
   wipes: { kept: number; overextended: number }
 }
 
@@ -65,7 +85,29 @@ function average(values: (number | null)[]): number | null {
 
 const normalize = (s: string) => s.trim().toLowerCase()
 
-export function computeStats(allGames: Game[], deck: string): Stats {
+export function upgradeStatus(deckGames: Game[], swaps: Swap[]): UpgradeStatus {
+  const sorted = [...swaps].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt))
+  const bounds = [null, ...sorted.map((s) => s.date)]
+  const phases = bounds.map((from, i) => {
+    const to = bounds[i + 1] ?? null
+    const games = deckGames.filter((g) => (from === null || g.playedAt >= from) && (to === null || g.playedAt < to))
+    return {
+      label: i === 0 ? 'Original' : `Nach Swap ${i}`,
+      from,
+      games: games.length,
+      wins: games.filter((g) => g.result === 'win').length,
+    }
+  })
+  const gamesSince = phases[phases.length - 1].games
+  const target = swaps.length === 0 ? UPGRADE_AFTER_GAMES : UPGRADE_AFTER_SWAP_GAMES
+  return { gamesSince, target, ready: gamesSince >= target, phases }
+}
+
+export function computeStats(
+  allGames: Game[],
+  deck: string,
+  { swaps = [], decklist }: { swaps?: Swap[]; decklist?: DeckEntry[] } = {},
+): Stats {
   const games = sortGames(allGames)
   const wins = games.filter((g) => g.result === 'win').length
   const deckGames = games.filter((g) => normalize(g.deck) === normalize(deck))
@@ -84,7 +126,10 @@ export function computeStats(allGames: Game[], deck: string): Stats {
     }
   })
 
-  const upgradeReady = deckGames.length >= UPGRADE_AFTER_GAMES
+  const upgrade = upgradeStatus(deckGames, swaps)
+  const upgradeReady = upgrade.ready
+  // Kandidaten nur aus Karten, die noch im Deck sind.
+  const inDeck = decklist ? new Set(decklist.map((e) => normalize(e.name))) : null
 
   return {
     total: games.length,
@@ -95,7 +140,7 @@ export function computeStats(allGames: Game[], deck: string): Stats {
     upgradeReady,
     deadCards,
     starCards,
-    upgradeCandidates: deadCards.filter((c) => c.count >= PATTERN_THRESHOLD),
+    upgradeCandidates: deadCards.filter((c) => c.count >= PATTERN_THRESHOLD && (!inDeck || inDeck.has(normalize(c.name)))),
     skills,
     patterns: skills
       .filter((s) => s.mistakes >= PATTERN_THRESHOLD)
@@ -105,10 +150,12 @@ export function computeStats(allGames: Game[], deck: string): Stats {
       count: games.filter((g) => g.result === 'loss' && g.whyCategory === id).length,
     })),
     avgGhaltaTurn: average(games.map((g) => g.ghaltaTurn)),
+    avgTurns: average(games.map((g) => g.turns)),
     avgMulligans: average(games.map((g) => g.mulligans)),
     wipes: {
       kept: games.filter((g) => g.wipe === 'kept').length,
       overextended: games.filter((g) => g.wipe === 'overextended').length,
     },
+    upgrade,
   }
 }

@@ -90,6 +90,9 @@ export const FOCUS_RATINGS: { id: FocusRating; label: string }[] = [
 /** Faustregel aus dem Lernplan: Upgrades erst nach etwa 8–10 Spielen mit dem unveränderten Deck. */
 export const UPGRADE_AFTER_GAMES = 8
 
+/** Nach jeder Swap-Runde wieder 4–5 Spiele testen, dann die nächste kleine Runde. */
+export const UPGRADE_AFTER_SWAP_GAMES = 5
+
 /** Erst wenn dasselbe Problem zum dritten Mal auftaucht, ist es ein Muster. */
 export const PATTERN_THRESHOLD = 3
 

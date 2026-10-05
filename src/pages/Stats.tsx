@@ -57,8 +57,8 @@ function TallyList({ items, empty }: { items: Tally[]; empty: string }) {
 }
 
 export function Stats() {
-  const { games, settings } = useData()
-  const s = computeStats(games, settings.defaultDeck)
+  const { games, settings, swaps, decklist } = useData()
+  const s = computeStats(games, settings.defaultDeck, { swaps, decklist })
   const streak = weekStreak(games, today())
 
   if (s.total === 0) {
@@ -91,6 +91,7 @@ export function Stats() {
           value={oneDecimal(s.avgGhaltaTurn)}
           sub={s.avgMulligans === null ? undefined : `Ø ${oneDecimal(s.avgMulligans)} Mulligans`}
         />
+        {s.avgTurns !== null && <StatTile label="Ø Züge pro Partie" value={oneDecimal(s.avgTurns)} />}
       </div>
 
       <section className="panel">
@@ -176,6 +177,32 @@ export function Stats() {
         <h3>Überperformer</h3>
         <TallyList items={s.starCards} empty="Noch keine Überperformer notiert." />
       </section>
+
+      {s.upgrade.phases.length > 1 && (
+        <section className="panel">
+          <h2>Deckversionen</h2>
+          <p className="muted small">Siegquote vor und nach deinen Swap-Runden.</p>
+          <table className="table">
+            <thead>
+              <tr>
+                <th scope="col">Version</th>
+                <th scope="col">Spiele</th>
+                <th scope="col">Siegquote</th>
+              </tr>
+            </thead>
+            <tbody>
+              {s.upgrade.phases.map((p) => (
+                <tr key={p.label}>
+                  <td>{p.label}</td>
+                  <td>{p.games}</td>
+                  <td>{p.games ? percent(p.wins / p.games) : '–'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="muted small">Wenige Spiele sind noch kein Beweis: Erst nach 4–5 Spielen pro Version lohnt der Vergleich.</p>
+        </section>
+      )}
 
       <section className="panel">
         <h2>Board Wipes</h2>

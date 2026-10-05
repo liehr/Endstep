@@ -11,8 +11,22 @@ Endstep ist eine kleine App fürs Handy, gebaut nach dem Lernplan „Commander v
   „Wen angreifen?“ und ein Regel-Spickzettel.
 - **Nach dem Spiel (2 Minuten):** Die drei Fragen: Warum hat der Gewinner gewonnen? Welche eine
   Entscheidung würdest du anders treffen? Welche Karten waren tot oder haben überperformt?
+- **Zug-Zähler:** Während der Runde „Nächster Zug“ und „Ghalta gecastet!“ tippen. Ghalta-Zug,
+  Spieldauer und Commander-Steuer landen automatisch in den Notizen.
+- **Training:** Kurze Lektionen im Duolingo-Stil (Antwort wählen → Prüfen → Erklärung, Fehler kommen
+  am Ende noch einmal):
+  - *Ghalta-Mathe*, *Kampf & Trample*, *Commander-Regeln*
+  - *Mulligan-Trainer:* echte Starthände aus deinem Deck, bewertet nach der Faustregel aus dem Lernplan
+  - *Wann kommt Ghalta?:* simulierte Züge mit deinem Deck
+  - *Karten kennen:* Teile einer Karte sind versteckt (Name, Kosten, Stärke, Textstelle). Rate sie
+    oder baue die Karte aus Kacheln; dazu die Rolle der Karte im Gameplan (Ramp, dicke Kreatur,
+    Kartenvorteil, Interaktion, Schutz, Finisher).
+- **Goldfish-Labor:** 1.000 simulierte Spiele zeigen, in welchem Zug Ghalta mit deinem Deck kommt.
+  Nach einer Swap-Runde nochmal laufen lassen: Ist das Deck schneller geworden?
+- **Deck & Swap-Runden:** Deckliste mit Kartenbildern, Swap-Runden („raus“ / „rein“) mit
+  Protokoll und Rückgängig, Siegquote je Deckversion.
 - **Statistik:** Siegquote, Skills, wiederkehrende Fehler („Muster“ ab 3×), tote Karten als
-  Upgrade-Kandidaten und der Upgrade-Fahrplan (erste Swap-Runde nach 8 Spielen).
+  Upgrade-Kandidaten und der Upgrade-Fahrplan (erste Swap-Runde nach 8 Spielen, danach alle 5).
 
 ## Technik in einem Satz
 
@@ -32,6 +46,20 @@ Menü ⋮) → bestätigen.
 
 Danach Endstep immer über das Icon starten. Neue Versionen lädt die App selbst und fragt
 **„Neue Version verfügbar – Aktualisieren?“**.
+
+### Kartendaten (Scryfall)
+
+Kartenbilder und -texte kommen von der [Scryfall-API](https://scryfall.com/docs/api). Die App fragt
+nur die Karten deines Decks ab (zwei Anfragen an `/cards/collection`), speichert sie auf dem Handy und
+funktioniert danach offline. Die Bulk-Daten von Scryfall (über 100 MB) wären fürs Handy zu groß.
+
+Damit die **richtigen Bilder** erscheinen, lädt die App die Druckversion aus dem Precon (Set
+`FDC`, Foundations Commander). Gibt es eine Karte in diesem Set nicht, zeigt sie eine andere
+Version und weist auf der Deck-Seite darauf hin. Am genauesten wird es, wenn du deine Liste aus
+Moxfield mit Set und Sammlernummer einfügst (z. B. `1 Llanowar Elves (FDC) 227`).
+
+Die Standard-Deckliste von Tramplesaurus Rex stammt aus veröffentlichten Decklisten. Gleiche sie
+unter **Mehr → Deckliste & Swaps** mit deinem Deck ab.
 
 ### Deine Daten
 
@@ -81,9 +109,12 @@ App-Icon ändern: `public/logo.png` (quadratisch, mind. 512 px) ersetzen und `np
 
 ```
 src/
-  lib/          Logik ohne UI: Datentypen, Speicherung, Statistik, Ghalta-Mathe, Lernplan-Inhalte
-  components/   Wiederverwendbare Bausteine (Formular, Ghalta-Rechner, Update-Hinweis …)
-  pages/        Die Bildschirme: Start, Runde, Verlauf, Statistik, Mehr
+  lib/          Logik ohne UI: Datentypen, Speicherung, Statistik, Ghalta-Mathe, Lernplan-Inhalte,
+                Deckliste, Scryfall-Anbindung
+  lib/sim/      Goldfish-Simulation (Autopilot) und Mulligan-Faustregel
+  lib/quiz/     Quiz-Lektionen und Karten-Quiz (Rollen, Lücken, Kacheln)
+  components/   Wiederverwendbare Bausteine (Formular, Ghalta-Rechner, Kartenbild, Kartenrahmen …)
+  pages/        Die Bildschirme: Start, Runde, Training, Lektion, Verlauf, Statistik, Deck, Mehr
 .github/workflows/
   ci.yml        Prüft PRs und master
   release.yml   Version erhöhen + Release + Ausrollen (manuell starten)

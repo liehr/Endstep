@@ -43,6 +43,18 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}', '**/nunito-latin-*.woff2'],
         // Quellbild der Icons, wird in der App nicht gebraucht
         globIgnores: ['logo.png'],
+        // Kartenbilder von Scryfall nach dem ersten Laden offline verfügbar halten.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.origin === 'https://cards.scryfall.io',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'scryfall-images',
+              expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
     }),
   ],

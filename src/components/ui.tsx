@@ -207,11 +207,15 @@ export function ChipInput({
   values,
   onChange,
   suggestions,
+  catalog = [],
   placeholder,
 }: {
   values: string[]
   onChange: (values: string[]) => void
+  /** Häufige Einträge: ohne Eingabe als Vorschläge sichtbar. */
   suggestions: string[]
+  /** Weitere Namen (z. B. alle Karten im Deck), werden beim Tippen durchsucht. */
+  catalog?: string[]
   placeholder: string
 }) {
   const [text, setText] = useState('')
@@ -227,9 +231,8 @@ export function ChipInput({
   }
 
   const query = text.trim().toLowerCase()
-  const visibleSuggestions = suggestions
-    .filter((s) => !has(s) && (!query || s.toLowerCase().includes(query)))
-    .slice(0, 8)
+  const pool = query ? [...new Set([...suggestions, ...catalog])] : suggestions
+  const visibleSuggestions = pool.filter((s) => !has(s) && (!query || s.toLowerCase().includes(query))).slice(0, 8)
 
   return (
     <div className="chips">

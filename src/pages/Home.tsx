@@ -1,10 +1,10 @@
-import { BookOpenIcon, CheckIcon, PlayIcon, TreasureChestIcon } from '@phosphor-icons/react'
+import { ArrowsLeftRightIcon, BookOpenIcon, CheckIcon, PlayIcon, TreasureChestIcon } from '@phosphor-icons/react'
 import { useState, type CSSProperties } from 'react'
 import { InstallHint } from '../components/InstallHint'
 import { SKILL_ICON, SkillBadge, skillStyle } from '../components/skills'
 import { TopStats } from '../components/TopStats'
 import { BottomSheet, Button, Card, ProgressBar } from '../components/ui'
-import { SKILLS, SKILL_BY_ID, UPGRADE_AFTER_GAMES } from '../lib/content'
+import { SKILLS, SKILL_BY_ID } from '../lib/content'
 import { nextFocus } from '../lib/focus'
 import { navigate } from '../lib/route'
 import { computeStats } from '../lib/stats'
@@ -15,11 +15,12 @@ import type { SkillId } from '../lib/types'
 const OFFSETS = [0, 52, 76, 52, 0, -52, -76, -52]
 
 export function Home() {
-  const { games, draft, settings } = useData()
+  const { games, draft, settings, swaps, decklist } = useData()
   const [sheet, setSheet] = useState<SkillId | 'chest' | null>(null)
   const current = nextFocus(games)
   const currentIndex = SKILLS.findIndex((s) => s.id === current)
-  const stats = computeStats(games, settings.defaultDeck)
+  const stats = computeStats(games, settings.defaultDeck, { swaps, decklist })
+  const chest = stats.upgrade
 
   return (
     <div className="screen">
@@ -84,7 +85,7 @@ export function Home() {
           <span className="path-label right">
             Upgrade-Truhe
             <small>
-              {Math.min(stats.deckGames, UPGRADE_AFTER_GAMES)}/{UPGRADE_AFTER_GAMES} Spiele
+              {Math.min(chest.gamesSince, chest.target)}/{chest.target} Spiele
             </small>
           </span>
         </li>
@@ -97,11 +98,11 @@ export function Home() {
       </BottomSheet>
 
       <BottomSheet open={sheet === 'chest'} onClose={() => setSheet(null)} title="Upgrade-Truhe">
-        <ProgressBar value={stats.deckGames / UPGRADE_AFTER_GAMES} label="Fortschritt bis zum Upgrade" />
+        <ProgressBar value={chest.gamesSince / chest.target} label="Fortschritt bis zum Upgrade" />
         {stats.upgradeReady ? (
           <>
             <p>
-              <strong>{stats.deckGames} Spiele</strong> mit {settings.defaultDeck}. Zeit für eine
+              <strong>{chest.gamesSince} Spiele</strong> {swaps.length ? 'seit dem letzten Swap' : `mit ${settings.defaultDeck}`}. Zeit für eine
               Swap-Runde mit 3–5 Karten. Zuerst Interaktion und Schutz gegen Wipes, nicht noch ein Dino.
             </p>
             {stats.upgradeCandidates.length > 0 ? (
@@ -114,10 +115,14 @@ export function Home() {
           </>
         ) : (
           <p>
-            Spiel {stats.deckGames} von {UPGRADE_AFTER_GAMES}. Lass das Deck bis dahin unverändert und
-            sammle Notizen. Dann weißt du, welche Karten wirklich raus sollten.
+            Spiel {chest.gamesSince} von {chest.target}
+            {swaps.length ? ' seit dem letzten Swap' : ''}. Lass das Deck bis dahin unverändert und sammle Notizen.
+            Dann weißt du, welche Karten wirklich raus sollten.
           </p>
         )}
+        <Button block variant={stats.upgradeReady ? 'primary' : 'secondary'} icon={ArrowsLeftRightIcon} onClick={() => navigate('/mehr/deck/swap')}>
+          Swap-Runde eintragen
+        </Button>
       </BottomSheet>
     </div>
   )
