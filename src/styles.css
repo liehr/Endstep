@@ -2947,3 +2947,25 @@ main.with-dice .screen.flow {
   align-items: center;
   padding-right: 6px;
 }
+
+/* Card names you can tap to see the card (swap round). */
+.card-link {
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+.chip.selected .card-link {
+  display: inline;
+  width: auto;
+  height: auto;
+  font-size: inherit;
+}
+/* A selectable row with its "show card" button next to it. */
+.select-item {
+  display: flex;
+  align-items: center;
+  padding-right: 6px;
+}
