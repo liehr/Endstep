@@ -1,6 +1,6 @@
-import { CaretLeftIcon, CaretRightIcon, ClipboardTextIcon, LinkIcon, UploadSimpleIcon } from '@phosphor-icons/react'
+import { CaretLeftIcon, CaretRightIcon, ClipboardTextIcon, LinkIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BottomSheet, Button, Field, IconButton } from '../components/ui'
+import { BottomSheet, Button, ConfirmSheet, Field, IconButton } from '../components/ui'
 import { parseBackup } from '../lib/backup'
 import { cardKey } from '../lib/cards'
 import { shortName } from '../lib/commander'
@@ -12,6 +12,7 @@ import { navigate } from '../lib/route'
 import { ensureCards } from '../lib/scryfall'
 import { actions, useData } from '../lib/store'
 import { toast } from '../lib/toast'
+import type { SavedDeck } from '../lib/types'
 
 const year = (p: Precon) => p.released.slice(0, 4)
 
@@ -22,12 +23,21 @@ function startWith(deck: ChosenDeck) {
   navigate('/', { replace: true })
 }
 
+/** Back to a deck you played before, exactly as you left it. */
+function resume(deck: SavedDeck) {
+  actions.chooseDeck(deck)
+  void ensureCards([{ name: deck.commander, set: deck.commanderSet }, ...deck.decklist])
+  toast(`Back to ${deck.name}`)
+  navigate('/mehr/deck', { replace: true })
+}
+
 /**
  * Pick the deck the app is tailored to: search a precon or paste your own list.
  * Shown on first launch (welcome) and when switching decks later.
  */
 export function DeckPicker({ welcome = false }: { welcome?: boolean }) {
-  const { settings } = useData()
+  const { settings, commander, decklist, decks } = useData()
+  const [forget, setForget] = useState<SavedDeck | null>(null)
   const [query, setQuery] = useState('')
   // Without a query only the newest few, so your own list stays in view.
   const results = useMemo(() => searchPrecons(query, undefined, query.trim() ? 30 : 8), [query])
@@ -62,15 +72,48 @@ export function DeckPicker({ welcome = false }: { welcome?: boolean }) {
             <IconButton icon={CaretLeftIcon} label="Back" onClick={() => navigate('/mehr/deck')} />
           </header>
           <div>
-            <h1>Play a different deck</h1>
+            <h1>Switch deck</h1>
             <p className="muted">
-              Your games stay. Stats, swaps and the upgrade chest follow the active deck, now {settings.defaultDeck}.
+              Each deck keeps its list, swaps and bracket. Stats and the upgrade chest follow the deck you play.
             </p>
           </div>
         </>
       )}
 
-      <Field label="Search a precon" hint="Deck name, commander, set code or year">
+      {!welcome && decks.length > 0 && (
+        <section className="list-group">
+          <h2 className="list-title">Your decks</h2>
+          <ul className="list">
+            <li>
+              <div className="deck-row">
+                <span className="deck-name">
+                  {settings.defaultDeck}
+                  <small className="muted small">
+                    {shortName(commander)} · {deckSize(decklist)} + 1 cards
+                  </small>
+                </span>
+                <span className="tag inline">Playing</span>
+              </div>
+            </li>
+            {decks.map((d) => (
+              <li key={d.name} className="deck-item">
+                <button type="button" className="deck-row" onClick={() => resume(d)}>
+                  <span className="deck-name">
+                    {d.name}
+                    <small className="muted small">
+                      {shortName(d.commander)} · {deckSize(d.decklist)} + 1 cards · Bracket {d.bracket}
+                    </small>
+                  </span>
+                  <CaretRightIcon weight="bold" className="settings-caret" aria-hidden="true" />
+                </button>
+                <IconButton icon={TrashIcon} label={`Remove ${d.name}`} onClick={() => setForget(d)} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <Field label={!welcome && decks.length > 0 ? 'Or add a precon' : 'Search a precon'} hint="Deck name, commander, set code or year">
         <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="e.g. Tramplesaurus or Ghalta" />
       </Field>
 
@@ -126,6 +169,17 @@ export function DeckPicker({ welcome = false }: { welcome?: boolean }) {
       <p className="muted small center">Precon lists: MTGJSON. Card data: Scryfall.</p>
 
       <PreconSheet precon={picked} onClose={() => setPicked(null)} />
+      <ConfirmSheet
+        open={forget !== null}
+        title={`Remove ${forget?.name ?? ''}?`}
+        text="The deck leaves your list. Its games and swaps stay in your history."
+        confirmLabel="Remove deck"
+        onConfirm={() => {
+          if (forget) actions.removeDeck(forget.name)
+          setForget(null)
+        }}
+        onClose={() => setForget(null)}
+      />
       <PasteSheet open={pasting} onClose={() => setPasting(false)} />
     </div>
   )
@@ -134,6 +188,7 @@ export function DeckPicker({ welcome = false }: { welcome?: boolean }) {
 type Loaded = { status: 'loading' } | { status: 'error'; error: string } | { status: 'ready'; deck: PreconDeck }
 
 function PreconSheet({ precon, onClose }: { precon: Precon | null; onClose: () => void }) {
+  const { decks } = useData()
   const [state, setState] = useState<Loaded>({ status: 'loading' })
   const file = precon?.file
 
@@ -154,8 +209,12 @@ function PreconSheet({ precon, onClose }: { precon: Precon | null; onClose: () =
   const play = () => {
     if (state.status !== 'ready') return
     const { deck } = state
+    const name = `${precon.name} (${shortName(deck.commander)})`
+    // Already one of your decks: go back to it with your swaps instead of a fresh copy.
+    const saved = decks.find((d) => cardKey(d.name) === cardKey(name))
+    if (saved) return resume(saved)
     startWith({
-      name: `${precon.name} (${shortName(deck.commander)})`,
+      name,
       commander: deck.commander,
       commanderSet: deck.commanderSet,
       decklist: deck.entries,

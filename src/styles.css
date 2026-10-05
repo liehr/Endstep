@@ -2748,3 +2748,10 @@ select:focus {
     transform: scale(0.96) translateY(12px);
   }
 }
+
+/* A saved deck with its remove button next to the row. */
+.deck-item {
+  display: flex;
+  align-items: center;
+  padding-right: 6px;
+}
