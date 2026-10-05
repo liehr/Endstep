@@ -9,6 +9,7 @@ import {
   HourglassIcon,
   LockIcon,
   PlayIcon,
+  ScalesIcon,
   SwordIcon,
   type Icon,
 } from '@phosphor-icons/react'
@@ -31,6 +32,7 @@ export const LESSON_ICON: Record<LessonId, Icon> = {
   mulligan: CardsIcon,
   goldfish: HourglassIcon,
   cards: CardsThreeIcon,
+  rulings: ScalesIcon,
 }
 
 /** Colors (with matching icon color) from the validated skill palette, so everything fits together. */
@@ -41,6 +43,7 @@ const LESSON_SKILL: Record<LessonId, SkillId> = {
   mulligan: 'mulligan',
   goldfish: 'politics',
   cards: 'removal',
+  rulings: 'wipe',
 }
 
 export const lessonStyle = (id: LessonId): CSSProperties => skillStyle(LESSON_SKILL[id])
@@ -88,7 +91,8 @@ export function Training() {
           const IconCmp = LESSON_ICON[lesson.id]
           const results = training.filter((t) => t.lessonId === lesson.id)
           const best = results.reduce((m, t) => Math.max(m, t.correct), 0)
-          const locked = lesson.needsCards && !ready
+          const needsRulings = ready && lesson.ready !== undefined && !lesson.ready(deck)
+          const locked = (lesson.needsCards && !ready) || needsRulings
           return (
             <li key={lesson.id}>
               <button
@@ -103,7 +107,13 @@ export function Training() {
                 </span>
                 <span className="lesson-text">
                   <strong>{lesson.title}</strong>
-                  <span className="muted small">{locked ? "Needs your deck's card data." : lesson.description}</span>
+                  <span className="muted small">{needsRulings
+                      ? deck.rulingsStatus === 'loading'
+                        ? 'Loading rulings…'
+                        : 'Rulings load in the background when you’re online.'
+                      : locked
+                        ? "Needs your deck's card data."
+                        : lesson.description}</span>
                   {results.length > 0 && (
                     <span className="lesson-progress">
                       {Array.from({ length: 5 }, (_, i) => (

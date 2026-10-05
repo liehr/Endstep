@@ -105,3 +105,22 @@ describe('mergeImport', () => {
     expect(data.swaps).toHaveLength(1)
   })
 })
+
+describe('question memory', () => {
+  const stat = (last: string, box = 1) => ({ box, due: last, seen: 1, wrong: 0, last })
+
+  it('older data loads with an empty memory, invalid entries are dropped', () => {
+    expect(sanitizeData({ games: [] }).quiz).toEqual({})
+    const quiz = sanitizeData({ quiz: { ok: stat('2026-10-05'), badBox: { ...stat('2026-10-05'), box: 9 }, badDate: { ...stat('x') }, list: [] } }).quiz
+    expect(Object.keys(quiz)).toEqual(['ok'])
+  })
+
+  it('restoring a backup keeps the more recently answered state per question', () => {
+    const current = { ...emptyData(), quiz: { a: stat('2026-10-05', 3), b: stat('2026-10-01') } }
+    const imported = { ...emptyData(), quiz: { a: stat('2026-10-02', 0), b: stat('2026-10-04', 2), c: stat('2026-10-03') } }
+    const { quiz } = mergeImport(current, imported).data
+    expect(quiz.a.box).toBe(3)
+    expect(quiz.b.box).toBe(2)
+    expect(quiz.c).toBeDefined()
+  })
+})

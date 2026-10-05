@@ -9,7 +9,7 @@ import type { FieldId } from '../lib/quiz/cardQuiz'
 import { buildLesson, LESSON_BY_ID, type Question } from '../lib/quiz/quiz'
 import { navigate } from '../lib/route'
 import { randomSeed } from '../lib/sim/rng'
-import { actions } from '../lib/store'
+import { actions, useData } from '../lib/store'
 import type { LessonId } from '../lib/types'
 import { useDeckCards } from '../lib/useDeckCards'
 import { LESSON_ICON, lessonStyle } from './Training'
@@ -30,8 +30,9 @@ interface Item {
 /** A lesson: question by question, like Duolingo. Wrong answers come back at the end. */
 export function Lesson({ id }: { id: LessonId }) {
   const deck = useDeckCards({ autoLoad: false })
+  const { quiz } = useData()
   const build = (seed: number) =>
-    buildLesson(id, { decklist: deck.decklist, commander: deck.commander, lookup: deck.lookup }, seed).map((question) => ({
+    buildLesson(id, { decklist: deck.decklist, commander: deck.commander, lookup: deck.lookup, rulings: deck.rulings }, seed, quiz).map((question) => ({
       question,
       retry: false,
     }))
@@ -76,6 +77,7 @@ export function Lesson({ id }: { id: LessonId }) {
 
   const check = () => {
     setChecked(true)
+    if (!item.retry && lesson.remember) actions.recordQuizAnswer(q.key, correct)
     if (correct) {
       haptic(12)
       if (!item.retry) setScore((s) => s + 1)

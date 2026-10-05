@@ -7,6 +7,7 @@ import { cardKey, fromScryfall, type CardInfo, type ScryfallCard } from './cards
 
 const API = 'https://api.scryfall.com'
 const CACHE_KEY = 'endstep:cards'
+const RULINGS_KEY = 'endstep:rulings'
 /** Scryfall allows at most 75 cards per collection request. */
 const BATCH = 75
 /** Scryfall asks for 50–100 ms between requests. */
@@ -108,12 +109,45 @@ export async function autocomplete(query: string, fetchImpl: Fetch = fetch): Pro
   return ((await res.json()) as { data: string[] }).data
 }
 
+/** An official ruling for a card (Wizards of the Coast or Scryfall). */
+export interface Ruling {
+  date: string
+  text: string
+}
+
+/**
+ * Load the rulings of the given cards, one request per card (/cards/:set/:number/rulings).
+ * Key = card name (lower case); cards without rulings get an empty list.
+ */
+export async function fetchRulings(
+  cards: CardInfo[],
+  fetchImpl: Fetch = fetch,
+  delayMs = DELAY_MS,
+): Promise<Map<string, Ruling[]>> {
+  const out = new Map<string, Ruling[]>()
+  for (const [i, card] of cards.entries()) {
+    if (i > 0) await sleep(delayMs)
+    const res = await fetchImpl(`${API}/cards/${encodeURIComponent(card.set)}/${encodeURIComponent(card.collectorNumber)}/rulings`, { headers })
+    if (res.status === 404) out.set(cardKey(card.name), [])
+    if (!res.ok) continue
+    const body = (await res.json()) as { data: { published_at: string; comment: string }[] }
+    out.set(
+      cardKey(card.name),
+      body.data.map((r) => ({ date: r.published_at, text: r.comment })),
+    )
+  }
+  return out
+}
+
 // --- Local storage ---------------------------------------------------------------
 
 export type LoadStatus = 'idle' | 'loading' | 'error'
 
 interface CardState {
   cards: Record<string, CardInfo>
+  /** Rulings per card name (lower case); loaded after the cards. */
+  rulings: Record<string, Ruling[]>
+  rulingsStatus: LoadStatus
   notFound: string[]
   status: LoadStatus
   error: string | null
@@ -128,7 +162,16 @@ function readCache(): Record<string, CardInfo> {
   }
 }
 
-let state: CardState = { cards: readCache(), notFound: [], status: 'idle', error: null }
+function readRulings(): Record<string, Ruling[]> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RULINGS_KEY) ?? '{}') as { rulings?: Record<string, Ruling[]> }
+    return raw.rulings ?? {}
+  } catch {
+    return {}
+  }
+}
+
+let state: CardState = { cards: readCache(), rulings: readRulings(), rulingsStatus: 'idle', notFound: [], status: 'idle', error: null }
 const listeners = new Set<() => void>()
 
 function set(next: Partial<CardState>) {
@@ -194,7 +237,39 @@ export async function ensureCards(
   }
 }
 
+/** Cards whose rulings are not stored yet. */
+export function missingRulings(names: string[]): CardInfo[] {
+  const cards = [...new Set(names.map(cardKey))].map((k) => state.cards[k]).filter((c): c is CardInfo => !!c)
+  return cards.filter((c) => !state.rulings[cardKey(c.name)] && !c.typeLine.startsWith('Basic Land'))
+}
+
+/** Cards whose rulings were already requested in this session (no endless retries). */
+const rulingsTried = new Set<string>()
+
+/** Load missing rulings in the background (online only, quietly: rulings are a bonus). */
+export async function ensureRulings(names: string[], { fetchImpl = fetch }: { fetchImpl?: Fetch } = {}): Promise<void> {
+  if (state.rulingsStatus === 'loading') return
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return
+  const missing = missingRulings(names).filter((c) => !rulingsTried.has(cardKey(c.name)))
+  if (missing.length === 0) return
+  missing.forEach((c) => rulingsTried.add(cardKey(c.name)))
+  set({ rulingsStatus: 'loading' })
+  try {
+    const found = await fetchRulings(missing, fetchImpl)
+    const rulings = { ...state.rulings, ...Object.fromEntries(found) }
+    try {
+      localStorage.setItem(RULINGS_KEY, JSON.stringify({ rulings }))
+    } catch {
+      // Storage full: data is kept for this session only.
+    }
+    set({ rulings, rulingsStatus: 'idle' })
+  } catch {
+    set({ rulingsStatus: 'error' })
+  }
+}
+
 /** Tests only: reset the store. */
-export function resetCardState(cards: Record<string, CardInfo> = {}) {
-  state = { cards, notFound: [], status: 'idle', error: null }
+export function resetCardState(cards: Record<string, CardInfo> = {}, rulings: Record<string, Ruling[]> = {}) {
+  state = { cards, rulings, rulingsStatus: 'idle', notFound: [], status: 'idle', error: null }
+  rulingsTried.clear()
 }

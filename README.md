@@ -22,6 +22,9 @@ Endstep is a small phone app built around the learning plan "Commander from the 
   - *Know Your Cards:* parts of a card are hidden (name, cost, power, a bit of text). Guess them or
     build the card from tiles; plus the card's role in the game plan (Ramp, Big creature, Card
     advantage, Interaction, Protection, Finisher).
+  - *Card Rulings:* official rulings (from Scryfall) for the cards in your deck: which card is it about?
+  - **Question memory:** the app remembers every answer. Wrong answers come back in the next lesson,
+    right ones only after 1, 3, 7 and 16 days, and new questions come before ones you already know.
 - **Goldfish Lab:** 1,000 simulated games show on which turn Ghalta lands with your deck. Run it again
   after a swap round: did the deck get faster?
 - **Deck & swap rounds:** decklist with card images, swap rounds ("out" / "in") with a log and undo,

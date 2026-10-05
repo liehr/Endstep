@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { cardKey, fromScryfall } from '../cards'
 import type { DeckEntry } from '../types'
-import { FIXTURE_CARDS } from '../scryfall.fixture'
+import { FIXTURE_CARDS, FIXTURE_RULINGS } from '../scryfall.fixture'
 import { evaluateHand } from '../sim/mulligan'
-import { buildLesson, cardCoverage, LESSONS, type Question } from './quiz'
+import { buildLesson, cardCoverage, LESSONS, rulingsReady, type Question } from './quiz'
+import { recordAnswer } from './memory'
 import { RULES_BANK } from './rulesBank'
 
 const cards = new Map(FIXTURE_CARDS.map((c) => [cardKey(c.name), fromScryfall(c)]))
@@ -23,7 +24,8 @@ const decklist: DeckEntry[] = [
   { name: 'Carnage Tyrant', qty: 6 },
   { name: 'Harmonize', qty: 12 },
 ]
-const ctx = { decklist, commander: 'Ghalta, Primal Hunger', lookup }
+const rulings = (name: string) => FIXTURE_RULINGS[cardKey(name)]
+const ctx = { decklist, commander: 'Ghalta, Primal Hunger', lookup, rulings }
 
 const checkShape = (q: Question) => {
   expect(q.prompt.length).toBeGreaterThan(5)
@@ -57,6 +59,11 @@ describe('Lessons', () => {
 
   it('is reproducible with the same seed', () => {
     expect(buildLesson('goldfish', ctx, 9)).toEqual(buildLesson('goldfish', ctx, 9))
+  })
+
+  it('locks the rulings lesson until enough rulings are loaded', () => {
+    expect(rulingsReady(ctx)).toBe(true)
+    expect(rulingsReady({ ...ctx, rulings: undefined })).toBe(false)
   })
 
   it('works without card data for the lessons that don’t need it', () => {
@@ -109,5 +116,46 @@ describe('Answers are correct', () => {
 
   it('rules questions have unique IDs', () => {
     expect(new Set(RULES_BANK.map((q) => q.id)).size).toBe(RULES_BANK.length)
+  })
+
+  it('Card Rulings: the ruling belongs to the correct card and hides its name', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      for (const q of buildLesson('rulings', ctx, seed)) {
+        const name = correctLabel(q)
+        const texts = FIXTURE_RULINGS[cardKey(name)].map((r) => r.text)
+        const shown = q.context!.slice(1, -1)
+        const strip = (t: string) => t.replace(/Ghalta|Dungrove Elder|Ilysian Caryatid|Pugnacious Hammerskull|[Tt]his card/g, '~')
+        expect(texts.some((t) => strip(t) === strip(shown))).toBe(true)
+        expect(shown).not.toContain(name.split(',')[0])
+      }
+    }
+  })
+})
+
+describe('Question memory in lessons', () => {
+  const today = '2026-10-05'
+
+  it('a fresh lesson avoids questions you have already seen', () => {
+    let memory = {}
+    const first = buildLesson('rules', ctx, 1, memory, today)
+    for (const q of first) memory = recordAnswer(memory, q.key, true, today)
+    const second = buildLesson('rules', ctx, 2, memory, today)
+    const firstKeys = new Set(first.map((q) => q.key))
+    expect(second.some((q) => firstKeys.has(q.key))).toBe(false)
+  })
+
+  it('a wrong answer comes back in the next lesson', () => {
+    const first = buildLesson('rules', ctx, 1, {}, today)
+    const memory = recordAnswer({}, first[0].key, false, today)
+    for (let seed = 2; seed <= 20; seed++) {
+      expect(buildLesson('rules', ctx, seed, memory, today).map((q) => q.key)).toContain(first[0].key)
+    }
+  })
+
+  it('Know Your Cards: never asks two questions about the same card', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const groups = buildLesson('cards', ctx, seed).map((q) => q.group)
+      expect(new Set(groups).size).toBe(groups.length)
+    }
   })
 })
