@@ -13,6 +13,7 @@ import {
   PlayIcon,
   ScalesIcon,
   SwordIcon,
+  TimerIcon,
   type Icon,
 } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
@@ -41,6 +42,7 @@ export const LESSON_ICON: Record<LessonId, Icon> = {
   rulings: ScalesIcon,
   scenario: FootprintsIcon,
   mistakes: ArrowCounterClockwiseIcon,
+  challenge: TimerIcon,
 }
 
 /** Colors (with matching icon color) from the validated skill palette, so everything fits together. */
@@ -54,6 +56,7 @@ const LESSON_SKILL: Record<LessonId, SkillId> = {
   rulings: 'wipe',
   scenario: 'sequencing',
   mistakes: 'threat',
+  challenge: 'combat',
 }
 
 export const lessonStyle = (id: LessonId): CSSProperties => skillStyle(LESSON_SKILL[id])
@@ -147,7 +150,12 @@ export function Training() {
                   {!locked && lesson.id === warmUp && (
                     <span className="warmup-tag small">Warm-up for {SKILL_BY_ID[focus].name}, your next game’s focus</span>
                   )}
-                  {results.length > 0 && (
+                  {results.length > 0 && lesson.id === 'challenge' && (
+                    <span className="small muted">
+                      Best: {best} correct · {results.length}× played
+                    </span>
+                  )}
+                  {results.length > 0 && lesson.id !== 'challenge' && (
                     <span className="lesson-progress">
                       {Array.from({ length: 5 }, (_, i) => (
                         <span key={i} className={i < best ? 'on' : ''} />

@@ -107,7 +107,7 @@ export interface Swap {
   createdAt: string
 }
 
-export type LessonId = 'ghalta' | 'combat' | 'rules' | 'mulligan' | 'goldfish' | 'cards' | 'rulings' | 'scenario' | 'mistakes'
+export type LessonId = 'ghalta' | 'combat' | 'rules' | 'mulligan' | 'goldfish' | 'cards' | 'rulings' | 'scenario' | 'mistakes' | 'challenge'
 
 export interface TrainingResult {
   lessonId: LessonId

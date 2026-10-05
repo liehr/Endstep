@@ -801,6 +801,16 @@ export const LESSONS: Lesson[] = [
     build: rulingsLesson,
   },
   {
+    id: 'challenge',
+    title: 'Ghalta Rush',
+    description: '60 seconds of Ghalta Math. How many can you get?',
+    needsCards: false,
+    forCommander: isGhalta,
+    remember: false,
+    page: true,
+    build: () => [],
+  },
+  {
     id: 'scenario',
     title: 'Turn by Turn',
     description: 'Play the turns yourself and race the autopilot to your commander.',

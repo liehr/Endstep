@@ -3248,3 +3248,33 @@ main.with-dice .screen.flow {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Ghalta Rush */
+.challenge-clock {
+  min-width: 2ch;
+  font-size: 20px;
+  font-weight: 900;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.challenge-clock.low {
+  color: var(--loss);
+}
+.challenge-board {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.challenge-board li {
+  padding: 6px 12px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-weight: 800;
+}
+.challenge-options .option {
+  min-height: 72px;
+}
