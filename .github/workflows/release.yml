@@ -1,0 +1,66 @@
+name: Release
+
+# Neue Version veröffentlichen: Actions → Release → Run workflow.
+#   patch = kleine Korrektur        (0.1.0 → 0.1.1)
+#   minor = neue Funktion           (0.1.0 → 0.2.0)
+#   major = große Umstellung        (0.1.0 → 1.0.0)
+# Der Workflow prüft die App, erhöht die Version, legt Tag und GitHub-Release
+# an und rollt die neue Version aus. Die installierte App meldet sich dann mit
+# „Neue Version verfügbar“.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Art der Änderung
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Nur von master aus
+        if: github.ref != 'refs/heads/master'
+        run: |
+          echo "::error::Releases bitte von master aus starten (gewählt: ${{ github.ref_name }})."
+          exit 1
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - name: Version erhöhen
+        id: version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          npm version "${{ inputs.bump }}" -m "Release v%s"
+          echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Commit und Tag pushen
+        run: git push --atomic origin HEAD:master "${{ steps.version.outputs.tag }}"
+      - name: GitHub-Release anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ steps.version.outputs.tag }}" --title "${{ steps.version.outputs.tag }}" --generate-notes
+
+  deploy:
+    needs: release
+    uses: ./.github/workflows/deploy.yml
+    with:
+      ref: ${{ needs.release.outputs.tag }}

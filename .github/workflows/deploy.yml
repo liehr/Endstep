@@ -1,0 +1,59 @@
+name: Deploy
+
+# Baut eine bestimmte Version und rollt sie auf GitHub Pages aus.
+# - Wird automatisch vom Release-Workflow aufgerufen.
+# - Manuell starten (Actions → Deploy → Run workflow) und einen älteren Tag
+#   eintragen = Rollback auf diese Version.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Version zum Ausrollen (Tag, z. B. v0.2.0). Für einen Rollback eine ältere Version eintragen.
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - id: pages
+        uses: actions/configure-pages@v5
+      - name: Build
+        run: |
+          echo "APP_COMMIT=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+          BASE_PATH="${{ steps.pages.outputs.base_path }}/" npm run build
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
