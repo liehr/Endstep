@@ -1,12 +1,12 @@
 import { ArrowClockwiseIcon, ArrowRightIcon, CheckCircleIcon, XCircleIcon, XIcon } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { AnswerLabel, CardFrame, type Slot } from '../components/CardFrame'
-import { CardGrid } from '../components/CardImage'
+import { CardGrid, PickCardGrid, type PickState } from '../components/CardImage'
 import { Confetti } from '../components/Confetti'
 import { Button, IconButton, ProgressBar } from '../components/ui'
 import { haptic } from '../lib/haptics'
 import type { FieldId } from '../lib/quiz/cardQuiz'
-import { buildLesson, LESSON_BY_ID, type Question } from '../lib/quiz/quiz'
+import { buildLesson, LESSON_BY_ID, orderIsCorrect, selectIsCorrect, selectSolution, type Question } from '../lib/quiz/quiz'
 import { navigate } from '../lib/route'
 import { randomSeed } from '../lib/sim/rng'
 import { actions, useData } from '../lib/store'
@@ -42,6 +42,10 @@ export function Lesson({ id }: { id: LessonId }) {
   const [selected, setSelected] = useState<string | null>(null)
   /** For "Build the card": per blank, the index of the placed tile. */
   const [slots, setSlots] = useState<(number | null)[]>([])
+  /** For order questions: tapped bank indexes, first to last. */
+  const [sequence, setSequence] = useState<number[]>([])
+  /** For tap-on-board questions: indexes of the tapped cards. */
+  const [picks, setPicks] = useState<number[]>([])
   const [checked, setChecked] = useState(false)
   const [score, setScore] = useState(0)
   const [done, setDone] = useState(false)
@@ -53,6 +57,8 @@ export function Lesson({ id }: { id: LessonId }) {
   const reset = () => {
     setSelected(null)
     setSlots([])
+    setSequence([])
+    setPicks([])
     setChecked(false)
   }
 
@@ -71,9 +77,18 @@ export function Lesson({ id }: { id: LessonId }) {
   const isBuild = q.kind === 'build'
   const blanks = q.blanks ?? []
   const bank = q.bank ?? []
+  const order = q.order ?? []
   const filled = blanks.map((_, i) => slots[i] ?? null)
-  const ready = isBuild ? filled.every((s) => s !== null) : selected !== null
-  const correct = isBuild ? blanks.every((b, i) => filled[i] !== null && bank[filled[i]!] === b.answer) : selected === q.correct
+  const ready =
+    q.kind === 'order' ? sequence.length === order.length : q.kind === 'select' ? picks.length > 0 : isBuild ? filled.every((s) => s !== null) : selected !== null
+  const correct =
+    q.kind === 'order'
+      ? orderIsCorrect(order, bank, sequence, q.accept)
+      : q.kind === 'select'
+        ? selectIsCorrect(q.select!, picks)
+        : isBuild
+          ? blanks.every((b, i) => filled[i] !== null && bank[filled[i]!] === b.answer)
+          : selected === q.correct
 
   const check = () => {
     setChecked(true)
@@ -117,6 +132,19 @@ export function Lesson({ id }: { id: LessonId }) {
     setSlots(nextSlots)
   }
 
+  const togglePick = (i: number) => {
+    if (checked) return
+    haptic()
+    setPicks((p) => (p.includes(i) ? p.filter((x) => x !== i) : [...p, i]))
+  }
+  const solution = q.kind === 'select' && checked ? new Set(correct ? picks : selectSolution(q.select!)) : null
+  const pickStates: PickState[] = (q.cards ?? []).map((_, i) => {
+    const picked = picks.includes(i)
+    if (!solution) return picked ? 'selected' : ''
+    if (picked) return solution.has(i) ? 'right' : 'wrong'
+    return solution.has(i) ? 'missed' : ''
+  })
+
   /** Blanks on the drawn card. */
   const frameSlots: Partial<Record<FieldId, Slot>> = {}
   if (q.face && q.hidden) {
@@ -154,9 +182,56 @@ export function Lesson({ id }: { id: LessonId }) {
           {q.context && <p className="muted">{q.context}</p>}
           <div className="question-body">
             {q.face && <CardFrame face={q.face} slots={frameSlots} />}
-            {q.cards && q.cards.length > 0 && <CardGrid cards={q.cards} label={q.cardsLabel} />}
+            {q.kind === 'select' && q.cards ? (
+              <PickCardGrid cards={q.cards} states={pickStates} disabled={checked} onToggle={togglePick} />
+            ) : (
+              q.cards && q.cards.length > 0 && <CardGrid cards={q.cards} label={q.cardsLabel} />
+            )}
 
-            {isBuild ? (
+            {q.kind === 'select' ? null : q.kind === 'order' ? (
+              <>
+                <ol className="order-slots" aria-label="Your order">
+                  {order.map((_, i) => {
+                    const b = sequence[i]
+                    const value = b !== undefined ? bank[b] : null
+                    const state = value === null ? '' : !checked ? 'filled' : correct || value === order[i] ? 'right' : 'wrong'
+                    return (
+                      <li key={i}>
+                        <button
+                          type="button"
+                          className={`order-slot ${state}`}
+                          disabled={checked || value === null}
+                          aria-label={value ? `${i + 1}. ${value}, tap to remove` : `${i + 1}. empty`}
+                          onClick={() => setSequence(sequence.filter((_, j) => j !== i))}
+                        >
+                          <span className="order-num">{i + 1}</span>
+                          <span>{value ?? ''}</span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ol>
+                <div className="tile-bank" aria-label="Tap in order">
+                  {bank.map((tile, i) => {
+                    const used = sequence.includes(i)
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        className={`tile-chip ${used ? 'used' : ''}`}
+                        disabled={checked || used}
+                        onClick={() => {
+                          haptic()
+                          setSequence([...sequence, i])
+                        }}
+                      >
+                        {tile}
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            ) : isBuild ? (
               <div className="tile-bank" aria-label="Tiles">
                 {bank.map((tile, i) => (
                   <button
@@ -211,7 +286,15 @@ export function Lesson({ id }: { id: LessonId }) {
             {correct ? <CheckCircleIcon weight="fill" aria-hidden="true" /> : <XCircleIcon weight="fill" aria-hidden="true" />}
             <strong>{correct ? 'Correct!' : 'Not quite.'}</strong>
           </div>
-          {!correct && !isBuild && (
+          {!correct && q.kind === 'order' && <p>{q.accept?.length ? 'An order that works:' : 'Correct order:'}</p>}
+          {!correct && q.kind === 'order' && (
+            <ol className="order-steps">
+              {order.map((step, i) => (
+                <li key={i}>{step}</li>
+              ))}
+            </ol>
+          )}
+          {!correct && (q.kind ?? 'choice') === 'choice' && (
             <p>
               Correct answer: <strong><AnswerLabel value={q.options.find((o) => o.id === q.correct)?.label ?? ''} /></strong>
             </p>
