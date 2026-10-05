@@ -20,7 +20,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Button, EmptyState } from '../components/ui'
 import { shortName } from '../lib/commander'
 import { SKILL_BY_ID } from '../lib/content'
-import { nextFocus } from '../lib/focus'
+import { upcomingFocus } from '../lib/focus'
 import { currentRank, unlockedSkills } from '../lib/ranks'
 import { LESSON_BY_ID, LESSONS, lessonOpen, MIN_COVERAGE, reviewCount, warmUpLesson, type Lesson } from '../lib/quiz/quiz'
 import { navigate } from '../lib/route'
@@ -76,10 +76,10 @@ export function openLessons(deck: DeckCards): LessonId[] {
 }
 
 export function Training() {
-  const { training, quiz, games, promotions, settings } = useData()
+  const { training, quiz, games, promotions, settings, spin } = useData()
   const review = reviewCount(quiz, games, undefined, settings.mistakeDays)
   const mistakes = review.questions + review.games
-  const focus = nextFocus(games, unlockedSkills(currentRank(promotions)))
+  const focus = upcomingFocus(games, unlockedSkills(currentRank(promotions)), spin)
   const deck = useDeckCards()
   const ready = deck.coverage >= MIN_COVERAGE
   const warmUp = warmUpLesson(focus, (id) => lessonOpen(LESSON_BY_ID[id], deck))

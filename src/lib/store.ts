@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { applySettings, emptyInput, emptyTracker, loadData, mergeImport, removeDeck, saveData, swapsOf, switchDeck, type ChosenDeck } from './data'
 import { applySwap } from './decklist'
 import { today } from './dates'
-import { nextFocus } from './focus'
+import { nextFocus, upcomingFocus } from './focus'
 import { recordAnswer } from './quiz/memory'
 import { currentRank, promote, unlockedSkills } from './ranks'
 import type { AppData, DeckEntry, Game, GameInput, LessonId, SavedDeck, Settings, SkillId, Swap, Tracker } from './types'
@@ -37,12 +37,16 @@ function requestPersistence() {
 }
 
 export const actions = {
-  startDraft(focus: SkillId = nextFocus(data.games, unlockedSkills(currentRank(data.promotions)))) {
+  startDraft(focus?: SkillId) {
+    const unlocked = unlockedSkills(currentRank(data.promotions))
+    const pick = focus ?? upcomingFocus(data.games, unlocked, data.spin)
+    // Playing the wheel's pick: the rotation skips this game, unless the wheel landed on its skill anyway.
+    const spun = pick === data.spin && pick !== nextFocus(data.games, unlocked)
     commit({
       ...data,
       draft: {
         startedAt: new Date().toISOString(),
-        form: emptyInput(data.settings, focus),
+        form: emptyInput(data.settings, pick, spun),
         tracker: emptyTracker(),
       },
     })
@@ -66,7 +70,8 @@ export const actions = {
   finishDraft(form: GameInput): string {
     const now = new Date().toISOString()
     const game: Game = { ...form, id: crypto.randomUUID(), createdAt: now, updatedAt: now }
-    commit({ ...data, games: [...data.games, game], draft: null })
+    // The wheel's pick was for this round only.
+    commit({ ...data, games: [...data.games, game], draft: null, spin: null })
     requestPersistence()
     return game.id
   },
@@ -82,6 +87,11 @@ export const actions = {
 
   deleteGame(id: string) {
     commit({ ...data, games: data.games.filter((g) => g.id !== id) })
+  },
+
+  /** The lucky wheel picked a focus for the next game (null = back to the rotation). */
+  setSpin(spin: SkillId | null) {
+    commit({ ...data, spin })
   },
 
   updateSettings(settings: Settings) {

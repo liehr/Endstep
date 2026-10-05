@@ -1,6 +1,7 @@
-import { ArrowsLeftRightIcon, CheckIcon, FlagCheckeredIcon, LockIcon, PlayIcon, TreasureChestIcon } from '@phosphor-icons/react'
+import { ArrowsLeftRightIcon, CheckIcon, FlagCheckeredIcon, LockIcon, PinwheelIcon, PlayIcon, TreasureChestIcon } from '@phosphor-icons/react'
 import { useState, type CSSProperties } from 'react'
 import { DailyGoal } from '../components/DailyGoal'
+import { FocusWheel } from '../components/FocusWheel'
 import { InstallHint } from '../components/InstallHint'
 import { SKILL_ICON, SkillBadge, skillStyle } from '../components/skills'
 import { TopStats } from '../components/TopStats'
@@ -20,9 +21,9 @@ import type { Bracket, SkillId } from '../lib/types'
 const OFFSETS = [0, 52, 76, 52, 0, -52, -76, -52]
 
 export function Home() {
-  const { games, draft, settings, swaps: allSwaps, decklist, promotions, training } = useData()
+  const { games, draft, settings, swaps: allSwaps, decklist, promotions, training, spin } = useData()
   const swaps = swapsOf(allSwaps, settings.defaultDeck)
-  const [sheet, setSheet] = useState<SkillId | 'chest' | 'bracket' | null>(null)
+  const [sheet, setSheet] = useState<SkillId | 'chest' | 'bracket' | 'wheel' | null>(null)
   const progress = rankProgress(promotions, games, training)
   const unlocked = unlockedSkills(progress.rank)
   const current = nextFocus(games, unlocked)
@@ -62,6 +63,28 @@ export function Home() {
 
       <RankUnit progress={progress} />
 
+      {!draft &&
+        (spin ? (
+          <Card className="draft-banner wheel-banner" style={skillStyle(spin)}>
+            <SkillBadge id={spin} size={44} />
+            <button type="button" className="wheel-banner-text" onClick={() => setSheet('wheel')}>
+              <strong>Wheel pick: {SKILL_BY_ID[spin].name}</strong>
+              <span className="muted">Your focus for the next game</span>
+            </button>
+            <Button size="sm" onClick={() => navigate(`/runde/neu/${spin}`)}>
+              Start
+            </Button>
+          </Card>
+        ) : (
+          <button type="button" className="card wheel-teaser" onClick={() => setSheet('wheel')}>
+            <PinwheelIcon weight="fill" aria-hidden="true" />
+            <span>
+              <strong>Lucky wheel</strong>
+              <span className="muted small">Spin for a random focus, any skill</span>
+            </span>
+          </button>
+        ))}
+
       <ol className="path">
         {pathSkills.map((id, i) => {
           const skill = SKILL_BY_ID[id]
@@ -75,12 +98,12 @@ export function Home() {
               className={`path-step ${state}`}
               style={{ ...skillStyle(skill.id), '--offset': `${offset}px` } as CSSProperties}
             >
-              {state === 'current' && !draft && <span className="path-bubble">Start</span>}
+              {state === 'current' && !draft && !spin && <span className="path-bubble">Start</span>}
               <button
                 type="button"
                 className="path-node"
                 aria-label={`${skill.name}${state === 'done' ? ' (done)' : state === 'current' ? ' (up next)' : state === 'skill-locked' ? ' (locked)' : ''}`}
-                onClick={() => (state === 'current' && !draft ? navigate(`/runde/neu/${skill.id}`) : setSheet(skill.id))}
+                onClick={() => (state === 'current' && !draft && !spin ? navigate(`/runde/neu/${skill.id}`) : setSheet(skill.id))}
               >
                 {state === 'skill-locked' ? <LockIcon weight="fill" /> : <IconCmp weight="fill" />}
                 {state === 'done' && (
@@ -146,8 +169,12 @@ export function Home() {
 
       <InstallHint compact />
 
-      <BottomSheet open={sheet !== null && sheet !== 'chest' && sheet !== 'bracket'} onClose={() => setSheet(null)}>
-        {sheet && sheet !== 'chest' && sheet !== 'bracket' && (
+      <BottomSheet open={sheet === 'wheel'} onClose={() => setSheet(null)} title="Lucky wheel">
+        {sheet === 'wheel' && <FocusWheel spin={spin} disabled={!!draft} />}
+      </BottomSheet>
+
+      <BottomSheet open={sheet !== null && sheet !== 'chest' && sheet !== 'bracket' && sheet !== 'wheel'} onClose={() => setSheet(null)}>
+        {sheet && sheet !== 'chest' && sheet !== 'bracket' && sheet !== 'wheel' && (
           <SkillSheet id={sheet} disabled={!!draft} lockedUntil={unlocked.includes(sheet) ? null : skillRank(sheet)} />
         )}
       </BottomSheet>

@@ -264,3 +264,15 @@ describe('picking a deck', () => {
     expect(data.decks.map((d) => d.name).sort()).toEqual([DEFAULT_DECK, 'Elves', sliver.name].sort())
   })
 })
+
+describe('lucky wheel data', () => {
+  it('loads old data without a spin and keeps a valid one', () => {
+    const { spin: _spin, ...old } = emptyData()
+    const oldGame = { ...makeGame(), spun: undefined }
+    const loaded = sanitizeData({ ...old, games: [oldGame] })
+    expect(loaded.spin).toBeNull()
+    expect(loaded.games[0].spun).toBe(false)
+    expect(sanitizeData({ ...emptyData(), spin: 'politics' }).spin).toBe('politics')
+    expect(sanitizeData({ ...emptyData(), spin: 'nonsense' }).spin).toBeNull()
+  })
+})
