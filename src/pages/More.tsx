@@ -157,7 +157,7 @@ export function More() {
         <p className="list-footnote">
           {sync.status === 'off'
             ? 'Your games are only stored on this device. Turn on cloud sync, or back them up now and then.'
-            : 'Synced with your GitHub account. A backup file is still a good extra copy.'}
+            : 'Synced with your other devices. A backup file is still a good extra copy.'}
         </p>
         <input
           ref={fileInput}

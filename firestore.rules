@@ -1,0 +1,19 @@
+rules_version = '2';
+
+// Endstep cloud sync. Each sync space is one document sync/<id>, where <id> is derived from
+// the sync code on the device. Its only field "blob" is encrypted on the device, so nobody,
+// not even the project owner, can read it. Documents can be read and written only by ID,
+// never listed, so nobody can browse other people's spaces.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /sync/{id} {
+      allow get: if id.matches('^[0-9a-f]{64}$');
+      allow create, update: if id.matches('^[0-9a-f]{64}$')
+        && request.resource.data.keys().hasOnly(['blob'])
+        && request.resource.data.blob is string
+        && request.resource.data.blob.matches('^e1[.].*')
+        && request.resource.data.blob.size() < 900000;
+      allow list, delete: if false;
+    }
+  }
+}

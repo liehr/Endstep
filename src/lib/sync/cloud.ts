@@ -1,13 +1,15 @@
 import { useSyncExternalStore } from 'react'
 import { applySynced, getData, onLocalChange } from '../store'
+import { FIRESTORE } from './config'
 import { createSyncEngine, type SyncState } from './engine'
+import { firestoreBackend } from './firestore'
 
 /** Wait this long after a change before uploading, so a lesson isn't uploaded answer by answer. */
 const AFTER_CHANGE_MS = 8_000
 /** While the app is open, look for changes from other devices this often. */
-const POLL_MS = 60_000
+const POLL_MS = 30_000
 
-export const cloud = createSyncEngine({ storage: localStorage, getData, apply: applySynced })
+export const cloud = createSyncEngine({ storage: localStorage, getData, apply: applySynced, backend: firestoreBackend(FIRESTORE) })
 
 export function useSyncState(): SyncState {
   return useSyncExternalStore(cloud.subscribe, cloud.getState)

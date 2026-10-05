@@ -1,26 +1,29 @@
 import { sanitizeData } from '../data'
 import type { AppData } from '../types'
-import { GistClient, SyncError, type FetchFn } from './gist'
+import { SyncError, type SyncBackend } from './backend'
+import { formatCode, generateCode, isValidCode, normalizeCode } from './code'
+import { deriveKeys, open, seal, type SyncKeys } from './crypto'
 import { mergeSync, sameSyncData, syncable } from './merge'
 
-// Cloud sync: on start, when the app comes back to the front, every minute while it's open
-// and shortly after each change, this device and the cloud copy are merged (see merge.ts)
-// and both end up with the result. The token stays on the device, outside the app data and
+// Cloud sync: on start, when the app comes back to the front, regularly while it's open and
+// shortly after each change, this device and the cloud copy are merged (see merge.ts) and
+// both end up with the result. The sync code stays on the device, outside the app data and
 // outside backups.
 
 const CONFIG_KEY = 'endstep:sync'
 const SYNC_APP = 'endstep'
+/** Another device wrote in between: merge again, but don't loop forever. */
+const MAX_ROUNDS = 4
 
 interface SyncConfig {
-  token: string
-  login: string
-  gistId: string | null
+  code: string
   lastSync: string | null
 }
 
 export interface SyncState {
   status: 'off' | 'idle' | 'syncing' | 'error'
-  login: string | null
+  /** Formatted sync code (K7QM-4XTD-P9). */
+  code: string | null
   lastSync: string | null
   error: string | null
 }
@@ -46,31 +49,34 @@ interface EngineDeps {
   storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
   getData: () => AppData
   apply: (merged: AppData) => void
-  fetchFn?: FetchFn
+  backend: SyncBackend
   now?: () => string
 }
 
-export function createSyncEngine({ storage, getData, apply, fetchFn, now = () => new Date().toISOString() }: EngineDeps) {
+export function createSyncEngine({ storage, getData, apply, backend, now = () => new Date().toISOString() }: EngineDeps) {
   const listeners = new Set<() => void>()
   let running: Promise<void> | null = null
   let again = false
+  let keys: { code: string; keys: Promise<SyncKeys> } | null = null
 
   const load = (): SyncConfig | null => {
     try {
       const raw = JSON.parse(storage.getItem(CONFIG_KEY) ?? 'null') as Partial<SyncConfig> | null
-      return raw && typeof raw.token === 'string' && raw.token
-        ? { token: raw.token, login: String(raw.login ?? ''), gistId: raw.gistId ?? null, lastSync: raw.lastSync ?? null }
-        : null
+      return raw && typeof raw.code === 'string' && isValidCode(raw.code) ? { code: normalizeCode(raw.code), lastSync: raw.lastSync ?? null } : null
     } catch {
       return null
     }
   }
   const save = (config: SyncConfig) => storage.setItem(CONFIG_KEY, JSON.stringify(config))
+  const keysFor = (code: string) => {
+    if (keys?.code !== code) keys = { code, keys: deriveKeys(code) }
+    return keys.keys
+  }
 
   const initial = load()
   let state: SyncState = {
     status: initial ? 'idle' : 'off',
-    login: initial?.login ?? null,
+    code: initial ? formatCode(initial.code) : null,
     lastSync: initial?.lastSync ?? null,
     error: null,
   }
@@ -79,42 +85,44 @@ export function createSyncEngine({ storage, getData, apply, fetchFn, now = () =>
     listeners.forEach((l) => l())
   }
 
+  async function decrypt(blob: string, key: CryptoKey): Promise<AppData> {
+    let text: string
+    try {
+      text = await open(blob, key)
+    } catch {
+      throw new SyncError('The cloud copy can’t be read with this code.', 'code')
+    }
+    return parseSync(text)
+  }
+
   async function once(): Promise<void> {
     const config = load()
     if (!config) return
     set({ status: 'syncing' })
     try {
-      const client = new GistClient(config.token, fetchFn)
-      let gistId = config.gistId
-      let text: string | null = null
-      if (gistId) {
-        try {
-          text = await client.read(gistId)
-        } catch (err) {
-          // Deleted on github.com: look again, or start a new one.
-          if (!(err instanceof SyncError && err.kind === 'missing')) throw err
-          gistId = null
+      const { id, key } = await keysFor(config.code)
+      for (let round = 1; ; round++) {
+        const stored = await backend.read(id)
+        const remote = stored ? await decrypt(stored.blob, key) : null
+        const merged = remote ? mergeSync(getData(), remote) : getData()
+        if (remote && sameSyncData(merged, remote)) {
+          apply(merged)
+          break
         }
+        const result = await backend.write(id, await seal(serializeSync(merged), key), stored?.version ?? null)
+        if (result === 'ok') {
+          apply(merged)
+          break
+        }
+        if (round >= MAX_ROUNDS) throw new SyncError('Other devices are busy syncing. Trying again shortly.', 'other')
       }
-      if (!gistId) {
-        gistId = await client.find()
-        if (gistId) text = await client.read(gistId)
-      }
-      const remote = text ? parseSync(text) : null
-      const merged = remote ? mergeSync(getData(), remote) : getData()
-      if (!remote || !sameSyncData(merged, remote)) {
-        const content = serializeSync(merged)
-        if (gistId) await client.write(gistId, content)
-        else gistId = await client.create(content)
-      }
-      apply(merged)
-      // Disconnected meanwhile: don't bring the config back.
-      if (load()?.token !== config.token) return
+      // Turned off meanwhile: don't bring the config back.
+      if (load()?.code !== config.code) return
       const lastSync = now()
-      save({ ...config, gistId, lastSync })
+      save({ ...config, lastSync })
       set({ status: 'idle', lastSync, error: null })
     } catch (err) {
-      if (load()?.token !== config.token) return
+      if (load()?.code !== config.code) return
       set({ status: 'error', error: err instanceof Error ? err.message : 'Sync failed.' })
     }
   }
@@ -135,6 +143,13 @@ export function createSyncEngine({ storage, getData, apply, fetchFn, now = () =>
     return running
   }
 
+  async function start(code: string): Promise<void> {
+    save({ code, lastSync: null })
+    set({ status: 'idle', code: formatCode(code), lastSync: null, error: null })
+    await sync()
+    if (state.status === 'error') throw new SyncError(state.error ?? 'Sync failed.', 'other')
+  }
+
   return {
     getState: () => state,
     subscribe(listener: () => void) {
@@ -144,21 +159,24 @@ export function createSyncEngine({ storage, getData, apply, fetchFn, now = () =>
     isConnected: () => load() !== null,
     sync,
 
-    /** Check the token, then sync. Throws a SyncError with a message for the user. */
-    async connect(token: string): Promise<void> {
-      const clean = token.trim()
-      if (!clean) throw new SyncError('Paste your token first.', 'auth')
-      const login = await new GistClient(clean, fetchFn).login()
-      save({ token: clean, login, gistId: null, lastSync: null })
-      set({ status: 'idle', login, lastSync: null, error: null })
-      await sync()
-      if (state.status === 'error') throw new SyncError(state.error ?? 'Sync failed.', 'other')
+    /** First device: make a new code and upload this device's data. */
+    create: () => start(generateCode()),
+
+    /** Another device: join with a code. Throws a SyncError with a message for the user. */
+    async join(input: string): Promise<void> {
+      if (!isValidCode(input)) throw new SyncError('That code isn’t right. Check it on your other device.', 'code')
+      const code = normalizeCode(input)
+      const { id, key } = await keysFor(code)
+      const stored = await backend.read(id)
+      if (!stored) throw new SyncError('Nothing is synced under this code yet. Check it on your other device.', 'code')
+      await decrypt(stored.blob, key)
+      await start(code)
     },
 
     /** Stop syncing on this device. The data here and in the cloud stays. */
     disconnect() {
       storage.removeItem(CONFIG_KEY)
-      set({ status: 'off', login: null, lastSync: null, error: null })
+      set({ status: 'off', code: null, lastSync: null, error: null })
     },
   }
 }
