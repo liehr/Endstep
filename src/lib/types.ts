@@ -28,6 +28,8 @@ export interface Game {
   bracket: Bracket
   players: number
   focus: SkillId
+  /** Focus came from the wheel: the rotation skips this game. */
+  spun: boolean
   focusRating: FocusRating | null
   result: Result
   /** Who won (name or commander). */
@@ -205,4 +207,6 @@ export interface AppData {
   quiz: QuizMemory
   /** Rank promotions, oldest first. Empty = Bronze. */
   promotions: Promotion[]
+  /** Focus the wheel picked for the next game; null = follow the rotation. */
+  spin: SkillId | null
 }

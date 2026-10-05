@@ -93,18 +93,20 @@ export function emptyData(): AppData {
     training: [],
     quiz: {},
     promotions: [],
+    spin: null,
   }
 }
 
 export const emptyTracker = (): Tracker => ({ turn: 1, power: 0, casts: 0 })
 
-export function emptyInput(settings: Settings, focus: SkillId): GameInput {
+export function emptyInput(settings: Settings, focus: SkillId, spun = false): GameInput {
   return {
     playedAt: today(),
     deck: settings.defaultDeck,
     bracket: settings.defaultBracket,
     players: settings.defaultPlayers,
     focus,
+    spun,
     focusRating: null,
     result: 'loss',
     winner: '',
@@ -167,6 +169,7 @@ export function sanitizeInput(raw: Obj, settings: Settings): GameInput {
     bracket: oneOf(raw.bracket, BRACKETS, settings.defaultBracket),
     players: intOrNull(raw.players, 2, 8) ?? settings.defaultPlayers,
     focus: oneOf<SkillId>(raw.focus, SKILL_IDS, SKILL_IDS[0]),
+    spun: raw.spun === true,
     focusRating: oneOf<FocusRating | null>(raw.focusRating, RATINGS, null),
     result: oneOf(raw.result, RESULTS, 'loss'),
     winner: str(raw.winner),
@@ -385,6 +388,7 @@ export function sanitizeData(raw: unknown): AppData {
     training: listOf(raw.training, sanitizeTraining),
     quiz: sanitizeQuiz(raw.quiz),
     promotions: listOf(raw.promotions, sanitizePromotion),
+    spin: oneOf<SkillId | null>(raw.spin, SKILL_IDS, null),
   }
 }
 
