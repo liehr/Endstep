@@ -1,7 +1,7 @@
 name: CI
 
-# Prüft jeden Pull Request und jeden Push auf master:
-# Typen, Lint, Tests und ob sich die App bauen lässt.
+# Checks every pull request and every push to master:
+# types, lint, tests and whether the app builds.
 on:
   push:
     branches: [master]

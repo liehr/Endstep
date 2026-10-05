@@ -13,16 +13,16 @@ export function createBackup(data: AppData, version: string): string {
   )
 }
 
-/** Liest eine Backup-Datei. Wirft einen Fehler mit verständlicher Meldung, wenn sie nicht passt. */
+/** Reads a backup file. Throws an error with a clear message if it doesn't fit. */
 export function parseBackup(text: string): AppData {
   let parsed: unknown
   try {
     parsed = JSON.parse(text)
   } catch {
-    throw new Error('Die Datei ist kein gültiges Backup (kein JSON).')
+    throw new Error('This file is not a valid backup (not JSON).')
   }
   if (typeof parsed !== 'object' || parsed === null || (parsed as { app?: unknown }).app !== BACKUP_APP) {
-    throw new Error('Die Datei ist kein Endstep-Backup.')
+    throw new Error('This file is not an Endstep backup.')
   }
   return sanitizeData((parsed as { data?: unknown }).data)
 }
@@ -32,18 +32,18 @@ export function backupFileName(): string {
 }
 
 /**
- * Backup auf dem Handy sichern. Bevorzugt das Teilen-Menü (iOS/Android),
- * damit die Datei z. B. in Dateien, Drive oder per Messenger gespeichert werden kann.
+ * Save the backup on the phone. Prefers the share sheet (iOS/Android)
+ * so the file can be saved e.g. to Files, Drive or sent via a messenger.
  */
 export async function shareOrDownload(json: string): Promise<void> {
   const name = backupFileName()
   const file = new File([json], name, { type: 'application/json' })
   if (navigator.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title: 'Endstep-Backup' })
+      await navigator.share({ files: [file], title: 'Endstep backup' })
       return
     } catch (err) {
-      // Nutzer hat das Teilen-Menü geschlossen: nichts weiter tun.
+      // User closed the share sheet: do nothing else.
       if (err instanceof DOMException && err.name === 'AbortError') return
     }
   }

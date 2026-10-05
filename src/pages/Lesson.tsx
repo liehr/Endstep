@@ -14,7 +14,7 @@ import type { LessonId } from '../lib/types'
 import { useDeckCards } from '../lib/useDeckCards'
 import { LESSON_ICON, lessonStyle } from './Training'
 
-/** Zu welcher Lücke gehört eine Kachel? */
+/** Which blank does a tile belong to? */
 function fieldOfTile(tile: string): FieldId {
   if (/^(\{[^}]+\})+$/.test(tile)) return 'cost'
   if (/^[\d*X+-]+\/[\d*X+-]+$/.test(tile)) return 'pt'
@@ -23,11 +23,11 @@ function fieldOfTile(tile: string): FieldId {
 
 interface Item {
   question: Question
-  /** Wiederholung einer falsch beantworteten Frage (zählt nicht für die Wertung). */
+  /** Repeat of a wrongly answered question (doesn't count toward the score). */
   retry: boolean
 }
 
-/** Eine Lektion: Frage für Frage, wie bei Duolingo. Falsche Antworten kommen am Ende noch einmal. */
+/** A lesson: question by question, like Duolingo. Wrong answers come back at the end. */
 export function Lesson({ id }: { id: LessonId }) {
   const deck = useDeckCards({ autoLoad: false })
   const build = (seed: number) =>
@@ -37,9 +37,9 @@ export function Lesson({ id }: { id: LessonId }) {
     }))
   const [queue, setQueue] = useState<Item[]>(() => build(randomSeed()))
   const [index, setIndex] = useState(0)
-  /** Auswahl bei Einfachauswahl-Fragen. */
+  /** Selection for single-choice questions. */
   const [selected, setSelected] = useState<string | null>(null)
-  /** Bei „Baue die Karte“: je Lücke der Index der gelegten Kachel. */
+  /** For "Build the card": per blank, the index of the placed tile. */
   const [slots, setSlots] = useState<(number | null)[]>([])
   const [checked, setChecked] = useState(false)
   const [score, setScore] = useState(0)
@@ -96,7 +96,7 @@ export function Lesson({ id }: { id: LessonId }) {
     window.scrollTo(0, 0)
   }
 
-  /** Kachel in die Lücke ihrer Art legen (Mana → Kosten, 5/4 → Stärke …); belegte Lücke wird getauscht. */
+  /** Place a tile into the blank of its kind (mana → cost, 5/4 → power …); a filled blank is swapped. */
   const placeTile = (tile: number) => {
     if (checked) return
     const field = fieldOfTile(bank[tile])
@@ -115,7 +115,7 @@ export function Lesson({ id }: { id: LessonId }) {
     setSlots(nextSlots)
   }
 
-  /** Lücken auf der gezeichneten Karte. */
+  /** Blanks on the drawn card. */
   const frameSlots: Partial<Record<FieldId, Slot>> = {}
   if (q.face && q.hidden) {
     if (isBuild) {
@@ -140,13 +140,13 @@ export function Lesson({ id }: { id: LessonId }) {
   return (
     <div className="screen flow lesson" style={lessonStyle(id)}>
       <header className="flow-header">
-        <IconButton icon={XIcon} label="Lektion beenden" onClick={() => navigate('/training')} />
-        <ProgressBar value={index / queue.length} label={`Frage ${index + 1} von ${queue.length}`} />
+        <IconButton icon={XIcon} label="End lesson" onClick={() => navigate('/training')} />
+        <ProgressBar value={index / queue.length} label={`Question ${index + 1} of ${queue.length}`} />
       </header>
 
       <div className="question-wrap" key={`${index}-${q.id}`}>
         <div className="question">
-          {item.retry && <span className="retry-tag">Nochmal</span>}
+          {item.retry && <span className="retry-tag">Again</span>}
           <span className="eyebrow">{lesson.title}</span>
           <h1>{q.prompt}</h1>
           {q.context && <p className="muted">{q.context}</p>}
@@ -155,7 +155,7 @@ export function Lesson({ id }: { id: LessonId }) {
             {q.cards && q.cards.length > 0 && <CardGrid cards={q.cards} label={q.cardsLabel} />}
 
             {isBuild ? (
-              <div className="tile-bank" aria-label="Kacheln">
+              <div className="tile-bank" aria-label="Tiles">
                 {bank.map((tile, i) => (
                   <button
                     key={i}
@@ -207,11 +207,11 @@ export function Lesson({ id }: { id: LessonId }) {
         <footer className={`feedback ${correct ? 'right' : 'wrong'}`} role="status">
           <div className="feedback-head">
             {correct ? <CheckCircleIcon weight="fill" aria-hidden="true" /> : <XCircleIcon weight="fill" aria-hidden="true" />}
-            <strong>{correct ? 'Richtig!' : 'Nicht ganz.'}</strong>
+            <strong>{correct ? 'Correct!' : 'Not quite.'}</strong>
           </div>
           {!correct && !isBuild && (
             <p>
-              Richtig wäre: <strong><AnswerLabel value={q.options.find((o) => o.id === q.correct)?.label ?? ''} /></strong>
+              Correct answer: <strong><AnswerLabel value={q.options.find((o) => o.id === q.correct)?.label ?? ''} /></strong>
             </p>
           )}
           <p>{q.explanation}</p>
@@ -226,13 +226,13 @@ export function Lesson({ id }: { id: LessonId }) {
             </details>
           )}
           <Button block variant={correct ? 'primary' : 'danger'} onClick={next}>
-            Weiter
+            Continue
           </Button>
         </footer>
       ) : (
         <footer className="flow-footer">
           <Button block disabled={!ready} onClick={check}>
-            Prüfen
+            Check
           </Button>
         </footer>
       )}
@@ -251,33 +251,33 @@ function LessonDone({ id, score, total, onAgain }: { id: LessonId; score: number
         <span className="lesson-icon big" aria-hidden="true">
           <IconCmp weight="fill" />
         </span>
-        <h1>{perfect ? 'Perfekt!' : 'Lektion geschafft!'}</h1>
+        <h1>{perfect ? 'Perfect!' : 'Lesson complete!'}</h1>
         <p className="lead">
           {perfect
-            ? 'Alles richtig beim ersten Versuch.'
+            ? 'Everything right on the first try.'
             : score >= total - 1
-              ? 'Fast alles richtig. Stark!'
-              : 'Jede falsche Antwort ist eine, die du am Tisch nicht mehr falsch machst.'}
+              ? 'Almost everything right. Great job!'
+              : "Every wrong answer here is one you won't get wrong at the table."}
         </p>
       </div>
       <div className="reward-tiles">
         <div className="reward rounds">
-          <span className="reward-title">Richtig</span>
+          <span className="reward-title">Correct</span>
           <span className="reward-value">
             {score} / {total}
           </span>
         </div>
         <div className="reward streak">
-          <span className="reward-title">Quote</span>
-          <span className="reward-value">{Math.round((score / Math.max(1, total)) * 100)} %</span>
+          <span className="reward-title">Rate</span>
+          <span className="reward-value">{Math.round((score / Math.max(1, total)) * 100)}%</span>
         </div>
       </div>
       <footer className="flow-footer stack">
         <Button block icon={ArrowRightIcon} onClick={() => navigate('/training', { replace: true })}>
-          Weiter
+          Continue
         </Button>
         <Button block variant="secondary" icon={ArrowClockwiseIcon} onClick={onAgain}>
-          Nochmal
+          Again
         </Button>
       </footer>
     </div>

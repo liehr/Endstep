@@ -1,20 +1,20 @@
 import { isArtifact, isCreature, isLand, manaAbility, parseCost, type CardInfo } from '../cards'
 import { shuffle, type Rng } from '../sim/rng'
 
-// Karten-Quiz: Teile einer Karte werden versteckt (Name, Kosten, Stärke, Typ, Textstelle),
-// man rät oder baut sie aus Kacheln wieder zusammen. Dazu: Welche Rolle hat die Karte im Gameplan?
+// Card quiz: parts of a card are hidden (name, cost, power, type, a bit of text),
+// you guess them or rebuild them from tiles. Plus: what role does the card play in the gameplan?
 
 export type Role = 'land' | 'ramp' | 'big' | 'draw' | 'removal' | 'protection' | 'finisher' | 'utility'
 
 export const ROLES: Record<Role, { label: string; hint: string }> = {
-  land: { label: 'Land', hint: 'Bringt jeden Zug Mana. Ohne Länder kein Ghalta.' },
-  ramp: { label: 'Ramp', hint: 'Extra-Mana oder günstigere Zauber, damit Ghalta früher kommt.' },
-  big: { label: 'Dicke Kreatur', hint: 'Viel Stärke: macht Ghalta billig und drückt Schaden durch.' },
-  draw: { label: 'Kartenvorteil', hint: 'Zieht Karten, damit dir nach einem Wipe nicht die Luft ausgeht.' },
-  removal: { label: 'Interaktion', hint: 'Entfernt gegnerische Bedrohungen. Davon hat das Deck wenig, also gezielt einsetzen.' },
-  protection: { label: 'Schutz', hint: 'Schützt deine Kreaturen vor Removal oder Wipes. Für die Antwort aufheben, die dich wirklich umbringt.' },
-  finisher: { label: 'Finisher', hint: 'Macht aus einem großen Board einen tödlichen Angriff.' },
-  utility: { label: 'Unterstützung', hint: 'Kleinere Karte mit nützlichem Effekt.' },
+  land: { label: 'Land', hint: 'Brings mana every turn. No lands, no Ghalta.' },
+  ramp: { label: 'Ramp', hint: 'Extra mana or cheaper spells, so Ghalta lands sooner.' },
+  big: { label: 'Big creature', hint: 'Lots of power: makes Ghalta cheap and pushes damage through.' },
+  draw: { label: 'Card advantage', hint: 'Draws cards so you don’t run out of gas after a wipe.' },
+  removal: { label: 'Interaction', hint: 'Removes opposing threats. The deck has little of it, so use it carefully.' },
+  protection: { label: 'Protection', hint: 'Protects your creatures from removal or wipes. Save it for the answer that would really kill you.' },
+  finisher: { label: 'Finisher', hint: 'Turns a big board into a lethal attack.' },
+  utility: { label: 'Utility', hint: 'Smaller card with a useful effect.' },
 }
 
 const RE = {
@@ -26,7 +26,7 @@ const RE = {
   draw: /draws? (a|one|two|three|four|x|\w+) cards?|draw cards equal|draw a card for each/i,
 }
 
-/** Rolle(n) einer Karte nach Faustregeln. confident = genau eine Rolle passt. */
+/** A card's role(s) by rule of thumb. confident = exactly one role fits. */
 export function classify(card: CardInfo): { role: Role; roles: Role[]; confident: boolean } {
   if (isLand(card)) return { role: 'land', roles: ['land'], confident: true }
   const text = card.oracleText
@@ -47,11 +47,11 @@ export function classify(card: CardInfo): { role: Role; roles: Role[]; confident
   return { role: roles[0], roles, confident: roles.length === 1 }
 }
 
-// --- Darstellung der Karte --------------------------------------------------------
+// --- Card display ----------------------------------------------------------------
 
 export type FieldId = 'name' | 'cost' | 'type' | 'pt' | 'gap'
 
-/** Platzhalter im Regeltext für eine Lücke. */
+/** Placeholder for a blank in the rules text. */
 export const GAP = '⦁'
 
 export interface CardFace {
@@ -61,20 +61,20 @@ export interface CardFace {
   text: string
   pt: string | null
   art: string | null
-  /** Rahmenfarbe nach Kartenart. */
+  /** Frame color by card kind. */
   frame: 'green' | 'artifact' | 'land' | 'multi'
 }
 
 export const typeLabel = (c: CardInfo): string => {
   const t = c.typeLine
   if (/\bLand\b/.test(t)) return 'Land'
-  if (/\bCreature\b/.test(t)) return 'Kreatur'
-  if (/\bInstant\b/.test(t)) return 'Spontanzauber'
-  if (/\bSorcery\b/.test(t)) return 'Hexerei'
-  if (/\bEnchantment\b/.test(t)) return 'Verzauberung'
-  if (/\bArtifact\b/.test(t)) return 'Artefakt'
+  if (/\bCreature\b/.test(t)) return 'Creature'
+  if (/\bInstant\b/.test(t)) return 'Instant'
+  if (/\bSorcery\b/.test(t)) return 'Sorcery'
+  if (/\bEnchantment\b/.test(t)) return 'Enchantment'
+  if (/\bArtifact\b/.test(t)) return 'Artifact'
   if (/\bPlaneswalker\b/.test(t)) return 'Planeswalker'
-  return 'Sonstiges'
+  return 'Other'
 }
 
 function frameOf(c: CardInfo): CardFace['frame'] {
@@ -85,7 +85,7 @@ function frameOf(c: CardInfo): CardFace['frame'] {
   return 'green'
 }
 
-/** Kartenname im Text verstecken (auch die Kurzform „Rhonas“ bei „Rhonas the Indomitable“). */
+/** Hide the card name in the text (including the short form “Rhonas” for “Rhonas the Indomitable”). */
 export function hideSelfName(text: string, name: string): string {
   const variants = [name, name.split(',')[0], name.split(' the ')[0]].filter((v, i, a) => v.length > 2 && a.indexOf(v) === i)
   return variants.reduce((t, v) => t.split(v).join('~'), text)
@@ -103,7 +103,7 @@ export function faceOf(c: CardInfo): CardFace {
   }
 }
 
-// --- Varianten für falsche Antworten ------------------------------------------------
+// --- Variants for wrong answers ------------------------------------------------------
 
 export function formatCost(generic: number, green: number, colorless = 0): string {
   return `${generic > 0 ? `{${generic}}` : ''}${'{C}'.repeat(colorless)}${'{G}'.repeat(green)}`
@@ -139,13 +139,13 @@ const KEYWORDS = ['Flying', 'Trample', 'Hexproof', 'Reach', 'Vigilance', 'Haste'
 const MANA_GROUPS = ['{G}', '{G}{G}', '{G}{G}{G}', '{C}', '{C}{C}']
 
 export interface Gap {
-  /** Text mit Platzhalter GAP an der Lücke. */
+  /** Text with the GAP placeholder at the blank. */
   text: string
   answer: string
   wrong: string[]
 }
 
-/** Eine sinnvolle Lücke im Regeltext finden: Zahlwort, Zahl, Schlüsselwort oder Mana. */
+/** Find a meaningful blank in the rules text: number word, number, keyword or mana. */
 export function findGap(text: string, rng: Rng): Gap | null {
   const candidates: Gap[] = []
   const replaceAt = (index: number, length: number) => text.slice(0, index) + GAP + text.slice(index + length)

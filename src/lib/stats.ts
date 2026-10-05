@@ -7,11 +7,11 @@ export interface Tally {
   count: number
 }
 
-/** Kartennamen zählen, ohne Groß-/Kleinschreibung und Leerzeichen zu unterscheiden. */
+/** Count card names, ignoring case and surrounding whitespace. */
 export function tallyCards(lists: string[][]): Tally[] {
   const counts = new Map<string, Tally>()
   for (const list of lists) {
-    // Pro Spiel zählt jede Karte nur einmal.
+    // Each card counts only once per game.
     const seen = new Set<string>()
     for (const raw of list) {
       const name = raw.trim()
@@ -23,7 +23,7 @@ export function tallyCards(lists: string[][]): Tally[] {
       else counts.set(key, { name, count: 1 })
     }
   }
-  return [...counts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'de'))
+  return [...counts.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'en'))
 }
 
 export interface SkillStat {
@@ -31,12 +31,12 @@ export interface SkillStat {
   games: number
   wins: number
   avgRating: number | null
-  /** Wie oft die „eine Entscheidung“ diesem Skill zugeordnet wurde. */
+  /** How often the "one decision" was assigned to this skill. */
   mistakes: number
 }
 
 export interface DeckPhase {
-  /** „Original“ oder „Nach Swap 1“ … */
+  /** "Original" or "After swap 1" … */
   label: string
   from: string | null
   games: number
@@ -44,23 +44,23 @@ export interface DeckPhase {
 }
 
 export interface UpgradeStatus {
-  /** Spiele seit der letzten Swap-Runde (bzw. insgesamt, wenn es noch keine gab). */
+  /** Games since the last swap round (or in total if there hasn't been one yet). */
   gamesSince: number
-  /** Ab so vielen Spielen ist die nächste Swap-Runde dran. */
+  /** After this many games the next swap round is due. */
   target: number
   ready: boolean
-  /** Nummer der nächsten Swap-Runde (1 = erste). */
+  /** Number of the next swap round (1 = first). */
   round: number
-  /** So viele Karten darf die nächste Swap-Runde höchstens tauschen. */
+  /** Maximum number of cards the next swap round may swap. */
   cards: number
-  /** Spielstand je Deckversion, älteste zuerst. */
+  /** Record per deck version, oldest first. */
   phases: DeckPhase[]
 }
 
 export interface BracketCheck {
   games: number
   target: number
-  /** Meilenstein erreicht und noch nicht beantwortet. */
+  /** Milestone reached and not answered yet. */
   due: boolean
   done: boolean
 }
@@ -69,17 +69,17 @@ export interface Stats {
   total: number
   wins: number
   winRate: number | null
-  /** Ergebnisse der letzten 5 Spiele, neuestes zuerst. */
+  /** Results of the last 5 games, newest first. */
   recent: Result[]
-  /** Spiele mit dem aktuellen Standard-Deck (für den Upgrade-Fahrplan). */
+  /** Games with the current default deck (for the upgrade roadmap). */
   deckGames: number
   upgradeReady: boolean
   deadCards: Tally[]
   starCards: Tally[]
-  /** Karten, die oft genug tot waren, um sie auszutauschen. */
+  /** Cards that were dead often enough to swap them out. */
   upgradeCandidates: Tally[]
   skills: SkillStat[]
-  /** Skills, bei denen die „eine Entscheidung“ mindestens dreimal gelandet ist. */
+  /** Skills where the "one decision" landed at least three times. */
   patterns: SkillStat[]
   whyCounts: { id: WhyCategory; count: number }[]
   avgGhaltaTurn: number | null
@@ -104,7 +104,7 @@ export function upgradeStatus(deckGames: Game[], swaps: Swap[]): UpgradeStatus {
     const to = bounds[i + 1] ?? null
     const games = deckGames.filter((g) => (from === null || g.playedAt >= from) && (to === null || g.playedAt < to))
     return {
-      label: i === 0 ? 'Original' : `Nach Swap ${i}`,
+      label: i === 0 ? 'Original' : `After swap ${i}`,
       from,
       games: games.length,
       wins: games.filter((g) => g.result === 'win').length,
@@ -115,12 +115,12 @@ export function upgradeStatus(deckGames: Game[], swaps: Swap[]): UpgradeStatus {
   return { gamesSince, target, ready: gamesSince >= target, round: swaps.length + 1, cards: swapCards(swaps.length), phases }
 }
 
-/** Höchstzahl Karten für die Swap-Runde nach `done` bereits erledigten Runden. */
+/** Maximum number of cards for the swap round after `done` completed rounds. */
 export function swapCards(done: number): number {
   return UPGRADE_CARDS[Math.min(done, UPGRADE_CARDS.length - 1)]
 }
 
-/** Meilenstein „Bracket-Check“: nach genug Spielen mit dem Deck einmal nachfragen. */
+/** "Bracket check" milestone: ask once after enough games with the deck. */
 export function bracketCheck(deckGames: number, done: boolean): BracketCheck {
   return { games: deckGames, target: BRACKET_CHECK_GAMES, due: !done && deckGames >= BRACKET_CHECK_GAMES, done }
 }
@@ -150,7 +150,7 @@ export function computeStats(
 
   const upgrade = upgradeStatus(deckGames, swaps)
   const upgradeReady = upgrade.ready
-  // Kandidaten nur aus Karten, die noch im Deck sind.
+  // Candidates only from cards that are still in the deck.
   const inDeck = decklist ? new Set(decklist.map((e) => normalize(e.name))) : null
 
   return {

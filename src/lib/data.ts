@@ -72,10 +72,10 @@ export function emptyInput(settings: Settings, focus: SkillId): GameInput {
   }
 }
 
-// --- Validierung -----------------------------------------------------------
-// Daten kommen aus localStorage oder aus importierten Backups und können
-// von älteren Versionen stammen oder beschädigt sein. Alles wird deshalb
-// feldweise geprüft und auf sichere Standardwerte zurückgesetzt.
+// --- Validation ------------------------------------------------------------
+// Data comes from localStorage or imported backups and may come from older
+// versions or be corrupted. So everything is checked field by field and
+// reset to safe defaults.
 
 type Obj = Record<string, unknown>
 
@@ -243,7 +243,7 @@ export function sanitizeData(raw: unknown): AppData {
   }
 }
 
-/** Ist das noch die unveränderte Standard-Deckliste? */
+/** Is this still the unchanged default decklist? */
 export function isDefaultDeck(data: Pick<AppData, 'commander' | 'decklist'>): boolean {
   return data.commander === DEFAULT_COMMANDER && sameDecklist(data.decklist, DEFAULT_DECKLIST)
 }
@@ -262,13 +262,13 @@ export function saveData(storage: Pick<Storage, 'setItem'>, data: AppData): void
   storage.setItem(STORAGE_KEY, JSON.stringify(data))
 }
 
-/** Swaps und Trainings zusammenführen: Duplikate (gleiche ID bzw. Zeitstempel) nur einmal. */
+/** Merge swaps and training results: duplicates (same ID or timestamp) only once. */
 export function mergeBy<T>(current: T[], incoming: T[], keyOf: (x: T) => string): T[] {
   const seen = new Set(current.map(keyOf))
   return [...current, ...incoming.filter((x) => !seen.has(keyOf(x)))]
 }
 
-/** Spiele zusammenführen: gleiche ID → die zuletzt geänderte Version gewinnt. */
+/** Merge games: same ID → the most recently changed version wins. */
 export function mergeGames(current: Game[], incoming: Game[]): Game[] {
   const byId = new Map(current.map((g) => [g.id, g]))
   for (const game of incoming) {
@@ -279,9 +279,9 @@ export function mergeGames(current: Game[], incoming: Game[]): Game[] {
 }
 
 /**
- * Backup einspielen: Spiele, Swaps und Trainings werden zusammengeführt.
- * Die Deckliste aus dem Backup wird übernommen, wenn hier noch die unveränderte
- * Standardliste liegt (typisch beim Umzug auf ein neues Handy).
+ * Restore a backup: games, swaps and training results are merged.
+ * The decklist from the backup is taken over if the unchanged default list
+ * is still here (typical when moving to a new phone).
  */
 export function mergeImport(current: AppData, imported: AppData): { data: AppData; changedGames: number } {
   const games = mergeGames(current.games, imported.games)

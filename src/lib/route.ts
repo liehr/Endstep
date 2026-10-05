@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
-// Hash-Routing (#/verlauf …): funktioniert auf jedem statischen Hoster
-// und die Zurück-Geste auf dem Handy verhält sich wie erwartet.
+// Hash routing (#/verlauf …): works on any static host
+// and the back gesture on phones behaves as expected.
 
 const listeners = new Set<() => void>()
 const emit = () => listeners.forEach((l) => l())
@@ -22,9 +22,9 @@ export function useRoute(): string {
 }
 
 /**
- * Zu einer Route wechseln. Benachrichtigt sofort (nicht erst beim späteren
- * hashchange-Event), damit Datenänderung und Seitenwechsel im selben Render
- * ankommen und keine Seite kurz mit veralteten Annahmen weiterläuft.
+ * Switch to a route. Notifies immediately (not only on the later hashchange
+ * event) so the data change and the page change arrive in the same render and
+ * no page briefly keeps running on stale assumptions.
  */
 export function navigate(path: string, { replace = false } = {}) {
   if (replace) window.location.replace(`#${path}`)

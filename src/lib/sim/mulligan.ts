@@ -1,13 +1,13 @@
 import { isCreature, isLand, manaAbility, type CardInfo } from '../cards'
 
-// Faustregel aus dem Lernplan: „Behalte Hände mit 3–4 Ländern oder Manakreaturen
-// plus mindestens einer frühen dicken Kreatur.“ Der erste Mulligan ist gratis.
+// Rule of thumb from the study plan: "Keep hands with 3–4 lands or mana creatures
+// plus at least one early big creature." The first mulligan is free.
 
 export interface HandReport {
   lands: number
-  /** Manakreaturen und Mana-Artefakte (z. B. Sol Ring). */
+  /** Mana creatures and mana artifacts (e.g. Sol Ring). */
   ramp: number
-  /** Kreaturen mit Stärke 4+ für höchstens 4 Mana. */
+  /** Creatures with power 4+ for at most 4 mana. */
   earlyBig: string[]
   keep: boolean
   reasons: string[]
@@ -24,30 +24,30 @@ export function evaluateHand(hand: (CardInfo | null)[]): HandReport {
   const sources = lands + ramp
   const reasons: string[] = []
 
-  const landWord = (n: number) => `${n} ${n === 1 ? 'Land' : 'Länder'}`
-  const rampText = ramp > 0 ? ` und ${ramp} Mana-Beschleuniger` : ''
+  const landWord = (n: number) => `${n} ${n === 1 ? 'land' : 'lands'}`
+  const rampText = ramp > 0 ? ` and ${ramp} ramp ${ramp === 1 ? 'piece' : 'pieces'}` : ''
 
   let manaOk = true
   if (lands < 2) {
     manaOk = false
-    reasons.push(`Nur ${landWord(lands)}${rampText}: zu wenig, um sicher loszulegen.`)
+    reasons.push(`Only ${landWord(lands)}${rampText}: too few to get going safely.`)
   } else if (sources < 3) {
     manaOk = false
-    reasons.push(`${landWord(lands)}${rampText}: unter 3 Manaquellen.`)
+    reasons.push(`${landWord(lands)}${rampText}: fewer than 3 mana sources.`)
   } else if (sources > 5 || lands > 5) {
     manaOk = false
-    reasons.push(`${landWord(lands)}${rampText}: zu viel Mana, zu wenig Druck.`)
+    reasons.push(`${landWord(lands)}${rampText}: too much mana, too little pressure.`)
   } else {
-    reasons.push(`${landWord(lands)}${rampText}: das Mana passt.`)
+    reasons.push(`${landWord(lands)}${rampText}: the mana works.`)
   }
 
-  if (earlyBig.length > 0) reasons.push(`Frühe dicke Kreatur: ${earlyBig.join(', ')}.`)
-  else reasons.push('Keine frühe dicke Kreatur (Stärke 4+ für höchstens 4 Mana).')
+  if (earlyBig.length > 0) reasons.push(`Early big creature: ${earlyBig.join(', ')}.`)
+  else reasons.push('No early big creature (power 4+ for at most 4 mana).')
 
   return { lands, ramp, earlyBig, keep: manaOk && earlyBig.length > 0, reasons }
 }
 
-/** Lockerere Regel nach einem Mulligan: Hauptsache das Mana passt. */
+/** Looser rule after a mulligan: as long as the mana works. */
 export function manaIsFine(hand: (CardInfo | null)[]): boolean {
   const cards = hand.filter((c): c is CardInfo => c !== null)
   const lands = cards.filter(isLand).length

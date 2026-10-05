@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { activateUpdate } from './pwaUpdate'
 
-/** Minimaler Nachbau eines wartenden Service Workers. */
+/** Minimal stand-in for a waiting service worker. */
 function fakeWorker() {
   const listeners: Record<string, (() => void)[]> = {}
   const worker = {
@@ -29,13 +29,13 @@ function fakeContainer(waiting: ReturnType<typeof fakeWorker> | null) {
 const asContainer = (c: ReturnType<typeof fakeContainer>) => c as unknown as ServiceWorkerContainer
 
 describe('activateUpdate', () => {
-  it('lädt sofort neu, wenn keine Version wartet', async () => {
+  it('reloads immediately when no version is waiting', async () => {
     const reload = vi.fn()
     await activateUpdate(asContainer(fakeContainer(null)), reload)
     expect(reload).toHaveBeenCalledOnce()
   })
 
-  it('schickt SKIP_WAITING und lädt nach controllerchange neu', async () => {
+  it('sends SKIP_WAITING and reloads after controllerchange', async () => {
     const worker = fakeWorker()
     const container = fakeContainer(worker)
     const reload = vi.fn()
@@ -46,7 +46,7 @@ describe('activateUpdate', () => {
     expect(reload).toHaveBeenCalledOnce()
   })
 
-  it('lädt auch ohne controllerchange neu, sobald die neue Version aktiv ist (iOS)', async () => {
+  it('reloads without controllerchange too, as soon as the new version is active (iOS)', async () => {
     const worker = fakeWorker()
     const reload = vi.fn()
     const pending = activateUpdate(asContainer(fakeContainer(worker)), reload, 60_000)
@@ -57,7 +57,7 @@ describe('activateUpdate', () => {
     expect(reload).toHaveBeenCalledOnce()
   })
 
-  it('lädt spätestens nach der Wartezeit neu, auch wenn gar kein Event kommt', async () => {
+  it('reloads after the timeout at the latest, even if no event arrives', async () => {
     vi.useFakeTimers()
     try {
       const worker = fakeWorker()

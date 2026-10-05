@@ -1,145 +1,146 @@
 # Endstep
 
-**Commander-Runden tracken und mit jedem Spiel besser werden.**
+**Track your Commander games and get better with every one.**
 
-Endstep ist eine kleine App fürs Handy, gebaut nach dem Lernplan „Commander von der Pike auf“
+Endstep is a small phone app built around the learning plan "Commander from the ground up"
 (Tramplesaurus Rex / Ghalta):
 
-- **Vor dem Spiel:** Der nächste Fokus-Skill aus der Rotation (Mulligan → Sequencing → Threat
-  Assessment → Kampfmathe → Board-Wipe-Disziplin → Removal-Timing → Politik), dazu dein Satz für den Tisch.
-- **Während des Spiels:** Ghalta-Rechner (Stärke + Commander-Steuer → Kosten), die Wrath-Frage,
-  „Wen angreifen?“ und ein Regel-Spickzettel.
-- **Nach dem Spiel (2 Minuten):** Die drei Fragen: Warum hat der Gewinner gewonnen? Welche eine
-  Entscheidung würdest du anders treffen? Welche Karten waren tot oder haben überperformt?
-- **Zug-Zähler:** Während der Runde „Nächster Zug“ und „Ghalta gecastet!“ tippen. Ghalta-Zug,
-  Spieldauer und Commander-Steuer landen automatisch in den Notizen.
-- **Training:** Kurze Lektionen im Duolingo-Stil (Antwort wählen → Prüfen → Erklärung, Fehler kommen
-  am Ende noch einmal):
-  - *Ghalta-Mathe*, *Kampf & Trample*, *Commander-Regeln*
-  - *Mulligan-Trainer:* echte Starthände aus deinem Deck, bewertet nach der Faustregel aus dem Lernplan
-  - *Wann kommt Ghalta?:* simulierte Züge mit deinem Deck
-  - *Karten kennen:* Teile einer Karte sind versteckt (Name, Kosten, Stärke, Textstelle). Rate sie
-    oder baue die Karte aus Kacheln; dazu die Rolle der Karte im Gameplan (Ramp, dicke Kreatur,
-    Kartenvorteil, Interaktion, Schutz, Finisher).
-- **Goldfish-Labor:** 1.000 simulierte Spiele zeigen, in welchem Zug Ghalta mit deinem Deck kommt.
-  Nach einer Swap-Runde nochmal laufen lassen: Ist das Deck schneller geworden?
-- **Deck & Swap-Runden:** Deckliste mit Kartenbildern, Swap-Runden („raus“ / „rein“) mit
-  Protokoll und Rückgängig, Siegquote je Deckversion.
-- **Statistik:** Siegquote, Skills, wiederkehrende Fehler („Muster“ ab 3×), tote Karten als
-  Upgrade-Kandidaten und der Upgrade-Fahrplan (erste Swap-Runde nach 8 Spielen, danach alle 5).
+- **Before the game:** the next focus skill in the rotation (Mulligan → Sequencing → Threat
+  Assessment → Combat Math → Board Wipe Discipline → Removal Timing → Reading the Table / Politics),
+  plus your line for the table.
+- **During the game:** Ghalta calculator (power + commander tax → cost), the wrath question,
+  "Who do I attack?" and a rules cheat sheet.
+- **After the game (2 minutes):** the three questions: Why did the winner win? Which one decision
+  would you make differently? Which cards were dead or overperformed?
+- **Turn counter:** tap "Next turn" and "Ghalta cast!" during the game. Ghalta turn, game length and
+  commander tax end up in your notes automatically.
+- **Training:** short Duolingo-style lessons (pick an answer → check → explanation, mistakes come back
+  at the end):
+  - *Ghalta Math*, *Combat & Trample*, *Commander Rules*
+  - *Mulligan Trainer:* real opening hands from your deck, rated by the rule of thumb from the learning plan
+  - *When Does Ghalta Land?:* simulated turns with your deck
+  - *Know Your Cards:* parts of a card are hidden (name, cost, power, a bit of text). Guess them or
+    build the card from tiles; plus the card's role in the game plan (Ramp, Big creature, Card
+    advantage, Interaction, Protection, Finisher).
+- **Goldfish Lab:** 1,000 simulated games show on which turn Ghalta lands with your deck. Run it again
+  after a swap round: did the deck get faster?
+- **Deck & swap rounds:** decklist with card images, swap rounds ("out" / "in") with a log and undo,
+  win rate per deck version.
+- **Stats:** win rate, skills, recurring mistakes ("patterns" from 3×), dead cards as upgrade
+  candidates, and the upgrade chest (a swap round every 8 games, with a Bracket check after 64 games).
 
-## Technik in einem Satz
+## Tech in one sentence
 
-Endstep ist eine **Progressive Web App (PWA)**: eine Web-App, die man aufs Handy installiert. Sie hat
-ein eigenes Icon auf dem Startbildschirm, läuft im Vollbild ohne Browserleiste und funktioniert offline.
-Gehostet wird sie kostenlos auf **GitHub Pages**. Ein App Store ist nicht nötig.
+Endstep is a **Progressive Web App (PWA)**: a web app you install on your phone. It has its own icon
+on the home screen, runs full screen without a browser bar and works offline. It is hosted for free
+on **GitHub Pages**. No app store needed.
 
-## App aufs Handy holen
+## Getting the app on your phone
 
-Adresse: **https://liehr.github.io/Endstep/**
+Address: **https://liehr.github.io/Endstep/**
 
-**iPhone (Safari):** Adresse öffnen → **Teilen** (Quadrat mit Pfeil) → **„Zum Home-Bildschirm“** →
-„Als Web-App öffnen“ an lassen (falls angezeigt) → **Hinzufügen**.
+**iPhone (Safari):** open the address → **Share** (square with arrow) → **"Add to Home Screen"** →
+leave "Open as Web App" on (if shown) → **Add**.
 
-**Android (Chrome):** Adresse öffnen → **„App installieren“** antippen (Banner in der App oder
-Menü ⋮) → bestätigen.
+**Android (Chrome):** open the address → tap **"Install app"** (banner in the app or the ⋮ menu) →
+confirm.
 
-Danach Endstep immer über das Icon starten. Neue Versionen lädt die App selbst und fragt
-**„Neue Version verfügbar – Aktualisieren?“**.
+After that, always start Endstep from the icon. The app loads new versions by itself and shows
+**"New version available"**.
 
-### Kartendaten (Scryfall)
+### Card data (Scryfall)
 
-Kartenbilder und -texte kommen von der [Scryfall-API](https://scryfall.com/docs/api). Die App fragt
-nur die Karten deines Decks ab (zwei Anfragen an `/cards/collection`), speichert sie auf dem Handy und
-funktioniert danach offline. Die Bulk-Daten von Scryfall (über 100 MB) wären fürs Handy zu groß.
+Card images and text come from the [Scryfall API](https://scryfall.com/docs/api). The app only
+requests the cards in your deck (two requests to `/cards/collection`), stores them on the phone and
+works offline afterwards. Scryfall's bulk data (over 100 MB) would be too big for a phone.
 
-Damit die **richtigen Bilder** erscheinen, lädt die App die Druckversion aus dem Precon (Set
-`FDC`, Foundations Commander). Gibt es eine Karte in diesem Set nicht, zeigt sie eine andere
-Version und weist auf der Deck-Seite darauf hin. Am genauesten wird es, wenn du deine Liste aus
-Moxfield mit Set und Sammlernummer einfügst (z. B. `1 Llanowar Elves (FDC) 227`).
+To show the **right images**, the app loads the printing from the precon (set `FDC`, Foundations
+Commander). If a card doesn't exist in that set, it shows another printing and points that out on
+the deck page. It is most accurate if you paste your list from Moxfield with set and collector
+number (e.g. `1 Llanowar Elves (FDC) 227`).
 
-Die Standard-Deckliste von Tramplesaurus Rex stammt aus veröffentlichten Decklisten. Gleiche sie
-unter **Mehr → Deckliste & Swaps** mit deinem Deck ab.
+The default Tramplesaurus Rex decklist comes from published decklists. Compare it with your own deck
+under **More → Decklist & swaps**.
 
-### Deine Daten
+### Your data
 
-Alle Runden bleiben **nur auf deinem Handy**. Es gibt keinen Server und kein Konto. Unter
-**Mehr → Backup sichern** kannst du ab und zu eine Sicherungsdatei anlegen (z. B. in iCloud Drive
-oder Google Drive). Damit nimmst du deine Daten auch auf ein neues Handy mit (**Backup einspielen**).
+All games stay **only on your phone**. There is no server and no account. Under
+**More → Save backup** you can create a backup file now and then (e.g. in iCloud Drive or Google
+Drive). That's also how you move your data to a new phone (**Restore backup**).
 
-## Einmalige Einrichtung auf GitHub
+## One-time setup on GitHub
 
-1. Repository → **Settings → Pages** → bei **Source** „**GitHub Actions**“ auswählen.
-2. Fertig. Ab jetzt läuft alles über GitHub Actions.
+1. Repository → **Settings → Pages** → under **Source** choose "**GitHub Actions**".
+2. Done. From now on everything runs through GitHub Actions.
 
-## Neue Version ausrollen
+## Rolling out a new version
 
-1. Änderungen landen per Pull Request auf `master`. Der **CI**-Workflow prüft jeden PR automatisch.
-2. Repository → **Actions → Release → Run workflow** → Art der Änderung wählen:
-   - `patch`: kleine Korrektur (0.1.0 → 0.1.1)
-   - `minor`: neue Funktion (0.1.0 → 0.2.0)
-   - `major`: große Umstellung (0.1.0 → 1.0.0)
-3. Der Workflow prüft die App, erhöht die Versionsnummer, legt ein GitHub-Release mit Änderungsliste
-   an und rollt die Version aus. Nach 1–2 Minuten ist sie live.
+1. Changes land on `master` via pull request. The **CI** workflow checks every PR automatically.
+2. Repository → **Actions → Release → Run workflow** → pick the type of change:
+   - `patch`: small fix (0.1.0 → 0.1.1)
+   - `minor`: new feature (0.1.0 → 0.2.0)
+   - `major`: big change (0.1.0 → 1.0.0)
+3. The workflow checks the app, bumps the version number, creates a GitHub release with a change list
+   and rolls the version out. It's live after 1–2 minutes.
 
-Ein Merge auf `master` allein verändert die App auf dem Handy **nicht**. Live geht nur, was per
-Release veröffentlicht wurde.
+A merge to `master` alone does **not** change the app on your phone. Only what was published through
+a release goes live.
 
-### Zurück zu einer älteren Version (Rollback)
+### Back to an older version (rollback)
 
-**Actions → Deploy → Run workflow** → bei „Version“ den alten Tag eintragen (z. B. `v0.1.0`). Alle
-Versionen stehen unter **Releases**.
+**Actions → Deploy → Run workflow** → enter the old tag under "Version" (e.g. `v0.1.0`). All versions
+are listed under **Releases**.
 
-## Entwicklung
+## Development
 
-Voraussetzung: Node.js 22 (siehe `.nvmrc`).
+Requirement: Node.js 22 (see `.nvmrc`).
 
 ```bash
 npm install
-npm run dev        # Entwicklungsserver, auch im WLAN vom Handy aus erreichbar
-npm test           # Unit-Tests (Vitest)
-npm run typecheck  # TypeScript prüfen
+npm run dev        # dev server, also reachable from your phone on the same Wi-Fi
+npm test           # unit tests (Vitest)
+npm run typecheck  # check TypeScript
 npm run lint       # oxlint
-npm run build      # Produktions-Build nach dist/
+npm run build      # production build to dist/
 ```
 
-App-Icon ändern: `public/logo.png` (quadratisch, mind. 512 px) ersetzen und `npm run generate-icons` ausführen.
+To change the app icon: replace `public/logo.png` (square, at least 512 px) and run `npm run generate-icons`.
 
-### Aufbau
+### Structure
 
 ```
 src/
-  lib/          Logik ohne UI: Datentypen, Speicherung, Statistik, Ghalta-Mathe, Lernplan-Inhalte,
-                Deckliste, Scryfall-Anbindung
-  lib/sim/      Goldfish-Simulation (Autopilot) und Mulligan-Faustregel
-  lib/quiz/     Quiz-Lektionen und Karten-Quiz (Rollen, Lücken, Kacheln)
-  components/   Wiederverwendbare Bausteine (Formular, Ghalta-Rechner, Kartenbild, Kartenrahmen …)
-  pages/        Die Bildschirme: Start, Runde, Training, Lektion, Verlauf, Statistik, Deck, Mehr
+  lib/          Logic without UI: data types, storage, stats, Ghalta math, learning-plan content,
+                decklist, Scryfall access
+  lib/sim/      Goldfish simulation (autopilot) and mulligan rule of thumb
+  lib/quiz/     Quiz lessons and card quiz (roles, blanks, tiles)
+  components/   Reusable building blocks (form, Ghalta calculator, card image, card frame …)
+  pages/        The screens: Home, Game, Training, Lesson, History, Stats, Deck, More
 .github/workflows/
-  ci.yml        Prüft PRs und master
-  release.yml   Version erhöhen + Release + Ausrollen (manuell starten)
-  deploy.yml    Bestimmte Version ausrollen (auch für Rollbacks)
+  ci.yml        Checks PRs and master
+  release.yml   Bump version + release + roll out (start manually)
+  deploy.yml    Roll out a specific version (also for rollbacks)
 ```
 
-Stack: React + TypeScript + Vite, `vite-plugin-pwa` für Offline-Betrieb und Updates,
-Phosphor-Icons und die Schrift Nunito (beides lokal eingebunden, funktioniert offline).
+Stack: React + TypeScript + Vite, `vite-plugin-pwa` for offline use and updates,
+Phosphor icons and the Nunito font (both bundled locally, works offline).
 
 ### Design
 
-Angelehnt an Lern-Apps wie Duolingo:
+Inspired by learning apps like Duolingo:
 
-- **Eine Sache pro Bildschirm:** Nach dem Spiel kommt jede Frage einzeln, mit Fortschrittsbalken.
-  Einfachauswahlen springen automatisch weiter, alles außer dem Ergebnis lässt sich überspringen.
-- **Lernpfad statt Liste:** Die Fokus-Rotation ist ein Pfad aus Knoten; der nächste Skill pulsiert.
-- **Daumenzone:** Die Hauptaktion steht immer unten; Zusatzinfos öffnen sich als Bottom Sheet.
-- **Taktile Elemente:** Buttons und Karten haben eine 3D-„Lippe“ und sinken beim Tippen ein,
-  auf Android mit kurzer Vibration.
-- **Belohnung:** Wochen-Serie (🔥), Feier-Bildschirm mit Konfetti nach jeder Runde.
-- **Farben:** Jeder Skill hat eine feste Farbe plus Icon. Die Palette ist auf Farbfehlsichtigkeit
-  geprüft (hell und dunkel); Farben stehen nie allein, immer mit Icon und Text.
+- **One thing per screen:** after the game, each question comes on its own, with a progress bar.
+  Single-choice questions advance automatically; everything except the result can be skipped.
+- **Learning path instead of a list:** the focus rotation is a path of nodes; the next skill pulses.
+- **Thumb zone:** the main action is always at the bottom; extra info opens as a bottom sheet.
+- **Tactile elements:** buttons and cards have a 3D "lip" and sink in when tapped, with a short
+  vibration on Android.
+- **Reward:** weekly streak (🔥), celebration screen with confetti after every game.
+- **Colors:** every skill has a fixed color plus icon. The palette is checked for color vision
+  deficiency (light and dark); colors never stand alone, always with icon and text.
 
-### Später denkbar
+### Possible later
 
-- **Sync zwischen Geräten** (z. B. mit Cloudflare Workers + D1 im Free Tier). Dafür bräuchte es ein Login.
-- **Echte Store-App:** Derselbe Code lässt sich mit Capacitor als Android-/iOS-App verpacken. Für den
-  iOS App Store ist ein Apple-Developer-Konto nötig (99 $/Jahr).
+- **Sync between devices** (e.g. with Cloudflare Workers + D1 on the free tier). That would need a login.
+- **Real store app:** the same code can be packaged as an Android/iOS app with Capacitor. The iOS App
+  Store requires an Apple Developer account ($99/year).

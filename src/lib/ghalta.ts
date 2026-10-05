@@ -1,20 +1,20 @@
-/** Generischer Anteil von Ghaltas Manakosten (10 generisch + GG). */
+/** Generic part of Ghalta's mana cost (10 generic + GG). */
 export const GHALTA_GENERIC = 10
 
 export interface GhaltaCost {
-  /** Generisches Mana, das nach Steuer und Reduktion übrig bleibt. */
+  /** Generic mana left after tax and reduction. */
   generic: number
-  /** Gesamtkosten inklusive GG. */
+  /** Total cost including GG. */
   total: number
-  /** Kosten in Kartenschreibweise, z. B. „4GG“ oder „GG“. */
+  /** Cost in card notation, e.g. "4GG" or "GG". */
   label: string
-  /** Wie viel Stärke noch fehlt, bis Ghalta nur noch GG kostet. */
+  /** How much power is still missing until Ghalta costs only GG. */
   missingPowerForGG: number
 }
 
 /**
- * Commander-Steuer (+2 je früherem Cast aus der Command Zone) wird zuerst addiert,
- * danach senkt die Gesamtstärke deiner Kreaturen den generischen Anteil.
+ * Commander tax (+2 per earlier cast from the command zone) is added first,
+ * then the total power of your creatures reduces the generic part.
  */
 export function ghaltaCost(power: number, previousCasts: number): GhaltaCost {
   const genericBeforeReduction = GHALTA_GENERIC + 2 * Math.max(0, previousCasts)

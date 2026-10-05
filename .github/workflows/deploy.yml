@@ -1,9 +1,9 @@
 name: Deploy
 
-# Baut eine bestimmte Version und rollt sie auf GitHub Pages aus.
-# - Wird automatisch vom Release-Workflow aufgerufen.
-# - Manuell starten (Actions → Deploy → Run workflow) und einen älteren Tag
-#   eintragen = Rollback auf diese Version.
+# Builds a specific version and rolls it out to GitHub Pages.
+# - Called automatically by the release workflow.
+# - Start manually (Actions → Deploy → Run workflow) and enter an older tag
+#   = rollback to that version.
 on:
   workflow_call:
     inputs:
@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: Version zum Ausrollen (Tag, z. B. v0.2.0). Für einen Rollback eine ältere Version eintragen.
+        description: Version to roll out (tag, e.g. v0.2.0). Enter an older version to roll back.
         type: string
         required: true
 

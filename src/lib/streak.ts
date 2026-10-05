@@ -1,7 +1,7 @@
 import type { Game } from './types'
 
-// Serie in Wochen statt Tagen: Commander spielt man meist einmal pro Woche
-// (z. B. donnerstags). Eine Woche zählt, wenn mindestens eine Runde darin liegt.
+// Streak in weeks instead of days: Commander is usually played once a week
+// (e.g. on Thursdays). A week counts if at least one game falls within it.
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -10,21 +10,21 @@ function toUtc(isoDate: string): number {
   return Date.UTC(y, m - 1, d)
 }
 
-/** Montag der Woche (als UTC-Zeitstempel). */
+/** Monday of the week (as a UTC timestamp). */
 function weekStart(isoDate: string): number {
   const t = toUtc(isoDate)
-  const weekday = (new Date(t).getUTCDay() + 6) % 7 // Montag = 0
+  const weekday = (new Date(t).getUTCDay() + 6) % 7 // Monday = 0
   return t - weekday * DAY_MS
 }
 
 const WEEK_MS = 7 * DAY_MS
 
 export interface Streak {
-  /** Aktuelle Serie in Wochen. Die laufende Woche darf noch leer sein. */
+  /** Current streak in weeks. The current week may still be empty. */
   current: number
-  /** Längste Serie bisher. */
+  /** Longest streak so far. */
   best: number
-  /** Wurde in dieser Woche schon gespielt? */
+  /** Has a game been played this week yet? */
   playedThisWeek: boolean
 }
 

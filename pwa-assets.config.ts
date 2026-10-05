@@ -1,7 +1,7 @@
 import { defineConfig, minimal2023Preset } from '@vite-pwa/assets-generator/config'
 
-// App-Icons aus public/logo.png erzeugen: `npm run generate-icons`
-// Das Motiv füllt das ganze Quadrat, deshalb ohne zusätzlichen Rand.
+// Generate app icons from public/logo.png: `npm run generate-icons`
+// The artwork fills the whole square, so no extra padding.
 const resizeOptions = { background: '#000000' }
 
 export default defineConfig({

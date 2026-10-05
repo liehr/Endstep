@@ -1,31 +1,31 @@
-// Kompakte Kartendaten (aus Scryfall) und Helfer, um sie für Quiz und Simulation zu lesen.
+// Compact card data (from Scryfall) and helpers to read it for the quiz and simulation.
 
 export interface CardInfo {
   name: string
   typeLine: string
   manaCost: string
   cmc: number
-  /** Stärke als Zahl; null bei „*“ oder Nicht-Kreaturen. */
+  /** Power as a number; null for "*" or non-creatures. */
   power: number | null
   powerText: string | null
   toughness: string | null
   oracleText: string
   producedMana: string[]
   keywords: string[]
-  /** Kleines Kartenbild (für Listen und Hände). */
+  /** Small card image (for lists and hands). */
   image: string | null
-  /** Größeres Kartenbild (für die Detailansicht). */
+  /** Larger card image (for the detail view). */
   imageLarge: string | null
-  /** Nur das Artwork (für das Karten-Quiz). */
+  /** Artwork only (for the card quiz). */
   art: string | null
   scryfallUri: string
-  /** Druckversion: Set-Code (klein) und Name, Sammlernummer. */
+  /** Printing: set code (lower case) and name, collector number. */
   set: string
   setName: string
   collectorNumber: string
   /**
-   * Wurde eine bestimmte Druckversion angefragt, die es bei Scryfall nicht gibt,
-   * steht hier das gewünschte Set; geliefert wurde dann eine andere Version.
+   * If a specific printing was requested that Scryfall doesn't have, this holds
+   * the requested set; a different version was delivered instead.
    */
   requestedSet?: string
 }
@@ -38,14 +38,14 @@ export const isArtifact = (c: CardInfo) => /\bArtifact\b/.test(c.typeLine)
 
 export interface ManaCost {
   generic: number
-  /** Grüne Symbole (inkl. Hybrid-/Phyrexia-Grün). */
+  /** Green symbols (incl. hybrid/Phyrexian green). */
   green: number
-  /** Andere farbige Symbole (W/U/B/R) – kann das grüne Deck nicht bezahlen. */
+  /** Other colored symbols (W/U/B/R) – the green deck can't pay these. */
   otherColors: number
   hasX: boolean
 }
 
-/** „{2}{G}{G}“ → 2 generisch, 2 grün. */
+/** "{2}{G}{G}" → 2 generic, 2 green. */
 export function parseCost(manaCost: string): ManaCost {
   const cost: ManaCost = { generic: 0, green: 0, otherColors: 0, hasX: false }
   for (const [, sym] of manaCost.matchAll(/\{([^}]+)\}/g)) {
@@ -60,21 +60,21 @@ export function parseCost(manaCost: string): ManaCost {
 }
 
 export interface ManaAbility {
-  /** Mana pro Tappen im Normalfall. */
+  /** Mana per tap in the normal case. */
   amount: number
-  /** Mana, wenn man eine Kreatur mit Stärke 4+ kontrolliert (Ilysian Caryatid, Whisperer of the Wilds). */
+  /** Mana when you control a creature with power 4+ (Ilysian Caryatid, Whisperer of the Wilds). */
   ferociousAmount: number
-  /** Kann es grünes Mana erzeugen? (Sonst nur farblos, z. B. Sol Ring.) */
+  /** Can it produce green mana? (Otherwise colorless only, e.g. Sol Ring.) */
   green: boolean
 }
 
-/** Liest „{T}: Add …“ aus dem Regeltext. null, wenn die Karte kein Mana erzeugt. */
+/** Reads "{T}: Add …" from the rules text. null if the card produces no mana. */
 export function manaAbility(card: CardInfo): ManaAbility | null {
   const text = card.oracleText
   const clauses = [...text.matchAll(/\{T\}(?:,[^:]*)?: Add ([^.]+)\./g)].map((m) => m[1])
   if (clauses.length === 0) {
     if (card.producedMana.length === 0) return null
-    // Fallback: produced_mana ohne lesbaren Text (sollte selten sein).
+    // Fallback: produced_mana without readable text (should be rare).
     return { amount: 1, ferociousAmount: 1, green: card.producedMana.includes('G') }
   }
 
@@ -101,14 +101,14 @@ export function manaAbility(card: CardInfo): ManaAbility | null {
 
 export const entersTapped = (card: CardInfo) => /enters( the battlefield)? tapped/i.test(card.oracleText)
 
-/** Stärke auf dem Feld, auch für „*“-Kreaturen wie Dungrove Elder (Anzahl Wälder). */
+/** Power on the battlefield, also for "*" creatures like Dungrove Elder (number of Forests). */
 export function boardPower(card: CardInfo, forests: number): number {
   if (card.power !== null) return card.power
   if (card.powerText?.includes('*') && /number of Forests you control/i.test(card.oracleText)) return forests
   return 0
 }
 
-/** Rohdaten einer Scryfall-Karte (nur die Felder, die wir lesen). */
+/** Raw data of a Scryfall card (only the fields we read). */
 export interface ScryfallCard {
   name: string
   type_line?: string
@@ -135,7 +135,7 @@ export interface ScryfallCard {
   scryfall_uri?: string
 }
 
-/** Scryfall-Karte in unser kompaktes Format übersetzen (bei doppelseitigen Karten zählt die Vorderseite). */
+/** Convert a Scryfall card into our compact format (for double-faced cards the front face counts). */
 export function fromScryfall(raw: ScryfallCard): CardInfo {
   const front = raw.card_faces?.[0]
   const powerText = raw.power ?? front?.power ?? null

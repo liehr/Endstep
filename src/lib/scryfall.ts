@@ -1,22 +1,22 @@
 import { useSyncExternalStore } from 'react'
 import { cardKey, fromScryfall, type CardInfo, type ScryfallCard } from './cards'
 
-// Kartendaten kommen live von der Scryfall-API (https://scryfall.com/docs/api) und werden
-// lokal gespeichert. Die Bulk-Daten (>100 MB) wären fürs Handy zu groß; wir brauchen nur
-// die ~100 Karten des eigenen Decks: zwei Anfragen an /cards/collection.
+// Card data comes live from the Scryfall API (https://scryfall.com/docs/api) and is
+// stored locally. The bulk data (>100 MB) would be too big for a phone; we only need
+// the ~100 cards of our own deck: two requests to /cards/collection.
 
 const API = 'https://api.scryfall.com'
 const CACHE_KEY = 'endstep:cards'
-/** Scryfall erlaubt höchstens 75 Karten pro Collection-Anfrage. */
+/** Scryfall allows at most 75 cards per collection request. */
 const BATCH = 75
-/** Scryfall bittet um 50–100 ms Abstand zwischen Anfragen. */
+/** Scryfall asks for 50–100 ms between requests. */
 const DELAY_MS = 100
 
 type Fetch = typeof fetch
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const headers = { Accept: 'application/json' }
 
-/** Welche Karte (und optional welche Druckversion) geladen werden soll. */
+/** Which card (and optionally which printing) to load. */
 export interface CardRequest {
   name: string
   set?: string | null
@@ -24,7 +24,7 @@ export interface CardRequest {
 }
 
 export interface FetchResult {
-  /** Gefundene Karten, Schlüssel = angefragter Name (klein geschrieben). */
+  /** Cards found, key = requested name (lower case). */
   found: Map<string, CardInfo>
   notFound: string[]
 }
@@ -47,7 +47,7 @@ async function collection(requests: CardRequest[], fetchImpl: Fetch, delayMs: nu
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ identifiers: batch.map((r) => (exact ? identifier(r) : { name: r.name })) }),
     })
-    if (!res.ok) throw new Error(`Scryfall antwortet mit ${res.status}`)
+    if (!res.ok) throw new Error(`Scryfall responded with ${res.status}`)
     const body = (await res.json()) as { data: ScryfallCard[] }
     for (const raw of body.data) {
       const card = fromScryfall(raw)
@@ -59,8 +59,8 @@ async function collection(requests: CardRequest[], fetchImpl: Fetch, delayMs: nu
 }
 
 /**
- * Karten laden: zuerst genau die gewünschte Druckversion (Set/Sammlernummer), dann für
- * nicht Gefundenes die Standardversion (markiert mit requestedSet), zuletzt unscharfe Suche.
+ * Load cards: first exactly the requested printing (set/collector number), then for anything
+ * not found the default version (marked with requestedSet), finally a fuzzy search.
  */
 export async function fetchCards(
   requests: (CardRequest | string)[],
@@ -76,7 +76,7 @@ export async function fetchCards(
     if (card) found.set(cardKey(r.name), card)
   }
 
-  // Druckversion nicht gefunden: Standardversion nehmen und merken, dass es nicht die gewünschte ist.
+  // Printing not found: take the default version and remember that it is not the requested one.
   const withoutPrinting = wanted.filter((r) => !found.has(cardKey(r.name)) && r.set)
   if (withoutPrinting.length > 0) {
     await sleep(delayMs)
@@ -100,7 +100,7 @@ export async function fetchCards(
   return { found, notFound }
 }
 
-/** Kartennamen-Vorschläge beim Tippen (für Swaps). */
+/** Card name suggestions while typing (for swaps). */
 export async function autocomplete(query: string, fetchImpl: Fetch = fetch): Promise<string[]> {
   if (query.trim().length < 2) return []
   const res = await fetchImpl(`${API}/cards/autocomplete?q=${encodeURIComponent(query.trim())}`, { headers })
@@ -108,7 +108,7 @@ export async function autocomplete(query: string, fetchImpl: Fetch = fetch): Pro
   return ((await res.json()) as { data: string[] }).data
 }
 
-// --- Lokaler Speicher ----------------------------------------------------------
+// --- Local storage ---------------------------------------------------------------
 
 export type LoadStatus = 'idle' | 'loading' | 'error'
 
@@ -150,7 +150,7 @@ export function getCard(name: string): CardInfo | undefined {
   return state.cards[cardKey(name)]
 }
 
-/** Passt die gespeicherte Karte zur gewünschten Druckversion? */
+/** Does the stored card match the requested printing? */
 export function satisfies(card: CardInfo | undefined, request: CardRequest): boolean {
   if (!card) return false
   if (!request.set) return true
@@ -164,8 +164,8 @@ export function missingCards(requests: (CardRequest | string)[]): CardRequest[] 
 }
 
 /**
- * Fehlende Karten nachladen (nur online). Bereits gespeicherte werden nicht erneut angefragt,
- * bei Scryfall unbekannte Namen nur mit force (z. B. Tipp auf „Erneut versuchen“).
+ * Load missing cards (online only). Cards already stored are not requested again,
+ * names unknown to Scryfall only with force (e.g. tapping "Try again").
  */
 export async function ensureCards(
   requests: (CardRequest | string)[],
@@ -175,7 +175,7 @@ export async function ensureCards(
   const missing = missingCards(requests).filter((r) => force || !unknown.has(cardKey(r.name)))
   if (missing.length === 0 || state.status === 'loading') return
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    set({ status: 'error', error: 'Offline: Kartendaten werden geladen, sobald du wieder online bist.' })
+    set({ status: 'error', error: "Offline: card data will load as soon as you're back online." })
     return
   }
   set({ status: 'loading', error: null })
@@ -185,16 +185,16 @@ export async function ensureCards(
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify({ cards }))
     } catch {
-      // Speicher voll: Daten bleiben nur für diese Sitzung.
+      // Storage full: data is kept for this session only.
     }
     const stillUnknown = [...new Set([...state.notFound.filter((n) => !found.has(cardKey(n))), ...notFound])]
     set({ cards, notFound: stillUnknown, status: 'idle' })
   } catch (err) {
-    set({ status: 'error', error: err instanceof Error ? err.message : 'Scryfall nicht erreichbar.' })
+    set({ status: 'error', error: err instanceof Error ? err.message : 'Scryfall is unreachable.' })
   }
 }
 
-/** Nur für Tests: Speicher zurücksetzen. */
+/** Tests only: reset the store. */
 export function resetCardState(cards: Record<string, CardInfo> = {}) {
   state = { cards, notFound: [], status: 'idle', error: null }
 }

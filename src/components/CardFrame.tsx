@@ -3,7 +3,7 @@ import { GAP, type CardFace, type FieldId } from '../lib/quiz/cardQuiz'
 
 const isManaString = (s: string) => /^(\{[^}]+\})+$/.test(s)
 
-/** Mana-Symbole wie {2}{G}{G} als runde Plättchen. */
+/** Mana symbols like {2}{G}{G} as round pips. */
 export function Mana({ cost }: { cost: string }) {
   const symbols = [...cost.matchAll(/\{([^}]+)\}/g)].map((m) => m[1])
   return (
@@ -17,12 +17,12 @@ export function Mana({ cost }: { cost: string }) {
   )
 }
 
-/** Text oder Mana-String passend darstellen (für Antwortoptionen und Kacheln). */
+/** Render text or a mana string appropriately (for answer options and tiles). */
 export function AnswerLabel({ value }: { value: string }) {
   return isManaString(value) ? <Mana cost={value} /> : <>{value}</>
 }
 
-/** Regeltext mit Mana-Symbolen, Zeilenumbrüchen, Lücke und versteckten Namen (~). */
+/** Rules text with mana symbols, line breaks, blank and hidden names (~). */
 function RulesText({ text, gap }: { text: string; gap: ReactNode }) {
   const parts = text.split(/(\{[^}]+\}|~|⦁|\n)/)
   return (
@@ -30,7 +30,7 @@ function RulesText({ text, gap }: { text: string; gap: ReactNode }) {
       {parts.map((p, i) => {
         if (p === '\n') return <br key={i} />
         if (p === GAP) return <span key={i}>{gap}</span>
-        if (p === '~') return <span key={i} className="name-mask" aria-label="Kartenname">▢▢▢</span>
+        if (p === '~') return <span key={i} className="name-mask" aria-label="Card name">▢▢▢</span>
         if (/^\{[^}]+\}$/.test(p)) return <Mana key={i} cost={p} />
         return <span key={i}>{p}</span>
       })}
@@ -38,14 +38,14 @@ function RulesText({ text, gap }: { text: string; gap: ReactNode }) {
   )
 }
 
-/** corrected = falsch beantwortet, die Lücke zeigt jetzt die richtige Lösung. */
+/** corrected = answered wrong, the blank now shows the right answer. */
 export type SlotState = 'empty' | 'filled' | 'right' | 'corrected'
 
 export interface Slot {
-  /** Angezeigter Inhalt (ausgefüllte Kachel oder aufgedeckte Antwort); leer = „?“. */
+  /** Displayed content (filled tile or revealed answer); empty = "?". */
   value: string | null
   state: SlotState
-  /** Tippen auf eine gefüllte Lücke gibt die Kachel zurück. */
+  /** Tapping a filled blank returns the tile. */
   onClick?: () => void
   active?: boolean
 }
@@ -63,7 +63,7 @@ function SlotView({ slot, wide }: { slot: Slot; wide?: boolean }) {
   )
 }
 
-/** Selbst gezeichnete Magic-Karte, bei der einzelne Felder als Lücke erscheinen. */
+/** Self-drawn Magic card where individual fields appear as blanks. */
 export function CardFrame({ face, slots }: { face: CardFace; slots: Partial<Record<FieldId, Slot>> }) {
   const field = (id: FieldId, content: ReactNode, wide = false) => {
     const slot = slots[id]
@@ -71,7 +71,7 @@ export function CardFrame({ face, slots }: { face: CardFace; slots: Partial<Reco
   }
 
   return (
-    <div className={`card-frame frame-${face.frame}`} role="img" aria-label="Karte mit Lücken">
+    <div className={`card-frame frame-${face.frame}`} role="img" aria-label="Card with blanks">
       <div className="cf-inner">
         <div className="cf-title">
           <span className="cf-name">{field('name', face.name, true)}</span>

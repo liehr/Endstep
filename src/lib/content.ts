@@ -3,66 +3,66 @@ import type { FocusRating, SkillId, WhyCategory, WipeOutcome } from './types'
 export interface Skill {
   id: SkillId
   name: string
-  /** Kurzer Merksatz für den Spieltisch. */
+  /** Short rule of thumb for the table. */
   tip: string
-  /** Konkrete Aufgabe, die man sich für die Runde vornehmen kann. */
+  /** Concrete task you can set yourself for the game. */
   task: string
 }
 
-/** Fokus-Rotation aus dem Lernplan: eine pro Spiel, danach von vorne. */
+/** Focus rotation from the learning plan: one per game, then start over. */
 export const SKILLS: Skill[] = [
   {
     id: 'mulligan',
     name: 'Mulligan',
-    tip: 'Der erste Mulligan ist gratis. Behalte 3–4 Länder oder Manakreaturen plus mindestens eine frühe dicke Kreatur.',
-    task: 'Starthand bewusst prüfen und eine „naja“-Hand ruhig zurückschicken.',
+    tip: 'The first mulligan is free. Keep 3–4 lands or mana creatures plus at least one early big creature.',
+    task: 'Check your opening hand on purpose and calmly send back a “meh” hand.',
   },
   {
     id: 'sequencing',
     name: 'Sequencing',
-    tip: 'Jeden Zug ein Land. Manakreaturen früh. Kreaturen und Removal so spät wie sinnvoll, um auf neue Infos zu reagieren.',
-    task: 'Laut mitzählen: „Ich habe X Stärke, Ghalta kostet Y.“',
+    tip: 'A land every turn. Mana creatures early. Creatures and removal as late as makes sense, so you can react to new info.',
+    task: 'Count out loud: “I have X power, Ghalta costs Y.”',
   },
   {
     id: 'threat',
     name: 'Threat Assessment',
-    tip: 'Lebenspunkte sind nicht der Punktestand. Gefährlich ist, wer Ressourcen anhäuft oder kurz vor dem Sieg steht. Der Zweite ist oft gefährlicher als der Erste.',
-    task: 'Vor jedem Angriff einen Satz bilden: „Wer gewinnt gerade, und warum?“',
+    tip: 'Life totals aren’t the scoreboard. The dangerous player is the one piling up resources or close to winning. Second place is often more dangerous than first.',
+    task: 'Before every attack, say one sentence: “Who is winning right now, and why?”',
   },
   {
     id: 'combat',
-    name: 'Kampfmathe',
-    tip: 'Trample: Jeder Blocker braucht tödlichen Schaden, der Rest geht durch. 21 Kampfschaden vom selben Commander gewinnen.',
-    task: 'Vor jedem Angriff die Kampfmathe einmal komplett im Kopf durchrechnen.',
+    name: 'Combat Math',
+    tip: 'Trample: every blocker needs lethal damage, the rest goes through. 21 combat damage from the same commander wins.',
+    task: 'Before every attack, run the full combat math in your head once.',
   },
   {
     id: 'wipe',
-    name: 'Board-Wipe-Disziplin',
-    tip: 'Was passiert, wenn jetzt ein Wrath kommt? Angreifen und dabei 1–2 Dicke auf der Hand behalten.',
-    task: 'Bewusst 1–2 dicke Kreaturen zurückhalten und notieren, ob es sich gelohnt hat.',
+    name: 'Board Wipe Discipline',
+    tip: 'What happens if a wrath comes down now? Attack, and keep 1–2 big creatures in hand.',
+    task: 'Deliberately hold back 1–2 big creatures and note whether it paid off.',
   },
   {
     id: 'removal',
-    name: 'Removal-Timing',
-    tip: 'Removal auf „tödlich“, nicht auf „nervig“. Ram Through und Bite Down funktionieren nur mit einer dicken Kreatur.',
-    task: 'Vor jedem Removal fragen: Beendet diese Karte sonst das Spiel?',
+    name: 'Removal Timing',
+    tip: 'Removal is for “lethal”, not for “annoying”. Ram Through and Bite Down only work with a big creature.',
+    task: 'Before every removal spell, ask: Will this card otherwise end the game?',
   },
   {
     id: 'politics',
-    name: 'Tisch lesen / Politik',
-    tip: 'Nicht früh und grundlos angreifen. Jeder Angriff braucht einen Grund, den du laut sagen kannst.',
-    task: 'Bei jedem Angriff den Grund laut aussprechen: „Ich hau dich, weil …“',
+    name: 'Reading the Table / Politics',
+    tip: 'Don’t attack early for no reason. Every attack needs a reason you can say out loud.',
+    task: 'Say the reason out loud with every attack: “I’m hitting you because …”',
   },
 ]
 
 export const SKILL_BY_ID = Object.fromEntries(SKILLS.map((s) => [s.id, s])) as Record<SkillId, Skill>
 
 export const WHY_CATEGORIES: { id: WhyCategory; label: string }[] = [
-  { id: 'mistake', label: 'Eigener technischer Fehler' },
-  { id: 'foresee', label: 'Hätte ich lesen oder vorhersehen können' },
-  { id: 'deckbuilding', label: 'Deckbau' },
-  { id: 'wrongdeck', label: 'Falsches Deck für diesen Tisch' },
-  { id: 'luck', label: 'Pech' },
+  { id: 'mistake', label: 'My own technical mistake' },
+  { id: 'foresee', label: 'I could have read or seen it coming' },
+  { id: 'deckbuilding', label: 'Deckbuilding' },
+  { id: 'wrongdeck', label: 'Wrong deck for this table' },
+  { id: 'luck', label: 'Bad luck' },
 ]
 
 export const WHY_LABEL = Object.fromEntries(WHY_CATEGORIES.map((c) => [c.id, c.label])) as Record<
@@ -71,9 +71,9 @@ export const WHY_LABEL = Object.fromEntries(WHY_CATEGORIES.map((c) => [c.id, c.l
 >
 
 export const WIPE_OPTIONS: { id: WipeOutcome; label: string }[] = [
-  { id: 'none', label: 'Kein Wipe' },
-  { id: 'kept', label: 'Wipe, aber Nachschub auf der Hand' },
-  { id: 'overextended', label: 'Wipe, alles verloren' },
+  { id: 'none', label: 'No wipe' },
+  { id: 'kept', label: 'Wipe, but reloads in hand' },
+  { id: 'overextended', label: 'Wipe, lost everything' },
 ]
 
 export const WIPE_LABEL = Object.fromEntries(WIPE_OPTIONS.map((o) => [o.id, o.label])) as Record<
@@ -82,65 +82,65 @@ export const WIPE_LABEL = Object.fromEntries(WIPE_OPTIONS.map((o) => [o.id, o.la
 >
 
 export const FOCUS_RATINGS: { id: FocusRating; label: string }[] = [
-  { id: 1, label: 'Kaum dran gedacht' },
-  { id: 2, label: 'Teilweise' },
-  { id: 3, label: 'Gut umgesetzt' },
+  { id: 1, label: 'Barely thought of it' },
+  { id: 2, label: 'Partly' },
+  { id: 3, label: 'Nailed it' },
 ]
 
-/** Upgrade-Truhe: alle 8 Spiele eine Swap-Runde (erste nach 8 Spielen mit dem unveränderten Deck). */
+/** Upgrade chest: a swap round every 8 games (the first after 8 games with the unchanged deck). */
 export const UPGRADE_EVERY_GAMES = 8
 
 /**
- * Höchstzahl Karten je Swap-Runde, in Stufen: erst einzeln tauschen, damit man die Wirkung sieht,
- * später etwas mehr. Die letzte Stufe gilt für alle weiteren Runden.
+ * Maximum number of cards per swap round, in steps: swap one at a time at first so you can see the effect,
+ * a bit more later on. The last step applies to all further rounds.
  */
 export const UPGRADE_CARDS = [1, 1, 2, 2, 3]
 
-/** Ab so vielen Spielen mit dem Deck fragt die App, ob die Runde ein höheres Bracket spielen will. */
+/** After this many games with the deck, the app asks whether the table wants to play a higher bracket. */
 export const BRACKET_CHECK_GAMES = 64
 
-/** Erst wenn dasselbe Problem zum dritten Mal auftaucht, ist es ein Muster. */
+/** Only when the same problem shows up for the third time is it a pattern. */
 export const PATTERN_THRESHOLD = 3
 
 export const DEFAULT_DECK = 'Tramplesaurus Rex (Ghalta)'
 
 export const DEFAULT_TABLE_INTRO =
-  'Ghalta-Precon, unverändert, Bracket 2, keine Game Changers, keine Kombos.'
+  'Ghalta precon, unchanged, Bracket 2, no Game Changers, no combos.'
 
 export const ATTACK_PRIORITIES = [
-  'Wer kurz vor dem Sieg steht oder eine Engine aufbaut, die du nicht entfernen kannst.',
-  'Wer dein Board wipen kann (viele offene Länder in Weiß, Schwarz oder Rot).',
-  'Wer wenige oder kleine Blocker hat: Trample-Überschuss zählt voll als Commander-Schaden.',
-  'Nicht den Schwächsten, nur weil es geht. Das macht dich zum Archenemy.',
+  'Whoever is close to winning or building an engine you can’t remove.',
+  'Whoever can wipe your board (lots of open lands in white, black or red).',
+  'Whoever has few or small blockers: trample overflow counts in full as commander damage.',
+  'Not the weakest player just because you can. That makes you the archenemy.',
 ]
 
 export const RULES = [
   {
-    title: 'Commander-Steuer',
-    text: '+2 generisches Mana für jeden früheren Cast aus der Command Zone. Ghaltas Reduktion senkt sie mit.',
+    title: 'Commander tax',
+    text: '+2 generic mana for each previous cast from the command zone. Ghalta’s reduction lowers it too.',
   },
   {
-    title: 'Commander-Schaden',
-    text: '21 Kampfschaden vom selben Commander. Durchgekommener Trample-Schaden zählt, Fight-Schaden nicht. Ghalta (12/12) gegen einen 5/5-Blocker: nur 7 zählen.',
+    title: 'Commander damage',
+    text: '21 combat damage from the same commander. Trample damage that gets through counts, fight damage doesn’t. Ghalta (12/12) against a 5/5 blocker: only 7 count.',
   },
   {
     title: 'Trample',
-    text: 'Jedem Blocker tödlichen Schaden zuweisen, Überschuss geht zum Spieler. Verteilung auf mehrere Blocker ist frei. Mit Deathtouch reicht 1 Schaden pro Blocker.',
+    text: 'Assign lethal damage to each blocker, the excess goes to the player. You can split it freely across multiple blockers. With Deathtouch, 1 damage per blocker is enough.',
   },
   {
-    title: 'Geblockt bleibt geblockt',
-    text: 'Verschwindet der Blocker, macht eine Kreatur ohne Trample keinen Schaden. Mit Trample geht der volle Schaden zum Spieler.',
+    title: 'Blocked stays blocked',
+    text: 'If the blocker disappears, a creature without Trample deals no damage. With Trample, the full damage goes to the player.',
   },
   {
-    title: 'Angriffe im Multiplayer',
-    text: 'Für jede Kreatur ansagen, welchen Spieler oder Planeswalker sie angreift, bevor jemand blockt.',
+    title: 'Attacks in multiplayer',
+    text: 'For each creature, announce which player or planeswalker it attacks before anyone blocks.',
   },
   {
-    title: 'Stack & Priorität',
-    text: 'Nach jedem Spruch darf jeder antworten. Last in, first out. Priorität mit etwas Zeit weitergeben.',
+    title: 'Stack & priority',
+    text: 'After every spell, everyone may respond. Last in, first out. Pass priority with a bit of time.',
   },
   {
-    title: 'Kampfschritte',
-    text: 'Beginn → Angreifer → Blocker → Kampfschaden → Ende. Pump-Effekte wie Overwhelming Stampede in den Hauptzug vor dem Kampf.',
+    title: 'Combat steps',
+    text: 'Beginning → attackers → blockers → combat damage → end. Pump effects like Overwhelming Stampede go in the main phase before combat.',
   },
 ]

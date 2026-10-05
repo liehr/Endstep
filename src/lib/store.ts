@@ -5,7 +5,7 @@ import { today } from './dates'
 import { nextFocus } from './focus'
 import type { AppData, DeckEntry, Game, GameInput, LessonId, Settings, SkillId, Swap, Tracker } from './types'
 
-// Ein kleiner globaler Speicher: Daten liegen nur auf dem Gerät (localStorage).
+// A small global store: data lives only on the device (localStorage).
 
 let data: AppData = loadData(localStorage)
 const listeners = new Set<() => void>()
@@ -15,7 +15,7 @@ function commit(next: AppData) {
   try {
     saveData(localStorage, data)
   } catch (err) {
-    console.error('Speichern fehlgeschlagen', err)
+    console.error('Saving failed', err)
   }
   listeners.forEach((l) => l())
 }
@@ -29,7 +29,7 @@ export function useData(): AppData {
   return useSyncExternalStore(subscribe, () => data)
 }
 
-/** Browser bitten, die Daten dauerhaft zu behalten (nicht bei Speicherknappheit zu löschen). */
+/** Ask the browser to keep the data persistently (not delete it when storage runs low). */
 function requestPersistence() {
   navigator.storage?.persist?.().catch(() => {})
 }
@@ -60,7 +60,7 @@ export const actions = {
     commit({ ...data, draft: null })
   },
 
-  /** Laufende Runde als Spiel speichern. Gibt die neue ID zurück. */
+  /** Save the game in progress as a game. Returns the new ID. */
   finishDraft(form: GameInput): string {
     const now = new Date().toISOString()
     const game: Game = { ...form, id: crypto.randomUUID(), createdAt: now, updatedAt: now }
@@ -86,7 +86,7 @@ export const actions = {
     commit({ ...data, settings })
   },
 
-  /** Backup einspielen: nichts geht verloren. Gibt die Anzahl neuer/aktualisierter Spiele zurück. */
+  /** Restore a backup: nothing gets lost. Returns the number of new/updated games. */
   importData(imported: AppData): number {
     const { data: merged, changedGames } = mergeImport(data, imported)
     commit(merged)
@@ -98,13 +98,13 @@ export const actions = {
     commit({ ...data, commander, commanderSet, decklist })
   },
 
-  /** Swap-Runde eintragen: Deckliste anpassen und Tausch protokollieren. */
+  /** Record a swap round: update the decklist and log the swap. */
   addSwap(out: string[], into: string[], note = '', date = today()) {
     const swap: Swap = { id: crypto.randomUUID(), date, out, in: into, note, createdAt: new Date().toISOString() }
     commit({ ...data, decklist: applySwap(data.decklist, out, into), swaps: [...data.swaps, swap] })
   },
 
-  /** Letzte Swap-Runde zurücknehmen (Deckliste wieder zurücktauschen). */
+  /** Undo the last swap round (swap the decklist back). */
   undoLastSwap() {
     const last = data.swaps.at(-1)
     if (!last) return

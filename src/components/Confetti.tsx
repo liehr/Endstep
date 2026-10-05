@@ -3,7 +3,7 @@ import { prefersReducedMotion } from '../lib/haptics'
 
 const COLORS = ['#58cc02', '#1cb0f6', '#ff9600', '#ff4b4b', '#ce82ff', '#ffc800']
 
-/** Kleines Konfetti zum Feiern, ohne externe Bibliothek. */
+/** A little confetti to celebrate, without an external library. */
 export function Confetti() {
   const canvas = useRef<HTMLCanvasElement>(null)
 

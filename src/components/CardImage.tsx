@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { getCard, useCardState } from '../lib/scryfall'
 import { BottomSheet } from './ui'
 
-/** Kartenbild von Scryfall; ohne Daten ein Platzhalter mit dem Namen. Tippen vergrößert. */
+/** Card image from Scryfall; without data a placeholder with the name. Tap to enlarge. */
 export function CardImage({ name, caption }: { name: string; caption?: string }) {
   useCardState()
   const card = getCard(name)

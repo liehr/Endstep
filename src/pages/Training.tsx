@@ -33,7 +33,7 @@ export const LESSON_ICON: Record<LessonId, Icon> = {
   cards: CardsThreeIcon,
 }
 
-/** Farben (mit passender Icon-Farbe) aus der geprüften Skill-Palette, damit alles zusammenpasst. */
+/** Colors (with matching icon color) from the validated skill palette, so everything fits together. */
 const LESSON_SKILL: Record<LessonId, SkillId> = {
   ghalta: 'combat',
   combat: 'threat',
@@ -45,7 +45,7 @@ const LESSON_SKILL: Record<LessonId, SkillId> = {
 
 export const lessonStyle = (id: LessonId): CSSProperties => skillStyle(LESSON_SKILL[id])
 
-/** Mindestens so viele Deckkarten müssen geladen sein, damit Simulationen Sinn ergeben. */
+/** At least this share of deck cards must be loaded for simulations to make sense. */
 const MIN_COVERAGE = 0.9
 
 export function Training() {
@@ -61,21 +61,21 @@ export function Training() {
       <header className="screen-header">
         <div>
           <h1>Training</h1>
-          <p className="muted">Kurze Lektionen für zwischen den Spieltagen.</p>
+          <p className="muted">Short lessons for between game nights.</p>
         </div>
       </header>
 
       {training.length > 0 && (
         <div className="stat-grid">
           <div className="stat-tile">
-            <span className="stat-label">Lektionen</span>
+            <span className="stat-label">Lessons</span>
             <strong className="stat-value">{training.length}</strong>
           </div>
           <div className="stat-tile">
-            <span className="stat-label">Richtig</span>
-            <strong className="stat-value">{Math.round((totalCorrect / totalAnswered) * 100)} %</strong>
+            <span className="stat-label">Correct</span>
+            <strong className="stat-value">{Math.round((totalCorrect / totalAnswered) * 100)}%</strong>
             <span className="stat-sub">
-              {totalCorrect} von {totalAnswered}
+              {totalCorrect} of {totalAnswered}
             </span>
           </div>
         </div>
@@ -103,14 +103,14 @@ export function Training() {
                 </span>
                 <span className="lesson-text">
                   <strong>{lesson.title}</strong>
-                  <span className="muted small">{locked ? 'Braucht die Kartendaten deines Decks.' : lesson.description}</span>
+                  <span className="muted small">{locked ? "Needs your deck's card data." : lesson.description}</span>
                   {results.length > 0 && (
                     <span className="lesson-progress">
                       {Array.from({ length: 5 }, (_, i) => (
                         <span key={i} className={i < best ? 'on' : ''} />
                       ))}
                       <span className="small muted">
-                        {results.length}× gespielt
+                        {results.length}× played
                       </span>
                     </span>
                   )}
@@ -131,20 +131,20 @@ function CardDataNotice({ deck }: { deck: ReturnType<typeof useDeckCards> }) {
   const loading = deck.status === 'loading'
   return (
     <section className="panel notice">
-      <h2>Kartendaten laden</h2>
+      <h2>Load card data</h2>
       <p className="muted">
-        Für den Mulligan-Trainer und die Simulation lädt Endstep einmalig die Karten deines Decks von Scryfall. Danach
-        geht alles auch offline.
+        For the Mulligan Trainer and the simulation, Endstep loads your deck's cards from Scryfall once. After that,
+        everything works offline too.
       </p>
       {deck.error && <p className="error-text">{deck.error}</p>}
       <Button icon={loading ? ArrowClockwiseIcon : CloudArrowDownIcon} disabled={loading} onClick={() => void deck.load(true)}>
-        {loading ? 'Lädt…' : 'Karten laden'}
+        {loading ? 'Loading…' : 'Load cards'}
       </Button>
     </section>
   )
 }
 
-// --- Goldfish-Labor -----------------------------------------------------------------
+// --- Goldfish Lab -------------------------------------------------------------------
 
 const LAB_GAMES = 1000
 const CHUNK = 100
@@ -195,10 +195,10 @@ function GoldfishLab() {
           <FlaskIcon weight="fill" />
         </span>
         <div>
-          <h2>Goldfish-Labor</h2>
+          <h2>Goldfish Lab</h2>
           <p className="muted small">
-            {LAB_GAMES.toLocaleString('de-DE')} Spiele mit deinem aktuellen Deck{swaps.length ? ` (nach ${swaps.length} Swap-Runde${swaps.length > 1 ? 'n' : ''})` : ''}: Wann kommt
-            Ghalta?
+            {LAB_GAMES.toLocaleString('en-GB')} games with your current deck{swaps.length ? ` (after ${swaps.length} swap round${swaps.length > 1 ? 's' : ''})` : ''}: when does
+            Ghalta land?
           </p>
         </div>
       </div>
@@ -208,11 +208,11 @@ function GoldfishLab() {
           <div className="progress">
             <div style={{ width: `${Math.round(progress * 100)}%` }} />
           </div>
-          <span className="muted small">Simuliere… {Math.round(progress * 100)} %</span>
+          <span className="muted small">Simulating… {Math.round(progress * 100)}%</span>
         </div>
       ) : (
         <Button variant={result ? 'secondary' : 'primary'} icon={result ? ArrowClockwiseIcon : PlayIcon} onClick={run}>
-          {result ? 'Nochmal simulieren' : 'Simulation starten'}
+          {result ? 'Simulate again' : 'Start simulation'}
         </Button>
       )}
 
@@ -221,8 +221,8 @@ function GoldfishLab() {
   )
 }
 
-const pct = (v: number) => `${Math.round(v * 100)} %`
-const dec = (v: number | null) => (v === null ? '–' : v.toLocaleString('de-DE', { maximumFractionDigits: 1 }))
+const pct = (v: number) => `${Math.round(v * 100)}%`
+const dec = (v: number | null) => (v === null ? '–' : v.toLocaleString('en-GB', { maximumFractionDigits: 1 }))
 
 function LabResult({ result, realAvg }: { result: Distribution; realAvg: number | null }) {
   const bins = [...result.byTurn.filter((b) => b.turn >= 2 && b.turn <= 10), { turn: 0, share: result.never + result.byTurn.filter((b) => b.turn > 10).reduce((s, b) => s + b.share, 0) }]
@@ -233,21 +233,21 @@ function LabResult({ result, realAvg }: { result: Distribution; realAvg: number 
     <div className="lab-result">
       <div className="stat-grid">
         <div className="stat-tile">
-          <span className="stat-label">Ø Ghalta-Zug</span>
+          <span className="stat-label">Avg. Ghalta turn</span>
           <strong className="stat-value">{dec(result.average)}</strong>
-          <span className="stat-sub">In echten Runden: {dec(realAvg)}</span>
+          <span className="stat-sub">In real games: {dec(realAvg)}</span>
         </div>
         <div className="stat-tile">
-          <span className="stat-label">Bis Zug 5</span>
+          <span className="stat-label">By turn 5</span>
           <strong className="stat-value">{pct(result.byTurnFive)}</strong>
-          <span className="stat-sub">Ø {dec(result.avgMulligans)} Mulligans</span>
+          <span className="stat-sub">Avg. {dec(result.avgMulligans)} mulligans</span>
         </div>
       </div>
 
-      <figure className="histogram" aria-label="Verteilung: in welchem Zug Ghalta kommt">
+      <figure className="histogram" aria-label="Distribution: which turn Ghalta lands">
         <div className="histogram-bars">
           {bins.map((b) => (
-            <div key={b.turn} className="histogram-col" title={`${b.turn ? `Zug ${b.turn}` : 'später/nie'}: ${pct(b.share)}`}>
+            <div key={b.turn} className="histogram-col" title={`${b.turn ? `Turn ${b.turn}` : 'later/never'}: ${pct(b.share)}`}>
               {b === peak && <span className="histogram-peak">{pct(b.share)}</span>}
               <div className="histogram-bar" style={{ height: `${max ? (b.share / max) * 100 : 0}%` }} />
             </div>
@@ -258,22 +258,22 @@ function LabResult({ result, realAvg }: { result: Distribution; realAvg: number 
             <span key={b.turn}>{b.turn ? b.turn : '11+'}</span>
           ))}
         </div>
-        <figcaption className="muted small">Ghalta-Zug in {result.games.toLocaleString('de-DE')} simulierten Spielen (ohne Gegner).</figcaption>
+        <figcaption className="muted small">Ghalta turn in {result.games.toLocaleString('en-GB')} simulated games (no opponents).</figcaption>
       </figure>
 
       <details className="lab-table">
-        <summary>Werte als Tabelle</summary>
+        <summary>Values as a table</summary>
         <table className="table">
           <thead>
             <tr>
-              <th scope="col">Zug</th>
-              <th scope="col">Anteil</th>
+              <th scope="col">Turn</th>
+              <th scope="col">Share</th>
             </tr>
           </thead>
           <tbody>
             {bins.map((b) => (
               <tr key={b.turn}>
-                <td>{b.turn ? b.turn : '11 oder nie'}</td>
+                <td>{b.turn ? b.turn : '11 or never'}</td>
                 <td>{pct(b.share)}</td>
               </tr>
             ))}
@@ -281,13 +281,13 @@ function LabResult({ result, realAvg }: { result: Distribution; realAvg: number 
         </table>
       </details>
       <p className="muted small">
-        Der Autopilot spielt jeden Zug ein Land, zuerst Manakreaturen, dann die stärksten Kreaturen, und castet Ghalta,
-        sobald es geht. Zauber und Gegner bleiben außen vor. Ein Richtwert, kein Orakel.
+        The autopilot plays a land every turn, mana creatures first, then the biggest creatures, and casts Ghalta as
+        soon as it can. Spells and opponents are left out. A guideline, not an oracle.
       </p>
     </div>
   )
 }
 
 export function TrainingEmpty() {
-  return <EmptyState title="Lektion nicht gefunden" text="Diese Lektion gibt es nicht." />
+  return <EmptyState title="Lesson not found" text="This lesson doesn't exist." />
 }

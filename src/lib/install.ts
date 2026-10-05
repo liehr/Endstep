@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from 'react'
 
-// Installations-Status der App. Android/Chrome liefert ein „beforeinstallprompt“-Event,
-// mit dem wir einen eigenen Installieren-Button anbieten können. iOS kennt das nicht:
-// dort installiert man über Teilen → „Zum Home-Bildschirm“.
+// Install status of the app. Android/Chrome fires a "beforeinstallprompt" event
+// that lets us offer our own install button. iOS doesn't have that:
+// there you install via Share → "Add to Home Screen".
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>

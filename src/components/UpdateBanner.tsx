@@ -5,7 +5,7 @@ import { Button } from './ui'
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000
 
-/** Meldet, wenn eine neue Version ausgerollt wurde, und aktualisiert auf Tipp. */
+/** Announces when a new version has been rolled out and updates on tap. */
 export function UpdateBanner() {
   const [updating, setUpdating] = useState(false)
   const {
@@ -26,7 +26,7 @@ export function UpdateBanner() {
   if (!needRefresh) return null
   return (
     <div className="update-banner" role="status">
-      <span>Neue Version verfügbar</span>
+      <span>New version available</span>
       <Button
         size="sm"
         disabled={updating}
@@ -35,7 +35,7 @@ export function UpdateBanner() {
           void activateUpdate()
         }}
       >
-        {updating ? 'Lädt…' : 'Aktualisieren'}
+        {updating ? 'Loading…' : 'Update'}
       </Button>
     </div>
   )

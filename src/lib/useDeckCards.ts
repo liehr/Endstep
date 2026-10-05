@@ -4,7 +4,7 @@ import { cardCoverage } from './quiz/quiz'
 import { ensureCards, satisfies, useCardState, type CardRequest } from './scryfall'
 import { useData } from './store'
 
-/** Deckliste plus Kartendaten von Scryfall; lädt Fehlendes automatisch, wenn online. */
+/** Decklist plus card data from Scryfall; loads anything missing automatically when online. */
 export function useDeckCards({ autoLoad = true } = {}) {
   const { decklist, commander, commanderSet } = useData()
   const cardState = useCardState()

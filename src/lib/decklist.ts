@@ -1,10 +1,10 @@
 import type { DeckEntry } from './types'
 
-// Tramplesaurus Rex (Foundations Commander Decks), Stand der Veröffentlichung.
-// Quelle: Decklisten von Wizards/EDHREC/playgroup.gg. In der App jederzeit änderbar.
+// Tramplesaurus Rex (Foundations Commander Decks), as released.
+// Source: decklists from Wizards/EDHREC/playgroup.gg. Can be changed in the app at any time.
 
 export const DEFAULT_COMMANDER = 'Ghalta, Primal Hunger'
-/** Foundations Commander Decks – Set-Code bei Scryfall. */
+/** Foundations Commander Decks – set code on Scryfall. */
 export const DEFAULT_SET = 'fdc'
 
 const DEFAULT_LIST_TEXT = `
@@ -82,7 +82,7 @@ export const deckSize = (entries: DeckEntry[]) => entries.reduce((sum, e) => sum
 
 const key = (name: string) => name.trim().toLowerCase()
 
-/** Abschnittsüberschriften aus Moxfield, Arena, Archidekt … */
+/** Section headings from Moxfield, Arena, Archidekt … */
 const SECTION_RE =
   /^(\/\/\s*)?(commanders?|deck|mainboard|main|sideboard|maybeboard|companion|creatures?|instants?|sorcer(?:y|ies)|enchantments?|artifacts?|lands?|planeswalkers?|other)\s*(\(\d+\))?\s*:?\s*$/i
 
@@ -90,13 +90,13 @@ export interface ParsedDecklist {
   commander: string | null
   commanderSet: string | null
   entries: DeckEntry[]
-  /** Zeilen, die nicht verstanden wurden. */
+  /** Lines that could not be understood. */
   errors: string[]
 }
 
 /**
- * Liest eine Deckliste als Text, z. B. aus Moxfield, Archidekt oder MTG Arena:
- * „1 Llanowar Elves“, „1x Llanowar Elves (FDN) 227 *F*“, Abschnitte wie „Commander“.
+ * Reads a decklist as text, e.g. from Moxfield, Archidekt or MTG Arena:
+ * "1 Llanowar Elves", "1x Llanowar Elves (FDN) 227 *F*", sections like "Commander".
  */
 export function parseDecklist(text: string): ParsedDecklist {
   const entries = new Map<string, DeckEntry>()
@@ -123,10 +123,10 @@ export function parseDecklist(text: string): ParsedDecklist {
     }
     const qty = m[1] ? Number(m[1]) : 1
     let rest = m[2]
-      .replace(/\s+\*[A-Z]+\*\s*$/i, '') // *F*, *E* (Foil-Markierungen)
-      .replace(/\s+\[[^\]]*\]\s*$/, '') // [Kategorie] bei Archidekt
+      .replace(/\s+\*[A-Z]+\*\s*$/i, '') // *F*, *E* (foil markers)
+      .replace(/\s+\[[^\]]*\]\s*$/, '') // [category] from Archidekt
       .trim()
-    // (SET) 123 → Druckversion merken
+    // (SET) 123 → remember the printing
     const printing = rest.match(/\s+\(([A-Z0-9]{2,6})\)(?:\s+([\w★-]+))?\s*$/i)
     if (printing) rest = rest.slice(0, printing.index).trim()
     const name = rest
@@ -161,7 +161,7 @@ export function serializeDecklist(commander: string, entries: DeckEntry[], comma
   ].join('\n')
 }
 
-/** Karten tauschen: je eine Kopie von „out“ entfernen, „in“ hinzufügen. */
+/** Swap cards: remove one copy of each "out", add each "in". */
 export function applySwap(entries: DeckEntry[], out: string[], into: string[]): DeckEntry[] {
   const result = entries.map((e) => ({ ...e }))
   for (const name of out) {
@@ -182,7 +182,7 @@ export function sameDecklist(a: DeckEntry[], b: DeckEntry[]): boolean {
   return b.every((e) => map.get(key(e.name)) === e.qty)
 }
 
-/** Alle Kartennamen eines Decks (ohne Basic Lands), alphabetisch. */
+/** All card names of a deck (without basic lands), alphabetically. */
 export function deckCardNames(entries: DeckEntry[]): string[] {
   return entries
     .map((e) => e.name)
@@ -190,5 +190,5 @@ export function deckCardNames(entries: DeckEntry[]): string[] {
     .sort((a, b) => a.localeCompare(b, 'en'))
 }
 
-// Am Ende definiert, weil parseDecklist die Konstanten oben braucht.
+// Defined at the end because parseDecklist needs the constants above.
 export const DEFAULT_DECKLIST: DeckEntry[] = parseDecklist(DEFAULT_LIST_TEXT).entries.map((e) => ({ ...e, set: DEFAULT_SET }))

@@ -25,7 +25,7 @@ import { actions, useData } from '../lib/store'
 import { toast } from '../lib/toast'
 import type { SkillId } from '../lib/types'
 
-/** Vor dem Spiel: Fokus und Ansage am Tisch, ein großer Start-Button. */
+/** Before the game: focus and table announcement, one big start button. */
 export function RoundStart({ skill }: { skill: SkillId }) {
   const { settings, draft } = useData()
   const s = SKILL_BY_ID[skill]
@@ -42,18 +42,18 @@ export function RoundStart({ skill }: { skill: SkillId }) {
   return (
     <div className="screen flow" style={skillStyle(skill)}>
       <header className="flow-header">
-        <IconButton icon={XIcon} label="Schließen" onClick={() => navigate('/', { replace: true })} />
+        <IconButton icon={XIcon} label="Close" onClick={() => navigate('/', { replace: true })} />
       </header>
 
       <div className="intro">
         <SkillBadge id={skill} size={112} />
-        <span className="eyebrow">Dein Fokus für diese Runde</span>
+        <span className="eyebrow">Your focus for this game</span>
         <h1>{s.name}</h1>
         <p className="lead">{s.tip}</p>
       </div>
 
       <div className="task-card">
-        <span className="eyebrow">Deine Aufgabe</span>
+        <span className="eyebrow">Your task</span>
         <p>{s.task}</p>
       </div>
 
@@ -61,22 +61,22 @@ export function RoundStart({ skill }: { skill: SkillId }) {
         <div className="speech">
           <img src={`${import.meta.env.BASE_URL}pwa-64x64.png`} alt="" />
           <div className="speech-bubble">
-            <span className="eyebrow">Am Tisch ansagen</span>
-            <p>„{settings.tableIntro}“</p>
+            <span className="eyebrow">Say it at the table</span>
+            <p>"{settings.tableIntro}"</p>
           </div>
         </div>
       )}
 
       <footer className="flow-footer">
         <Button block icon={PlayIcon} onClick={start}>
-          Los geht’s
+          Let’s go
         </Button>
       </footer>
     </div>
   )
 }
 
-/** Während des Spiels: Erinnerungen, Ghalta-Rechner, Spickzettel. */
+/** During the game: reminders, Ghalta calculator, cheat sheet. */
 export function Round() {
   const { draft } = useData()
   const [sheet, setSheet] = useState<'attack' | 'rules' | 'discard' | null>(null)
@@ -91,14 +91,14 @@ export function Round() {
   return (
     <div className="screen flow">
       <header className="flow-header">
-        <IconButton icon={XIcon} label="Runde verwerfen" onClick={() => setSheet('discard')} />
-        <span className="flow-title">Runde läuft</span>
+        <IconButton icon={XIcon} label="Discard game" onClick={() => setSheet('discard')} />
+        <span className="flow-title">Game in progress</span>
       </header>
 
       <div className="focus-card" style={skillStyle(focus.id)}>
         <SkillBadge id={focus.id} size={52} />
         <div>
-          <span className="eyebrow">Fokus: {focus.name}</span>
+          <span className="eyebrow">Focus: {focus.name}</span>
           <p>{focus.task}</p>
         </div>
       </div>
@@ -106,7 +106,7 @@ export function Round() {
       <div className="callout warn">
         <ShieldWarningIcon weight="fill" aria-hidden="true" />
         <p>
-          <strong>Bevor du ausspielst:</strong> Was passiert, wenn jetzt ein Wrath kommt?
+          <strong>Before you commit:</strong> What happens if a wrath hits right now?
         </p>
       </div>
 
@@ -120,11 +120,11 @@ export function Round() {
       <div className="tiles">
         <button type="button" className="tile" onClick={() => setSheet('attack')}>
           <CrosshairIcon weight="fill" aria-hidden="true" />
-          Wen angreifen?
+          Who to attack?
         </button>
         <button type="button" className="tile" onClick={() => setSheet('rules')}>
           <BookOpenIcon weight="fill" aria-hidden="true" />
-          Regeln
+          Rules
         </button>
       </div>
 
@@ -137,21 +137,21 @@ export function Round() {
             navigate('/runde/ende')
           }}
         >
-          Spiel beendet
+          End game
         </Button>
       </footer>
 
-      <BottomSheet open={sheet === 'attack'} onClose={() => setSheet(null)} title="Wen angreifen?">
+      <BottomSheet open={sheet === 'attack'} onClose={() => setSheet(null)} title="Who to attack?">
         <AttackList />
       </BottomSheet>
-      <BottomSheet open={sheet === 'rules'} onClose={() => setSheet(null)} title="Regeln">
+      <BottomSheet open={sheet === 'rules'} onClose={() => setSheet(null)} title="Rules">
         <RulesList />
       </BottomSheet>
       <ConfirmSheet
         open={sheet === 'discard'}
-        title="Runde verwerfen?"
-        text="Die Runde wird nicht gespeichert. Notizen, die du schon gemacht hast, gehen verloren."
-        confirmLabel="Verwerfen"
+        title="Discard game?"
+        text="The game won’t be saved. Any notes you’ve already made will be lost."
+        confirmLabel="Discard"
         onConfirm={() => {
           actions.discardDraft()
           navigate('/', { replace: true })
@@ -162,7 +162,7 @@ export function Round() {
   )
 }
 
-/** Zug-Zähler: „Nächster Zug“ und „Ghalta gecastet!“ tragen Zahlen fürs Notieren gleich mit ein. */
+/** Turn counter: "Next turn" and "Ghalta cast!" fill in the numbers for your notes right away. */
 function TurnCard() {
   const { draft } = useData()
   if (!draft) return null
@@ -172,7 +172,7 @@ function TurnCard() {
     const turn = tracker.turn + 1
     haptic(10)
     actions.updateDraft({ ...form, turns: turn }, { ...tracker, turn })
-    toast(`Zug ${turn}: Was passiert, wenn jetzt ein Wrath kommt?`)
+    toast(`Turn ${turn}: What happens if a wrath hits right now?`)
   }
 
   const ghaltaCast = () => {
@@ -181,28 +181,28 @@ function TurnCard() {
       { ...form, ghaltaTurn: form.ghaltaTurn ?? tracker.turn, turns: Math.max(form.turns ?? 1, tracker.turn) },
       { ...tracker, casts: tracker.casts + 1 },
     )
-    toast(form.ghaltaTurn === null ? `Ghalta in Zug ${tracker.turn}! Notiert.` : 'Ghalta erneut gecastet: Steuer +2.')
+    toast(form.ghaltaTurn === null ? `Ghalta on turn ${tracker.turn}! Noted.` : 'Ghalta cast again: tax +2.')
   }
 
   return (
-    <section className="turn-card" aria-label="Zug-Zähler">
+    <section className="turn-card" aria-label="Turn counter">
       <div className="turn-number">
-        <span className="eyebrow">Zug</span>
+        <span className="eyebrow">Turn</span>
         <strong aria-live="polite">{tracker.turn}</strong>
       </div>
       <div className="turn-actions">
         <Button icon={CaretDoubleRightIcon} onClick={nextTurn}>
-          Nächster Zug
+          Next turn
         </Button>
         <Button variant="secondary" size="sm" onClick={ghaltaCast}>
-          {form.ghaltaTurn === null ? 'Ghalta gecastet!' : `Ghalta: Zug ${form.ghaltaTurn} · nochmal?`}
+          {form.ghaltaTurn === null ? 'Ghalta cast!' : `Ghalta: turn ${form.ghaltaTurn} · again?`}
         </Button>
       </div>
     </section>
   )
 }
 
-/** Nach dem Speichern: kurz feiern, Serie zeigen, nächsten Fokus ankündigen. */
+/** After saving: celebrate briefly, show the streak, announce the next focus. */
 export function RoundDone({ id }: { id: string }) {
   const { games } = useData()
   const game = games.find((g) => g.id === id)
@@ -223,22 +223,22 @@ export function RoundDone({ id }: { id: string }) {
       <Confetti />
       <div className="intro">
         <img src={`${import.meta.env.BASE_URL}pwa-192x192.png`} alt="" className="mascot bounce" />
-        <h1>{won ? 'Gewonnen!' : 'Runde notiert!'}</h1>
+        <h1>{won ? 'You won!' : 'Game logged!'}</h1>
         <p className="lead">
-          {won ? 'Stark gespielt. Und du weißt jetzt auch, warum.' : 'Jede Niederlage ist ein Lernspiel. Genau so wirst du besser.'}
+          {won ? 'Well played. And now you know why, too.' : 'Every loss is a lesson. That’s exactly how you get better.'}
         </p>
       </div>
 
       <div className="reward-tiles">
         <div className="reward streak">
-          <span className="reward-title">Serie</span>
+          <span className="reward-title">Streak</span>
           <span className="reward-value">
             <FireIcon weight="fill" aria-hidden="true" />
-            {streak.current} {streak.current === 1 ? 'Woche' : 'Wochen'}
+            {streak.current} {streak.current === 1 ? 'week' : 'weeks'}
           </span>
         </div>
         <div className="reward rounds">
-          <span className="reward-title">Runden</span>
+          <span className="reward-title">Games</span>
           <span className="reward-value">
             <CardsIcon weight="fill" aria-hidden="true" />
             {games.length}
@@ -249,7 +249,7 @@ export function RoundDone({ id }: { id: string }) {
       <div className="focus-card" style={skillStyle(next.id)}>
         <SkillBadge id={next.id} size={52} />
         <div>
-          <span className="eyebrow">Nächstes Mal</span>
+          <span className="eyebrow">Next time</span>
           <p>
             <strong>{next.name}</strong>
           </p>
@@ -258,7 +258,7 @@ export function RoundDone({ id }: { id: string }) {
 
       <footer className="flow-footer">
         <Button block icon={ArrowRightIcon} onClick={() => navigate('/', { replace: true })}>
-          Weiter
+          Continue
         </Button>
       </footer>
     </div>

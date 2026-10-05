@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { applySwap, DEFAULT_DECKLIST, deckCardNames, deckSize, parseDecklist, serializeDecklist } from './decklist'
 
-describe('Standard-Deckliste', () => {
-  it('hat 99 Karten (plus Commander) und 32 Wälder', () => {
+describe('default decklist', () => {
+  it('has 99 cards (plus commander) and 32 Forests', () => {
     expect(deckSize(DEFAULT_DECKLIST)).toBe(99)
     expect(DEFAULT_DECKLIST.find((e) => e.name === 'Forest')?.qty).toBe(32)
   })
 })
 
 describe('parseDecklist', () => {
-  it('versteht Moxfield-/Arena-Formate mit Abschnitten, Sets und Foil-Markierungen', () => {
+  it('understands Moxfield/Arena formats with sections, sets and foil markers', () => {
     const text = `Commander
 1 Ghalta, Primal Hunger (RIX) 130
 
@@ -19,7 +19,7 @@ Deck
 Sol Ring
 Creatures (2)
 1 Steel Leaf Champion [Ramp]
-// Kommentar
+// comment
 Sideboard
 1 Blightsteel Colossus`
     const parsed = parseDecklist(text)
@@ -34,15 +34,15 @@ Sideboard
     expect(parsed.errors).toEqual([])
   })
 
-  it('verwechselt „Commander’s Sphere“ nicht mit einer Überschrift', () => {
+  it("does not mistake Commander's Sphere for a heading", () => {
     expect(parseDecklist("Commander's Sphere").entries).toEqual([{ name: "Commander's Sphere", qty: 1 }])
   })
 
-  it('fasst doppelte Einträge zusammen', () => {
+  it('merges duplicate entries', () => {
     expect(parseDecklist('1 Forest\n3 forest').entries).toEqual([{ name: 'Forest', qty: 4 }])
   })
 
-  it('lässt sich mit Druckversionen wieder einlesen', () => {
+  it('round-trips with printings', () => {
     const text = serializeDecklist('Ghalta, Primal Hunger', DEFAULT_DECKLIST, 'fdc')
     expect(text).toContain('1 Ghalta, Primal Hunger (FDC)')
     expect(text).toContain('32 Forest (FDC)')
@@ -51,13 +51,13 @@ Sideboard
     expect(parsed.entries).toEqual(DEFAULT_DECKLIST)
   })
 
-  it('setzt die Precon-Karten auf das Set FDC', () => {
+  it('sets the precon cards to set FDC', () => {
     expect(DEFAULT_DECKLIST.every((e) => e.set === 'fdc')).toBe(true)
   })
 })
 
 describe('applySwap', () => {
-  it('nimmt Karten raus und neue rein, Kartenzahl bleibt gleich', () => {
+  it('takes cards out and new ones in, card count stays the same', () => {
     const next = applySwap(DEFAULT_DECKLIST, ['Colossal Majesty', 'forest'], ['Heroic Intervention', 'Return of the Wildspeaker'])
     expect(deckSize(next)).toBe(99)
     expect(next.find((e) => e.name === 'Colossal Majesty')).toBeUndefined()
@@ -65,7 +65,7 @@ describe('applySwap', () => {
     expect(next.find((e) => e.name === 'Heroic Intervention')?.qty).toBe(1)
   })
 
-  it('ist mit vertauschten Listen umkehrbar', () => {
+  it('is reversible with swapped lists', () => {
     const swapped = applySwap(DEFAULT_DECKLIST, ['Harmonize'], ['Heroic Intervention'])
     const back = applySwap(swapped, ['Heroic Intervention'], ['Harmonize'])
     expect(deckSize(back)).toBe(99)
@@ -74,7 +74,7 @@ describe('applySwap', () => {
 })
 
 describe('deckCardNames', () => {
-  it('lässt Basic Lands weg', () => {
+  it('leaves out basic lands', () => {
     const names = deckCardNames(DEFAULT_DECKLIST)
     expect(names).not.toContain('Forest')
     expect(names).toContain('Sol Ring')
