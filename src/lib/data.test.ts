@@ -224,7 +224,7 @@ describe('picking a deck', () => {
     const swapped = [{ name: 'Forest', qty: 98 }, { name: 'Sol Ring', qty: 1 }]
     const ghalta = { ...emptyData(), deckChosen: true, decklist: swapped, settings: { ...defaultSettings(), defaultBracket: 3 as const, bracketCheckDone: true, tableIntro: 'Stomp!' } }
     const onSliver = switchDeck(ghalta, sliver)
-    expect(onSliver.decks).toEqual([activeDeck(ghalta)])
+    expect(onSliver.decks).toEqual([{ ...activeDeck(ghalta), savedAt: expect.any(String) }])
     expect(onSliver.decks[0]).toMatchObject({ name: DEFAULT_DECK, bracket: 3, bracketCheckDone: true, tableIntro: 'Stomp!' })
 
     const back = switchDeck({ ...onSliver, settings: { ...onSliver.settings, defaultBracket: 1 } }, onSliver.decks[0])

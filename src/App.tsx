@@ -13,6 +13,7 @@ import { GameDetail, GameEdit, History } from './pages/History'
 import { Home } from './pages/Home'
 import { CheatSheet, GhaltaPage, More } from './pages/More'
 import { SettingsPage } from './pages/Settings'
+import { SyncPage } from './pages/Sync'
 import { Round, RoundDone, RoundStart } from './pages/Round'
 import { Ranks } from './pages/Ranks'
 import { RoundEnd } from './pages/RoundEnd'
@@ -60,6 +61,8 @@ function Page({ route }: { route: string }) {
       return <More />
     case '/mehr/einstellungen':
       return <SettingsPage />
+    case '/mehr/sync':
+      return <SyncPage />
     case '/mehr/spickzettel':
       return <CheatSheet />
     case '/mehr/ghalta':
@@ -120,7 +123,8 @@ export function App() {
       <UpdateBanner />
       <main className={`${flow ? 'flow-main' : ''} ${dice ? 'with-dice' : ''}`}>
         <Suspense fallback={null}>
-          {deckChosen ? <Page key={route} route={route} /> : <DeckPicker welcome />}
+          {/* A new device can connect cloud sync before picking a deck. */}
+          {deckChosen || route === '/mehr/sync' ? <Page key={route} route={route} /> : <DeckPicker welcome />}
         </Suspense>
       </main>
       {dice && <DiceButton flow={flow} />}

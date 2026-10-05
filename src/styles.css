@@ -3623,3 +3623,18 @@ main.with-dice .screen.flow {
 .challenge-options .option {
   min-height: 72px;
 }
+
+/* Cloud sync status heading */
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sync-status svg {
+  flex-shrink: 0;
+  color: var(--brand);
+}
+.steps a {
+  color: var(--select);
+  font-weight: 800;
+}

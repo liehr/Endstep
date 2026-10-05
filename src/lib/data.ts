@@ -93,6 +93,8 @@ export function emptyData(): AppData {
     training: [],
     quiz: {},
     promotions: [],
+    deleted: {},
+    stamps: { settings: '', deck: '' },
   }
 }
 
@@ -288,11 +290,12 @@ function sanitizeSavedDeck(raw: unknown, settings: Settings): SavedDeck | null {
     bracket: oneOf(raw.bracket, BRACKETS, settings.defaultBracket),
     bracketCheckDone: raw.bracketCheckDone === true,
     tableIntro: str(raw.tableIntro, tableIntroFor(name, commander, false, settings.defaultBracket)),
+    ...(typeof raw.savedAt === 'string' && raw.savedAt ? { savedAt: raw.savedAt } : {}),
   }
 }
 
 /** Saved decks: each name once, never the active deck. */
-const otherDecks = (decks: SavedDeck[], active: string) =>
+export const otherDecks = (decks: SavedDeck[], active: string) =>
   decks.filter((d, i) => cardKey(d.name) !== cardKey(active) && decks.findIndex((x) => cardKey(x.name) === cardKey(d.name)) === i)
 
 const LESSON_IDS = ['ghalta', 'combat', 'rules', 'mulligan', 'goldfish', 'cards', 'rulings', 'scenario', 'mistakes', 'challenge'] as const
@@ -343,9 +346,24 @@ function sanitizeQuiz(raw: unknown): QuizMemory {
 export function mergeQuiz(current: QuizMemory, incoming: QuizMemory): QuizMemory {
   const out = { ...current }
   for (const [key, stat] of Object.entries(incoming)) {
-    if (!out[key] || stat.last > out[key].last) out[key] = stat
+    const mine = out[key]
+    if (!mine || stat.last > mine.last || (stat.last === mine.last && (stat.at ?? 0) > (mine.at ?? 0))) out[key] = stat
   }
   return out
+}
+
+function sanitizeDeleted(raw: unknown): Record<string, string> {
+  const out: Record<string, string> = {}
+  if (!isObj(raw)) return out
+  for (const [key, at] of Object.entries(raw)) {
+    if (/^(game|swap|deck):/.test(key) && typeof at === 'string' && at) out[key] = at
+  }
+  return out
+}
+
+function sanitizeStamps(raw: unknown): AppData['stamps'] {
+  const stamps = isObj(raw) ? raw : {}
+  return { settings: str(stamps.settings), deck: str(stamps.deck) }
 }
 
 const listOf = <T>(raw: unknown, fn: (x: unknown) => T | null): T[] =>
@@ -385,6 +403,8 @@ export function sanitizeData(raw: unknown): AppData {
     training: listOf(raw.training, sanitizeTraining),
     quiz: sanitizeQuiz(raw.quiz),
     promotions: listOf(raw.promotions, sanitizePromotion),
+    deleted: sanitizeDeleted(raw.deleted),
+    stamps: sanitizeStamps(raw.stamps),
   }
 }
 
@@ -493,7 +513,8 @@ const isSaved = (deck: ChosenDeck | SavedDeck): deck is SavedDeck => 'bracket' i
 export function switchDeck(data: AppData, deck: ChosenDeck | SavedDeck): AppData {
   const { settings } = data
   const sameDeck = cardKey(deck.name) === cardKey(settings.defaultDeck)
-  const decks = otherDecks(data.deckChosen && !sameDeck ? [...data.decks, activeDeck(data)] : data.decks, deck.name)
+  const leaving = { ...activeDeck(data), savedAt: new Date().toISOString() }
+  const decks = otherDecks(data.deckChosen && !sameDeck ? [...data.decks, leaving] : data.decks, deck.name)
   if (isSaved(deck)) {
     return {
       ...data,
