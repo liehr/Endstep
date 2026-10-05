@@ -8,6 +8,7 @@ import {
   CloudArrowDownIcon,
   CopyIcon,
   MagnifyingGlassIcon,
+  SwapIcon,
   WarningIcon,
   XIcon,
 } from '@phosphor-icons/react'
@@ -18,17 +19,18 @@ import { cardKey, isArtifact, isCreature, isLand, type CardInfo } from '../lib/c
 import { formatDate } from '../lib/dates'
 import { UPGRADE_EVERY_GAMES } from '../lib/content'
 import {
-  DEFAULT_COMMANDER,
-  DEFAULT_DECKLIST,
-  DEFAULT_SET,
   deckCardNames,
   deckSize,
+  isBasicLand,
   parseDecklist,
   serializeDecklist,
 } from '../lib/decklist'
+import { shortName } from '../lib/commander'
 import { haptic } from '../lib/haptics'
+import { fetchPreconDeck, PRECON_BY_FILE } from '../lib/precons'
 import { navigate } from '../lib/route'
 import { autocomplete, ensureCards } from '../lib/scryfall'
+import { swapsOf } from '../lib/data'
 import { computeStats } from '../lib/stats'
 import { actions, useData } from '../lib/store'
 import { toast } from '../lib/toast'
@@ -59,11 +61,13 @@ function groupDeck(entries: DeckEntry[], lookup: (n: string) => CardInfo | undef
 }
 
 export function DeckPage() {
-  const { swaps } = useData()
+  const { swaps: allSwaps, settings, precon } = useData()
+  const swaps = swapsOf(allSwaps, settings.defaultDeck)
   const deck = useDeckCards()
   const [sheet, setSheet] = useState<'import' | 'reset' | 'undo' | null>(null)
   const [card, setCard] = useState<string | null>(null)
   const size = deckSize(deck.decklist)
+  const preconInfo = precon ? PRECON_BY_FILE.get(precon) : undefined
   const uniqueNames = useMemo(() => [...new Set([deck.commander, ...deck.decklist.map((e) => e.name)])], [deck.commander, deck.decklist])
   const loaded = uniqueNames.filter((n) => deck.lookup(n)).length
   const otherPrinting = uniqueNames.filter((n) => deck.lookup(n)?.requestedSet)
@@ -107,6 +111,9 @@ export function DeckPage() {
           Paste list
         </Button>
       </div>
+      <Button variant="ghost" size="sm" icon={SwapIcon} onClick={() => navigate('/mehr/deck/wechseln')}>
+        Play a different deck
+      </Button>
 
       {(deck.missing.length > 0 || deck.error) && (
         <section className="panel notice">
@@ -198,9 +205,11 @@ export function DeckPage() {
         <Button variant="ghost" size="sm" icon={CopyIcon} onClick={() => void copy()}>
           Copy decklist
         </Button>
-        <Button variant="ghost" size="sm" icon={ArrowCounterClockwiseIcon} onClick={() => setSheet('reset')}>
-          Reset to precon
-        </Button>
+        {preconInfo && (
+          <Button variant="ghost" size="sm" icon={ArrowCounterClockwiseIcon} onClick={() => setSheet('reset')}>
+            Reset to precon
+          </Button>
+        )}
       </div>
       <p className="muted small center">Card data and images: Scryfall. Magic: The Gathering © Wizards of the Coast.</p>
 
@@ -208,12 +217,11 @@ export function DeckPage() {
       <ConfirmSheet
         open={sheet === 'reset'}
         title="Reset to precon?"
-        text="The decklist goes back to Tramplesaurus Rex as it ships. Your swap history is kept."
+        text={`The decklist goes back to ${preconInfo?.name ?? 'the precon'} as it ships. Your swap history is kept.`}
         confirmLabel="Reset"
         onConfirm={() => {
-          actions.setDecklist(DEFAULT_COMMANDER, DEFAULT_DECKLIST.map((e) => ({ ...e })), DEFAULT_SET)
           setSheet(null)
-          toast('Decklist reset')
+          if (precon) void resetToPrecon(precon)
         }}
         onClose={() => setSheet(null)}
       />
@@ -234,6 +242,17 @@ export function DeckPage() {
       </BottomSheet>
     </div>
   )
+}
+
+async function resetToPrecon(file: string) {
+  try {
+    const deck = await fetchPreconDeck(file)
+    actions.setDecklist(deck.commander, deck.entries, deck.commanderSet)
+    toast('Decklist reset')
+    void ensureCards([{ name: deck.commander, set: deck.commanderSet }, ...deck.entries])
+  } catch (err) {
+    toast(err instanceof Error ? err.message : "Couldn't load the precon")
+  }
 }
 
 function CardDetail({ name }: { name: string }) {
@@ -289,7 +308,7 @@ function ImportSheet({
         Export the list from Moxfield, Archidekt or MTG Arena and paste it here. One card per line, e.g. "1 Sol
         Ring".
       </p>
-      <textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} placeholder={'Commander\n1 Ghalta, Primal Hunger\n\nDeck\n1 Llanowar Elves\n32 Forest\n…'} />
+      <textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} placeholder={'Commander\n1 Your Commander\n\nDeck\n1 Sol Ring\n1 Command Tower\n…'} />
       {text.trim() && (
         <p className={size === 99 ? 'muted small' : 'error-text small'}>
           {size} cards recognized{parsed.commander ? `, Commander: ${parsed.commander}` : ''}.
@@ -307,19 +326,20 @@ function ImportSheet({
 // --- Swap round -------------------------------------------------------------------
 
 export function SwapFlow() {
-  const { games, settings, swaps, decklist } = useData()
+  const { games, settings, swaps: allSwaps, decklist, commander } = useData()
+  const swaps = swapsOf(allSwaps, settings.defaultDeck)
   const [step, setStep] = useState<'out' | 'in'>('out')
   const [out, setOut] = useState<string[]>([])
   const [into, setInto] = useState<string[]>([])
   const [note, setNote] = useState('')
   const [query, setQuery] = useState('')
 
-  const stats = computeStats(games, settings.defaultDeck, { swaps, decklist })
+  const stats = computeStats(games, settings.defaultDeck, { swaps: allSwaps, decklist })
   const maxCards = stats.upgrade.cards
   const deadCount = new Map(stats.deadCards.map((t) => [cardKey(t.name), t.count]))
   const names = deckCardNames(decklist)
-  const hasForest = decklist.some((e) => /^forest$/i.test(e.name))
-  const all = hasForest ? [...names, 'Forest'] : names
+  const basics = decklist.filter((e) => isBasicLand(e.name)).map((e) => e.name)
+  const all = [...names, ...basics]
   const candidates = all.filter((n) => (deadCount.get(cardKey(n)) ?? 0) >= 2).sort((a, b) => (deadCount.get(cardKey(b)) ?? 0) - (deadCount.get(cardKey(a)) ?? 0))
   const filtered = all.filter((n) => !candidates.includes(n) && n.toLowerCase().includes(query.trim().toLowerCase()))
 
@@ -349,8 +369,8 @@ export function SwapFlow() {
         <div className="question">
           <h1>What goes out?</h1>
           <p className="muted">
-            At most {maxCards} card{maxCards > 1 ? 's' : ''} this round, so you can see the effect. Never cut lands, ramp or direct
-            Ghalta support.
+            At most {maxCards} card{maxCards > 1 ? 's' : ''} this round, so you can see the effect. Never cut lands, ramp or the
+            cards that make {shortName(commander)} work.
           </p>
         </div>
 

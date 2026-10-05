@@ -41,7 +41,8 @@ export interface Game {
   /** Question 3: Which cards were dead, which overperformed? */
   deadCards: string[]
   starCards: string[]
-  ghaltaTurn: number | null
+  /** Turn in which your commander was first cast. */
+  commanderTurn: number | null
   /** How many (own) turns the game lasted. */
   turns: number | null
   mulligans: number | null
@@ -94,6 +95,8 @@ export interface DeckEntry {
 /** A swap round: cards out, cards in (upgrade roadmap from the learning plan). */
 export interface Swap {
   id: string
+  /** Deck name the swap belongs to. */
+  deck: string
   /** The new deck version applies from this day (YYYY-MM-DD). */
   date: string
   out: string[]
@@ -132,6 +135,10 @@ export interface AppData {
   games: Game[]
   settings: Settings
   draft: Draft | null
+  /** Has a deck been picked (welcome screen)? Until then the app shows the deck picker. */
+  deckChosen: boolean
+  /** MTGJSON file of the precon the deck is based on (for "Reset to precon"); null for your own list. */
+  precon: string | null
   /** Commander of the default deck (not counted). */
   commander: string
   /** Set code of the commander printing. */

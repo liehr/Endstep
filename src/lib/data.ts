@@ -1,6 +1,7 @@
-import { DEFAULT_DECK, DEFAULT_TABLE_INTRO, SKILLS, WHY_CATEGORIES, WIPE_OPTIONS } from './content'
+import { DEFAULT_DECK, DEFAULT_TABLE_INTRO, SKILLS, tableIntroFor, WHY_CATEGORIES, WIPE_OPTIONS } from './content'
 import { today } from './dates'
-import { DEFAULT_COMMANDER, DEFAULT_DECKLIST, DEFAULT_SET, sameDecklist } from './decklist'
+import { cardKey } from './cards'
+import { DEFAULT_COMMANDER, DEFAULT_DECKLIST, DEFAULT_PRECON, DEFAULT_SET, sameDecklist } from './decklist'
 import type {
   AppData,
   Bracket,
@@ -38,6 +39,9 @@ export function emptyData(): AppData {
     games: [],
     settings: defaultSettings(),
     draft: null,
+    // Until a deck is picked on the welcome screen, the Ghalta precon stands in.
+    deckChosen: false,
+    precon: DEFAULT_PRECON,
     commander: DEFAULT_COMMANDER,
     commanderSet: DEFAULT_SET,
     decklist: DEFAULT_DECKLIST.map((e) => ({ ...e })),
@@ -65,7 +69,7 @@ export function emptyInput(settings: Settings, focus: SkillId): GameInput {
     decisionSkill: null,
     deadCards: [],
     starCards: [],
-    ghaltaTurn: null,
+    commanderTurn: null,
     turns: null,
     mulligans: null,
     wipe: null,
@@ -123,7 +127,8 @@ export function sanitizeInput(raw: Obj, settings: Settings): GameInput {
     decisionSkill: oneOf<SkillId | null>(raw.decisionSkill, SKILL_IDS, null),
     deadCards: strList(raw.deadCards),
     starCards: strList(raw.starCards),
-    ghaltaTurn: intOrNull(raw.ghaltaTurn, 1, 99),
+    // Called ghaltaTurn before the app supported other decks.
+    commanderTurn: intOrNull(raw.commanderTurn ?? raw.ghaltaTurn, 1, 99),
     turns: intOrNull(raw.turns, 1, 99),
     mulligans: intOrNull(raw.mulligans, 0, 7),
     wipe: oneOf<WipeOutcome | null>(raw.wipe, WIPE_IDS, null),
@@ -192,10 +197,12 @@ function sanitizeDecklist(raw: unknown): DeckEntry[] | null {
   return entries.length > 0 ? entries : null
 }
 
-function sanitizeSwap(raw: unknown): Swap | null {
+function sanitizeSwap(raw: unknown, settings: Settings): Swap | null {
   if (!isObj(raw) || typeof raw.id !== 'string' || !DATE_RE.test(str(raw.date))) return null
   return {
     id: raw.id,
+    // Older swaps have no deck: back then there was only one.
+    deck: str(raw.deck).trim() || settings.defaultDeck,
     date: str(raw.date),
     out: strList(raw.out),
     in: strList(raw.in),
@@ -247,6 +254,8 @@ export function mergeQuiz(current: QuizMemory, incoming: QuizMemory): QuizMemory
   return out
 }
 
+const PRECON_RE = /^[A-Za-z0-9_]{1,80}$/
+
 const listOf = <T>(raw: unknown, fn: (x: unknown) => T | null): T[] =>
   Array.isArray(raw) ? raw.map(fn).filter((x): x is T => x !== null) : []
 
@@ -254,12 +263,24 @@ export function sanitizeData(raw: unknown): AppData {
   if (!isObj(raw)) return emptyData()
   const settings = sanitizeSettings(raw.settings)
   const defaults = emptyData()
+  const commander = str(raw.commander).trim() || defaults.commander
   return {
     schemaVersion: 1,
     games: listOf(raw.games, (g) => sanitizeGame(g, settings)),
     settings,
     draft: sanitizeDraft(raw.draft, settings),
-    commander: str(raw.commander).trim() || defaults.commander,
+    // Data from before the welcome screen: the deck was chosen back then (always a Ghalta deck).
+    deckChosen:
+      typeof raw.deckChosen === 'boolean'
+        ? raw.deckChosen
+        : raw.commander !== undefined || (Array.isArray(raw.games) && raw.games.length > 0),
+    precon:
+      typeof raw.precon === 'string' && PRECON_RE.test(raw.precon)
+        ? raw.precon
+        : raw.precon === undefined && cardKey(commander) === cardKey(DEFAULT_COMMANDER)
+          ? DEFAULT_PRECON
+          : null,
+    commander,
     commanderSet:
       typeof raw.commanderSet === 'string' && SET_RE.test(raw.commanderSet)
         ? raw.commanderSet
@@ -267,7 +288,7 @@ export function sanitizeData(raw: unknown): AppData {
           ? defaults.commanderSet
           : null,
     decklist: sanitizeDecklist(raw.decklist) ?? defaults.decklist,
-    swaps: listOf(raw.swaps, sanitizeSwap),
+    swaps: listOf(raw.swaps, (s) => sanitizeSwap(s, settings)),
     training: listOf(raw.training, sanitizeTraining),
     quiz: sanitizeQuiz(raw.quiz),
   }
@@ -310,18 +331,23 @@ export function mergeGames(current: Game[], incoming: Game[]): Game[] {
 
 /**
  * Restore a backup: games, swaps, training results and question memory are merged.
- * The decklist from the backup is taken over if the unchanged default list
- * is still here (typical when moving to a new phone).
+ * The deck from the backup is taken over if no deck has been picked yet or the unchanged
+ * default list is still here (typical when moving to a new phone). Without a picked deck,
+ * the settings (deck name, table) come from the backup too.
  */
 export function mergeImport(current: AppData, imported: AppData): { data: AppData; changedGames: number } {
   const games = mergeGames(current.games, imported.games)
   const before = new Map(current.games.map((g) => [g.id, g.updatedAt]))
   const changedGames = games.filter((g) => before.get(g.id) !== g.updatedAt).length
-  const takeDeck = isDefaultDeck(current) && !isDefaultDeck(imported)
+  const fresh = !current.deckChosen && imported.deckChosen
+  const takeDeck = fresh || (isDefaultDeck(current) && !isDefaultDeck(imported))
   return {
     changedGames,
     data: {
       ...current,
+      settings: fresh ? imported.settings : current.settings,
+      deckChosen: current.deckChosen || imported.deckChosen,
+      precon: takeDeck ? imported.precon : current.precon,
       games,
       swaps: mergeBy(current.swaps, imported.swaps, (s) => s.id),
       training: mergeBy(current.training, imported.training, (t) => `${t.lessonId}|${t.createdAt}`),
@@ -332,3 +358,52 @@ export function mergeImport(current: AppData, imported: AppData): { data: AppDat
     },
   }
 }
+
+/** A deck picked on the welcome screen or when changing decks. */
+export interface ChosenDeck {
+  name: string
+  commander: string
+  commanderSet: string | null
+  decklist: DeckEntry[]
+  /** MTGJSON file of the precon; null for a pasted list. */
+  precon: string | null
+}
+
+/**
+ * Switch to another deck. Games and swaps stay: they carry the deck name, so stats and the
+ * upgrade chest follow the active deck. The table talk is rewritten unless you changed it.
+ */
+export function switchDeck(data: AppData, deck: ChosenDeck): AppData {
+  const { settings } = data
+  const previousIntro = tableIntroFor(settings.defaultDeck, data.commander, data.precon !== null, settings.defaultBracket)
+  const keepIntro = data.deckChosen && settings.tableIntro !== DEFAULT_TABLE_INTRO && settings.tableIntro !== previousIntro
+  const sameDeck = cardKey(deck.name) === cardKey(settings.defaultDeck)
+  return {
+    ...data,
+    deckChosen: true,
+    precon: deck.precon,
+    commander: deck.commander,
+    commanderSet: deck.commanderSet,
+    decklist: deck.decklist,
+    settings: {
+      ...settings,
+      defaultDeck: deck.name,
+      tableIntro: keepIntro ? settings.tableIntro : tableIntroFor(deck.name, deck.commander, deck.precon !== null, settings.defaultBracket),
+      bracketCheckDone: sameDeck && settings.bracketCheckDone,
+    },
+  }
+}
+
+/** Save settings; renaming the deck takes its swap history along. */
+export function applySettings(data: AppData, settings: Settings): AppData {
+  const from = cardKey(data.settings.defaultDeck)
+  const renamed = from !== cardKey(settings.defaultDeck)
+  return {
+    ...data,
+    settings,
+    swaps: renamed ? data.swaps.map((s) => (cardKey(s.deck) === from ? { ...s, deck: settings.defaultDeck } : s)) : data.swaps,
+  }
+}
+
+/** Swaps of the given deck, in the order they were made. */
+export const swapsOf = (swaps: Swap[], deck: string) => swaps.filter((s) => cardKey(s.deck) === cardKey(deck))

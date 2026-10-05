@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Confetti } from '../components/Confetti'
 import { GhaltaCalculator } from '../components/GhaltaCalculator'
+import { isGhalta, shortName } from '../lib/commander'
 import { AttackList, RulesList } from '../components/Reference'
 import { SkillBadge, skillStyle } from '../components/skills'
 import { BottomSheet, Button, ConfirmSheet, IconButton } from '../components/ui'
@@ -76,9 +77,9 @@ export function RoundStart({ skill }: { skill: SkillId }) {
   )
 }
 
-/** During the game: reminders, Ghalta calculator, cheat sheet. */
+/** During the game: reminders, Ghalta calculator (for Ghalta decks), cheat sheet. */
 export function Round() {
-  const { draft } = useData()
+  const { draft, commander } = useData()
   const [sheet, setSheet] = useState<'attack' | 'rules' | 'discard' | null>(null)
 
   useEffect(() => {
@@ -112,10 +113,12 @@ export function Round() {
 
       <TurnCard />
 
-      <GhaltaCalculator
-        value={draft.tracker}
-        onChange={({ power, casts }) => actions.updateTracker({ ...draft.tracker, power, casts })}
-      />
+      {isGhalta(commander) && (
+        <GhaltaCalculator
+          value={draft.tracker}
+          onChange={({ power, casts }) => actions.updateTracker({ ...draft.tracker, power, casts })}
+        />
+      )}
 
       <div className="tiles">
         <button type="button" className="tile" onClick={() => setSheet('attack')}>
@@ -162,11 +165,12 @@ export function Round() {
   )
 }
 
-/** Turn counter: "Next turn" and "Ghalta cast!" fill in the numbers for your notes right away. */
+/** Turn counter: "Next turn" and "Commander cast!" fill in the numbers for your notes right away. */
 function TurnCard() {
-  const { draft } = useData()
+  const { draft, commander } = useData()
   if (!draft) return null
   const { tracker, form } = draft
+  const name = shortName(commander)
 
   const nextTurn = () => {
     const turn = tracker.turn + 1
@@ -175,13 +179,13 @@ function TurnCard() {
     toast(`Turn ${turn}: What happens if a wrath hits right now?`)
   }
 
-  const ghaltaCast = () => {
+  const commanderCast = () => {
     haptic([12, 50, 12])
     actions.updateDraft(
-      { ...form, ghaltaTurn: form.ghaltaTurn ?? tracker.turn, turns: Math.max(form.turns ?? 1, tracker.turn) },
+      { ...form, commanderTurn: form.commanderTurn ?? tracker.turn, turns: Math.max(form.turns ?? 1, tracker.turn) },
       { ...tracker, casts: tracker.casts + 1 },
     )
-    toast(form.ghaltaTurn === null ? `Ghalta on turn ${tracker.turn}! Noted.` : 'Ghalta cast again: tax +2.')
+    toast(form.commanderTurn === null ? `${name} on turn ${tracker.turn}! Noted.` : `${name} cast again: tax +2.`)
   }
 
   return (
@@ -194,8 +198,8 @@ function TurnCard() {
         <Button icon={CaretDoubleRightIcon} onClick={nextTurn}>
           Next turn
         </Button>
-        <Button variant="secondary" size="sm" onClick={ghaltaCast}>
-          {form.ghaltaTurn === null ? 'Ghalta cast!' : `Ghalta: turn ${form.ghaltaTurn} · again?`}
+        <Button variant="secondary" size="sm" onClick={commanderCast}>
+          {form.commanderTurn === null ? `${name} cast!` : `${name}: turn ${form.commanderTurn} · again?`}
         </Button>
       </div>
     </section>

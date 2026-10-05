@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { createBackup, parseBackup } from './backup'
-import { defaultSettings, emptyData, loadData, mergeGames, mergeImport, sanitizeData, STORAGE_KEY } from './data'
+import { DEFAULT_DECK, DEFAULT_TABLE_INTRO } from './content'
+import {
+  applySettings,
+  defaultSettings,
+  emptyData,
+  loadData,
+  mergeGames,
+  mergeImport,
+  sanitizeData,
+  STORAGE_KEY,
+  swapsOf,
+  switchDeck,
+  type ChosenDeck,
+} from './data'
 import { makeGame } from './test-utils'
 
 const memoryStorage = (value: string | null) => ({ getItem: (key: string) => (key === STORAGE_KEY ? value : null) })
@@ -90,14 +103,14 @@ describe('new fields (deck, swaps, training, counters)', () => {
 
 describe('mergeImport', () => {
   it('takes the decklist from the backup if the default list is still here', () => {
-    const backup = { ...emptyData(), decklist: [{ name: 'Forest', qty: 99 }], swaps: [{ id: 's', date: '2026-10-01', out: [], in: [], note: '', createdAt: 'x' }] }
+    const backup = { ...emptyData(), deckChosen: true, decklist: [{ name: 'Forest', qty: 99 }], swaps: [{ id: 's', deck: DEFAULT_DECK, date: '2026-10-01', out: [], in: [], note: '', createdAt: 'x' }] }
     const { data } = mergeImport(emptyData(), backup)
     expect(data.decklist).toEqual([{ name: 'Forest', qty: 99 }])
     expect(data.swaps).toHaveLength(1)
   })
 
   it('keeps a custom decklist and merges swaps without duplicates', () => {
-    const swap = { id: 's', date: '2026-10-01', out: [], in: [], note: '', createdAt: 'x' }
+    const swap = { id: 's', deck: DEFAULT_DECK, date: '2026-10-01', out: [], in: [], note: '', createdAt: 'x' }
     const current = { ...emptyData(), decklist: [{ name: 'Forest', qty: 98 }, { name: 'Sol Ring', qty: 1 }], swaps: [swap] }
     const backup = { ...emptyData(), decklist: [{ name: 'Forest', qty: 99 }], swaps: [swap] }
     const { data } = mergeImport(current, backup)
@@ -122,5 +135,61 @@ describe('question memory', () => {
     expect(quiz.a.box).toBe(3)
     expect(quiz.b.box).toBe(2)
     expect(quiz.c).toBeDefined()
+  })
+})
+
+describe('picking a deck', () => {
+  const sliver: ChosenDeck = {
+    name: 'Sliver Swarm (Sliver Gravemother)',
+    commander: 'The First Sliver',
+    commanderSet: 'clb',
+    decklist: [{ name: 'Sol Ring', qty: 1 }],
+    precon: 'SliverSwarm_CMM',
+  }
+  const swap = (deck: string) => ({ id: deck, deck, date: '2026-10-01', out: ['A'], in: ['B'], note: '', createdAt: 'x' })
+
+  it('starts without a deck, older data counts as having picked the Ghalta deck', () => {
+    expect(emptyData().deckChosen).toBe(false)
+    expect(sanitizeData({ games: [] }).deckChosen).toBe(false)
+    const legacy = sanitizeData({ commander: 'Ghalta, Primal Hunger', swaps: [{ id: 's', date: '2026-10-01' }] })
+    expect(legacy).toMatchObject({ deckChosen: true, precon: 'TramplesaurusRex_FDC' })
+    expect(legacy.swaps[0].deck).toBe(DEFAULT_DECK)
+    expect(sanitizeData({ commander: 'Atraxa, Praetors\' Voice' }).precon).toBeNull()
+    // Once saved, the stored flag wins (the stand-in Ghalta deck has a commander too).
+    expect(sanitizeData(JSON.parse(JSON.stringify(emptyData()))).deckChosen).toBe(false)
+  })
+
+  it('switches deck, name and table talk; games and swaps stay', () => {
+    const before = { ...emptyData(), deckChosen: true, games: [makeGame()], swaps: [swap(DEFAULT_DECK)] }
+    const after = switchDeck(before, sliver)
+    expect(after).toMatchObject({ deckChosen: true, commander: 'The First Sliver', precon: 'SliverSwarm_CMM' })
+    expect(after.settings.defaultDeck).toBe(sliver.name)
+    expect(after.settings.tableIntro).toBe('Sliver Swarm (Sliver Gravemother) precon, unchanged, Bracket 2.')
+    expect(after.games).toEqual(before.games)
+    expect(swapsOf(after.swaps, sliver.name)).toEqual([])
+    expect(swapsOf(after.swaps, DEFAULT_DECK)).toHaveLength(1)
+  })
+
+  it('keeps a table talk you wrote yourself and resets the bracket check for a new deck', () => {
+    const own = { ...emptyData(), deckChosen: true, settings: { ...defaultSettings(), tableIntro: 'Hi all!', bracketCheckDone: true } }
+    const after = switchDeck(own, { ...sliver, precon: null })
+    expect(after.settings.tableIntro).toBe('Hi all!')
+    expect(after.settings.bracketCheckDone).toBe(false)
+    const fresh = switchDeck(emptyData(), { ...sliver, precon: null })
+    expect(fresh.settings.tableIntro).toBe('The First Sliver deck, Bracket 2.')
+    expect(emptyData().settings.tableIntro).toBe(DEFAULT_TABLE_INTRO)
+  })
+
+  it('renaming the deck takes its swaps along', () => {
+    const data = { ...emptyData(), swaps: [swap(DEFAULT_DECK), swap('Other')] }
+    const renamed = applySettings(data, { ...data.settings, defaultDeck: 'Dino Stomp' })
+    expect(renamed.swaps.map((s) => s.deck)).toEqual(['Dino Stomp', 'Other'])
+  })
+
+  it('restoring a backup before picking a deck takes deck and settings from the backup', () => {
+    const backup = switchDeck({ ...emptyData(), settings: { ...defaultSettings(), defaultPlayers: 5 } }, sliver)
+    const { data } = mergeImport(emptyData(), backup)
+    expect(data).toMatchObject({ deckChosen: true, commander: 'The First Sliver', precon: 'SliverSwarm_CMM' })
+    expect(data.settings.defaultPlayers).toBe(5)
   })
 })

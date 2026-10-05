@@ -15,10 +15,12 @@ import {
 } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Button, EmptyState } from '../components/ui'
+import { isGhalta } from '../lib/commander'
 import { LESSONS } from '../lib/quiz/quiz'
 import { navigate } from '../lib/route'
 import { buildLibrary, seedFor, simulateGame, summarize, type Distribution } from '../lib/sim/goldfish'
 import { randomSeed } from '../lib/sim/rng'
+import { swapsOf } from '../lib/data'
 import { computeStats } from '../lib/stats'
 import { useData } from '../lib/store'
 import type { LessonId, SkillId } from '../lib/types'
@@ -87,7 +89,7 @@ export function Training() {
       {!ready && <CardDataNotice deck={deck} />}
 
       <ul className="lessons">
-        {LESSONS.map((lesson) => {
+        {LESSONS.filter((l) => !l.forCommander || l.forCommander(deck.commander)).map((lesson) => {
           const IconCmp = LESSON_ICON[lesson.id]
           const results = training.filter((t) => t.lessonId === lesson.id)
           const best = results.reduce((m, t) => Math.max(m, t.correct), 0)
@@ -132,7 +134,7 @@ export function Training() {
         })}
       </ul>
 
-      {ready ? <GoldfishLab /> : null}
+      {ready && isGhalta(deck.commander) ? <GoldfishLab /> : null}
     </div>
   )
 }
@@ -160,7 +162,8 @@ const LAB_GAMES = 1000
 const CHUNK = 100
 
 function GoldfishLab() {
-  const { games, settings, swaps } = useData()
+  const { games, settings, swaps: allSwaps } = useData()
+  const swaps = swapsOf(allSwaps, settings.defaultDeck)
   const deck = useDeckCards({ autoLoad: false })
   const [result, setResult] = useState<Distribution | null>(null)
   const [progress, setProgress] = useState<number | null>(null)
@@ -172,7 +175,7 @@ function GoldfishLab() {
     }
   }, [])
 
-  const realAvg = computeStats(games, settings.defaultDeck).avgGhaltaTurn
+  const realAvg = computeStats(games, settings.defaultDeck).avgCommanderTurn
 
   const run = () => {
     const library = buildLibrary(deck.decklist, deck.lookup)

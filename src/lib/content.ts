@@ -21,7 +21,7 @@ export const SKILLS: Skill[] = [
     id: 'sequencing',
     name: 'Sequencing',
     tip: 'A land every turn. Mana creatures early. Creatures and removal as late as makes sense, so you can react to new info.',
-    task: 'Count out loud: “I have X power, Ghalta costs Y.”',
+    task: 'Before each main phase, say your plan out loud: which land, which spell, and why now.',
   },
   {
     id: 'threat',
@@ -44,7 +44,7 @@ export const SKILLS: Skill[] = [
   {
     id: 'removal',
     name: 'Removal Timing',
-    tip: 'Removal is for “lethal”, not for “annoying”. Ram Through and Bite Down only work with a big creature.',
+    tip: 'Removal is for “lethal”, not for “annoying”. Fight and bite spells only work when you have a big creature.',
     task: 'Before every removal spell, ask: Will this card otherwise end the game?',
   },
   {
@@ -106,6 +106,13 @@ export const DEFAULT_DECK = 'Tramplesaurus Rex (Ghalta)'
 
 export const DEFAULT_TABLE_INTRO =
   'Ghalta precon, unchanged, Bracket 2, no Game Changers, no combos.'
+
+/** The sentence for the table when you pick a deck. */
+export function tableIntroFor(deckName: string, commander: string, precon: boolean, bracket: number): string {
+  return precon
+    ? `${deckName} precon, unchanged, Bracket ${bracket}.`
+    : `${commander} deck, Bracket ${bracket}.`
+}
 
 export const ATTACK_PRIORITIES = [
   'Whoever is close to winning or building an engine you can’t remove.',

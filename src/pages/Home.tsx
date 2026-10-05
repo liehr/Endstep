@@ -7,6 +7,7 @@ import { BottomSheet, Button, Card, ProgressBar } from '../components/ui'
 import { SKILLS, SKILL_BY_ID } from '../lib/content'
 import { nextFocus } from '../lib/focus'
 import { navigate } from '../lib/route'
+import { swapsOf } from '../lib/data'
 import { bracketCheck, computeStats } from '../lib/stats'
 import { actions, useData } from '../lib/store'
 import type { Bracket, SkillId } from '../lib/types'
@@ -15,7 +16,8 @@ import type { Bracket, SkillId } from '../lib/types'
 const OFFSETS = [0, 52, 76, 52, 0, -52, -76, -52]
 
 export function Home() {
-  const { games, draft, settings, swaps, decklist } = useData()
+  const { games, draft, settings, swaps: allSwaps, decklist } = useData()
+  const swaps = swapsOf(allSwaps, settings.defaultDeck)
   const [sheet, setSheet] = useState<SkillId | 'chest' | 'bracket' | null>(null)
   const current = nextFocus(games)
   const currentIndex = SKILLS.findIndex((s) => s.id === current)

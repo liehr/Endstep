@@ -87,8 +87,8 @@ export function Stats() {
         <StatTile label="Win rate" value={percent(s.winRate)} sub={`${s.wins} ${s.wins === 1 ? 'win' : 'wins'}`} />
         <StatTile label="Streak" value={`${streak.current} ${streak.current === 1 ? 'wk' : 'wks'}`} sub={`Best: ${streak.best}`} />
         <StatTile
-          label="Avg. Ghalta turn"
-          value={oneDecimal(s.avgGhaltaTurn)}
+          label="Avg. commander turn"
+          value={oneDecimal(s.avgCommanderTurn)}
           sub={s.avgMulligans === null ? undefined : `Avg. ${oneDecimal(s.avgMulligans)} mulligans`}
         />
         {s.avgTurns !== null && <StatTile label="Avg. turns per game" value={oneDecimal(s.avgTurns)} />}

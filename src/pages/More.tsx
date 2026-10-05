@@ -8,6 +8,7 @@ import {
   DeviceMobileIcon,
   DownloadSimpleIcon,
   StackIcon,
+  SwapIcon,
   UploadSimpleIcon,
   UsersThreeIcon,
   type Icon,
@@ -20,6 +21,7 @@ import { SkillBadge } from '../components/skills'
 import { BottomSheet, Button, Choice, Field, Group, IconButton, Stepper } from '../components/ui'
 import { createBackup, parseBackup, shareOrDownload } from '../lib/backup'
 import { SKILLS } from '../lib/content'
+import { isGhalta } from '../lib/commander'
 import { deckSize } from '../lib/decklist'
 import { isStandalone } from '../lib/install'
 import { navigate } from '../lib/route'
@@ -95,6 +97,7 @@ export function More() {
         <ul className="list settings">
           <Row icon={CardsIcon} color="var(--skill-mulligan)" label="Decklist & swaps" value={`${deckSize(data.decklist)} + 1`} onClick={() => navigate('/mehr/deck')} />
           <Row icon={StackIcon} color="var(--skill-combat)" label="Deck name" value={settings.defaultDeck} onClick={() => open('deck')} />
+          <Row icon={SwapIcon} color="var(--skill-threat)" label="Play a different deck" onClick={() => navigate('/mehr/deck/wechseln')} />
           <Row
             icon={UsersThreeIcon}
             color="var(--skill-sequencing)"
@@ -110,7 +113,9 @@ export function More() {
         <h2 className="list-title">Tools</h2>
         <ul className="list settings">
           <Row icon={BookOpenIcon} color="var(--skill-mulligan)" label="Cheat sheet" onClick={() => navigate('/mehr/spickzettel')} />
-          <Row icon={CalculatorIcon} color="var(--brand)" label="Ghalta calculator" onClick={() => navigate('/mehr/ghalta')} />
+          {isGhalta(data.commander) && (
+            <Row icon={CalculatorIcon} color="var(--brand)" label="Ghalta calculator" onClick={() => navigate('/mehr/ghalta')} />
+          )}
         </ul>
       </section>
 
