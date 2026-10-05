@@ -63,6 +63,10 @@
   --radius: 16px;
   --tabbar-h: 68px;
   --footer-h: 92px;
+  /* Layout widths; widened for tablet and desktop at the end of this file. */
+  --content-w: 560px;
+  --flow-w: 560px;
+  --nav-w: 0px;
   color-scheme: light;
 }
 
@@ -226,7 +230,7 @@ button {
    ========================================================================== */
 
 .screen {
-  max-width: 560px;
+  max-width: var(--content-w);
   margin: 0 auto;
   padding: calc(env(safe-area-inset-top) + 12px) 16px calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 24px);
   display: flex;
@@ -236,6 +240,7 @@ button {
 }
 
 .screen.flow {
+  max-width: var(--flow-w);
   padding-top: env(safe-area-inset-top);
   padding-bottom: calc(var(--footer-h) + env(safe-area-inset-bottom) + 16px);
 }
@@ -274,7 +279,7 @@ button {
   right: 0;
   bottom: 0;
   z-index: 10;
-  padding: 16px max(16px, calc((100% - 528px) / 2)) calc(16px + env(safe-area-inset-bottom));
+  padding: 16px max(16px, calc((100% - var(--flow-w)) / 2 + 16px)) calc(16px + env(safe-area-inset-bottom));
   background: var(--bg);
   border-top: 2px solid var(--border);
 }
@@ -1678,6 +1683,9 @@ textarea:focus {
   border-top: 2px solid var(--border);
   background: var(--surface);
 }
+.tabbar .tabbar-brand {
+  display: none;
+}
 .tabbar a {
   display: flex;
   flex-direction: column;
@@ -1969,7 +1977,7 @@ textarea:focus {
   gap: 8px;
   max-height: 70vh;
   overflow-y: auto;
-  padding: 18px max(16px, calc((100% - 528px) / 2)) calc(16px + env(safe-area-inset-bottom));
+  padding: 18px max(16px, calc((100% - var(--flow-w)) / 2 + 16px)) calc(16px + env(safe-area-inset-bottom));
   border-top: 2px solid;
   animation: sheet-up 220ms cubic-bezier(0.2, 0.9, 0.3, 1);
 }
@@ -2523,4 +2531,202 @@ textarea:focus {
 }
 .tile-chip.used .mana {
   visibility: hidden;
+}
+
+/* Stats panels: stacked on phones, two columns on wide screens (see below). */
+.panel-columns {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ==========================================================================
+   Tablet and desktop
+   Phones keep the bottom tab bar. From tablet width the navigation moves to a
+   rail on the left, from laptop width to a sidebar with labels. Content gets
+   wider, but stays a readable column; flows stay centered without navigation.
+   ========================================================================== */
+
+:focus-visible {
+  outline: 3px solid var(--select-border);
+  outline-offset: 2px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --nav-w: calc(96px + env(safe-area-inset-left));
+    --content-w: 720px;
+    --flow-w: 640px;
+  }
+
+  main:not(.flow-main) {
+    padding-left: var(--nav-w);
+  }
+
+  .screen {
+    padding: calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 40px);
+  }
+  .screen.flow {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .tabbar {
+    top: 0;
+    right: auto;
+    width: var(--nav-w);
+    height: auto;
+    grid-auto-flow: row;
+    grid-auto-rows: 76px;
+    align-content: start;
+    gap: 4px;
+    padding: calc(env(safe-area-inset-top) + 20px) 8px calc(env(safe-area-inset-bottom) + 16px) calc(8px + env(safe-area-inset-left));
+    border-top: none;
+    border-right: 2px solid var(--border);
+    overflow-y: auto;
+  }
+
+  /* Next to the rail, not underneath it. */
+  body:has(.tabbar) .update-banner {
+    margin-left: var(--nav-w);
+  }
+
+  .toast {
+    left: calc(50% + var(--nav-w) / 2);
+    bottom: calc(env(safe-area-inset-bottom) + 24px);
+  }
+  .toast.flow {
+    left: 50%;
+  }
+
+  /* Bottom sheets become centered dialogs. */
+  .sheet-backdrop {
+    align-items: center;
+    padding: 24px;
+  }
+  .sheet {
+    max-height: min(88vh, 800px);
+    padding: 6px 20px 20px;
+    border-radius: 24px;
+    animation: dialog-in 200ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  .sheet-handle {
+    visibility: hidden;
+  }
+
+  .stat-grid {
+    grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  }
+  .lessons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .lesson-card {
+    height: 100%;
+  }
+  .path-label {
+    width: max-content;
+    max-width: 180px;
+  }
+}
+
+/* Phones in landscape also get the rail; keep all tabs on screen. */
+@media (min-width: 768px) and (max-height: 500px) {
+  .tabbar {
+    grid-auto-rows: 64px;
+    gap: 0;
+    padding-top: calc(env(safe-area-inset-top) + 8px);
+  }
+}
+
+@media (min-width: 1100px) {
+  :root {
+    --nav-w: calc(240px + env(safe-area-inset-left));
+  }
+
+  .screen.wide {
+    --content-w: 1000px;
+  }
+  .panel-columns {
+    display: block;
+    columns: 2;
+    column-gap: 16px;
+  }
+  .panel-columns > * {
+    break-inside: avoid;
+    margin-bottom: 16px;
+  }
+
+  .tabbar {
+    grid-auto-rows: auto;
+    gap: 6px;
+    padding: calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 16px) calc(16px + env(safe-area-inset-left));
+  }
+  .tabbar .tabbar-brand {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    margin: 0 8px 18px;
+    padding: 0;
+    border: none;
+    color: var(--brand);
+    text-transform: none;
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+  }
+  .tabbar-brand img {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+  .tabbar a {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 14px;
+    min-height: 52px;
+    padding: 4px 12px 4px 6px;
+    border: 2px solid transparent;
+    border-radius: 14px;
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .tabbar a .tab-icon {
+    width: 36px;
+    height: 36px;
+  }
+  .tabbar a.active {
+    border-color: var(--select-border);
+    background: var(--select-soft);
+  }
+  .tabbar a.active .tab-icon {
+    border-color: transparent;
+    background: none;
+  }
+
+  /* The sidebar already shows the logo. */
+  .topstats-logo {
+    visibility: hidden;
+  }
+}
+
+@media (hover: hover) {
+  .tabbar a:not(.active):hover {
+    color: var(--muted);
+  }
+}
+@media (hover: hover) and (min-width: 1100px) {
+  .tabbar a:not(.active):hover {
+    background: var(--surface-2);
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
 }

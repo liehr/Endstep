@@ -100,6 +100,11 @@ export function App() {
       )}
       {!flow && (
         <nav className="tabbar" aria-label="Main navigation">
+          {/* Only visible as a sidebar on wide screens (tablet landscape, desktop). */}
+          <a href="#/" className="tabbar-brand" aria-hidden="true" tabIndex={-1}>
+            <img src={`${import.meta.env.BASE_URL}pwa-64x64.png`} alt="" />
+            Endstep
+          </a>
           {TABS.map(({ path, label, icon: IconCmp }) => {
             const active = tab === path
             return (
