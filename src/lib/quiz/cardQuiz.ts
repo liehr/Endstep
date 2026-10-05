@@ -7,9 +7,9 @@ import { shuffle, type Rng } from '../sim/rng'
 export type Role = 'land' | 'ramp' | 'big' | 'draw' | 'removal' | 'protection' | 'finisher' | 'utility'
 
 export const ROLES: Record<Role, { label: string; hint: string }> = {
-  land: { label: 'Land', hint: 'Brings mana every turn. No lands, no Ghalta.' },
-  ramp: { label: 'Ramp', hint: 'Extra mana or cheaper spells, so Ghalta lands sooner.' },
-  big: { label: 'Big creature', hint: 'Lots of power: makes Ghalta cheap and pushes damage through.' },
+  land: { label: 'Land', hint: 'Brings mana every turn. No lands, no spells.' },
+  ramp: { label: 'Ramp', hint: 'Extra mana or cheaper spells, so your commander and big spells land sooner.' },
+  big: { label: 'Big creature', hint: 'Lots of power: pressures the table and pushes damage through.' },
   draw: { label: 'Card advantage', hint: 'Draws cards so you don’t run out of gas after a wipe.' },
   removal: { label: 'Interaction', hint: 'Removes opposing threats. The deck has little of it, so use it carefully.' },
   protection: { label: 'Protection', hint: 'Protects your creatures from removal or wipes. Save it for the answer that would really kill you.' },

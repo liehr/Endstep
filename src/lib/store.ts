@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { emptyInput, emptyTracker, loadData, mergeImport, saveData } from './data'
+import { applySettings, emptyInput, emptyTracker, loadData, mergeImport, saveData, swapsOf, switchDeck, type ChosenDeck } from './data'
 import { applySwap } from './decklist'
 import { today } from './dates'
 import { nextFocus } from './focus'
@@ -84,7 +84,12 @@ export const actions = {
   },
 
   updateSettings(settings: Settings) {
-    commit({ ...data, settings })
+    commit(applySettings(data, settings))
+  },
+
+  /** Pick a deck (welcome screen) or switch to another one. */
+  chooseDeck(deck: ChosenDeck) {
+    commit(switchDeck(data, deck))
   },
 
   /** Restore a backup: nothing gets lost. Returns the number of new/updated games. */
@@ -101,15 +106,15 @@ export const actions = {
 
   /** Record a swap round: update the decklist and log the swap. */
   addSwap(out: string[], into: string[], note = '', date = today()) {
-    const swap: Swap = { id: crypto.randomUUID(), date, out, in: into, note, createdAt: new Date().toISOString() }
+    const swap: Swap = { id: crypto.randomUUID(), deck: data.settings.defaultDeck, date, out, in: into, note, createdAt: new Date().toISOString() }
     commit({ ...data, decklist: applySwap(data.decklist, out, into), swaps: [...data.swaps, swap] })
   },
 
-  /** Undo the last swap round (swap the decklist back). */
+  /** Undo the last swap round of the active deck (swap the decklist back). */
   undoLastSwap() {
-    const last = data.swaps.at(-1)
+    const last = swapsOf(data.swaps, data.settings.defaultDeck).at(-1)
     if (!last) return
-    commit({ ...data, decklist: applySwap(data.decklist, last.in, last.out), swaps: data.swaps.slice(0, -1) })
+    commit({ ...data, decklist: applySwap(data.decklist, last.in, last.out), swaps: data.swaps.filter((s) => s !== last) })
   },
 
   addTrainingResult(lessonId: LessonId, correct: number, total: number) {

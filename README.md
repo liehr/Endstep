@@ -2,30 +2,36 @@
 
 **Track your Commander games and get better with every one.**
 
-Endstep is a small phone app built around the learning plan "Commander from the ground up"
-(Tramplesaurus Rex / Ghalta):
+Endstep is a small phone app built around the learning plan "Commander from the ground up".
+It started with the Tramplesaurus Rex (Ghalta) precon and now works with any Commander deck:
+
+- **Pick your deck:** on first launch, search all Commander precons (by name, commander, set or year)
+  or paste your own list from Moxfield, Archidekt, MTGGoldfish or any text list. Links to deck sites
+  can't be read from the browser, so the app explains how to copy the list as text instead.
+  Switch decks any time under **More → Play a different deck**; games stay, and stats, swaps and the
+  upgrade chest follow the active deck.
 
 - **Before the game:** the next focus skill in the rotation (Mulligan → Sequencing → Threat
   Assessment → Combat Math → Board Wipe Discipline → Removal Timing → Reading the Table / Politics),
   plus your line for the table.
-- **During the game:** Ghalta calculator (power + commander tax → cost), the wrath question,
+- **During the game:** the wrath question, the Ghalta calculator for Ghalta decks,
   "Who do I attack?" and a rules cheat sheet.
 - **After the game (2 minutes):** the three questions: Why did the winner win? Which one decision
   would you make differently? Which cards were dead or overperformed?
-- **Turn counter:** tap "Next turn" and "Ghalta cast!" during the game. Ghalta turn, game length and
+- **Turn counter:** tap "Next turn" and "<Commander> cast!" during the game. Commander turn, game length and
   commander tax end up in your notes automatically.
 - **Training:** short Duolingo-style lessons (pick an answer → check → explanation, mistakes come back
   at the end):
-  - *Ghalta Math*, *Combat & Trample*, *Commander Rules*
+  - *Combat & Trample*, *Commander Rules*, plus *Ghalta Math* for Ghalta decks
   - *Mulligan Trainer:* real opening hands from your deck, rated by the rule of thumb from the learning plan
-  - *When Does Ghalta Land?:* simulated turns with your deck
+  - *When Does Ghalta Land?:* simulated turns with your deck (Ghalta decks for now)
   - *Know Your Cards:* parts of a card are hidden (name, cost, power, a bit of text). Guess them or
     build the card from tiles; plus the card's role in the game plan (Ramp, Big creature, Card
     advantage, Interaction, Protection, Finisher).
   - *Card Rulings:* official rulings (from Scryfall) for the cards in your deck: which card is it about?
   - **Question memory:** the app remembers every answer. Wrong answers come back in the next lesson,
     right ones only after 1, 3, 7 and 16 days, and new questions come before ones you already know.
-- **Goldfish Lab:** 1,000 simulated games show on which turn Ghalta lands with your deck. Run it again
+- **Goldfish Lab (Ghalta decks for now):** 1,000 simulated games show on which turn Ghalta lands. Run it again
   after a swap round: did the deck get faster?
 - **Deck & swap rounds:** decklist with card images, swap rounds ("out" / "in") with a log and undo,
   win rate per deck version.
@@ -57,13 +63,15 @@ Card images and text come from the [Scryfall API](https://scryfall.com/docs/api)
 requests the cards in your deck (two requests to `/cards/collection`), stores them on the phone and
 works offline afterwards. Scryfall's bulk data (over 100 MB) would be too big for a phone.
 
-To show the **right images**, the app loads the printing from the precon (set `FDC`, Foundations
-Commander). If a card doesn't exist in that set, it shows another printing and points that out on
+To show the **right images**, the app loads the printing from the precon list (MTGJSON has set and
+collector number for every card). If a card doesn't exist in that set, it shows another printing and points that out on
 the deck page. It is most accurate if you paste your list from Moxfield with set and collector
 number (e.g. `1 Llanowar Elves (FDC) 227`).
 
-The default Tramplesaurus Rex decklist comes from published decklists. Compare it with your own deck
-under **More → Decklist & swaps**.
+Precon lists come from [MTGJSON](https://mtgjson.com), which allows requests from the browser. The
+searchable index of all precons is bundled in `src/lib/precons.json`; refresh it with
+`node scripts/precons.mjs` when new precons come out. Compare the list with your own deck under
+**More → Decklist & swaps**.
 
 ### Your data
 

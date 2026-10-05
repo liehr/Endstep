@@ -410,7 +410,8 @@ button {
 }
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   padding: 13px 14px;
   border: 2px solid var(--border);
@@ -431,7 +432,8 @@ textarea::placeholder {
   color: var(--subtle);
 }
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   outline: none;
   border-color: var(--select-border);
   background: var(--surface);

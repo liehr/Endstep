@@ -76,8 +76,8 @@ export function GameForm({ value, onChange }: { value: GameInput; onChange: (val
       <section className="form-section">
         <h2>Details</h2>
         <div className="row">
-          <Group label="Ghalta landed on turn">
-            <Stepper label="Ghalta turn" value={value.ghaltaTurn} min={1} max={30} onChange={(v) => set('ghaltaTurn', v)} />
+          <Group label="Commander landed on turn">
+            <Stepper label="Commander turn" value={value.commanderTurn} min={1} max={30} onChange={(v) => set('commanderTurn', v)} />
           </Group>
           <Group label="Mulligans">
             <Stepper label="Mulligans" value={value.mulligans} min={0} max={7} onChange={(v) => set('mulligans', v)} />

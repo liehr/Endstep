@@ -1,4 +1,5 @@
 import { BRACKET_CHECK_GAMES, PATTERN_THRESHOLD, SKILLS, UPGRADE_CARDS, UPGRADE_EVERY_GAMES, WHY_CATEGORIES } from './content'
+import { swapsOf } from './data'
 import { sortGames } from './focus'
 import type { DeckEntry, Game, Result, SkillId, Swap, WhyCategory } from './types'
 
@@ -82,7 +83,7 @@ export interface Stats {
   /** Skills where the "one decision" landed at least three times. */
   patterns: SkillStat[]
   whyCounts: { id: WhyCategory; count: number }[]
-  avgGhaltaTurn: number | null
+  avgCommanderTurn: number | null
   avgTurns: number | null
   avgMulligans: number | null
   upgrade: UpgradeStatus
@@ -148,7 +149,7 @@ export function computeStats(
     }
   })
 
-  const upgrade = upgradeStatus(deckGames, swaps)
+  const upgrade = upgradeStatus(deckGames, swapsOf(swaps, deck))
   const upgradeReady = upgrade.ready
   // Candidates only from cards that are still in the deck.
   const inDeck = decklist ? new Set(decklist.map((e) => normalize(e.name))) : null
@@ -171,7 +172,7 @@ export function computeStats(
       id,
       count: games.filter((g) => g.result === 'loss' && g.whyCategory === id).length,
     })),
-    avgGhaltaTurn: average(games.map((g) => g.ghaltaTurn)),
+    avgCommanderTurn: average(deckGames.map((g) => g.commanderTurn)),
     avgTurns: average(games.map((g) => g.turns)),
     avgMulligans: average(games.map((g) => g.mulligans)),
     wipes: {

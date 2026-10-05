@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { UpdateBanner } from './components/UpdateBanner'
 import { SKILLS } from './lib/content'
 import { useRoute } from './lib/route'
+import { useData } from './lib/store'
 import { useToast } from './lib/toast'
 import type { LessonId, SkillId } from './lib/types'
 import { LESSON_BY_ID } from './lib/quiz/quiz'
@@ -18,6 +19,7 @@ const Training = lazy(() => import('./pages/Training').then((m) => ({ default: m
 const Lesson = lazy(() => import('./pages/Lesson').then((m) => ({ default: m.Lesson })))
 const DeckPage = lazy(() => import('./pages/Deck').then((m) => ({ default: m.DeckPage })))
 const SwapFlow = lazy(() => import('./pages/Deck').then((m) => ({ default: m.SwapFlow })))
+const DeckPicker = lazy(() => import('./pages/DeckPicker').then((m) => ({ default: m.DeckPicker })))
 
 const TABS: { path: string; label: string; icon: Icon }[] = [
   { path: '/', label: 'Home', icon: HouseIcon },
@@ -56,6 +58,8 @@ function Page({ route }: { route: string }) {
       return <DeckPage />
     case '/mehr/deck/swap':
       return <SwapFlow />
+    case '/mehr/deck/wechseln':
+      return <DeckPicker />
     case '/training':
       return <Training />
     default:
@@ -78,8 +82,10 @@ function activeTab(route: string): string {
 export function App() {
   const route = useRoute()
   const message = useToast()
+  const { deckChosen } = useData()
   const tab = activeTab(route)
-  const flow = isFlow(route)
+  // First launch: pick a deck before anything else, without the tab bar.
+  const flow = isFlow(route) || !deckChosen
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -90,7 +96,7 @@ export function App() {
       <UpdateBanner />
       <main className={flow ? 'flow-main' : ''}>
         <Suspense fallback={null}>
-          <Page key={route} route={route} />
+          {deckChosen ? <Page key={route} route={route} /> : <DeckPicker welcome />}
         </Suspense>
       </main>
       {message && (

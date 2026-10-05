@@ -1,4 +1,5 @@
 import { boardPower, isCreature, isLand, type CardInfo } from '../cards'
+import { isGhalta } from '../commander'
 import { ghaltaCost } from '../ghalta'
 import { buildLibrary, MAX_TURNS, simulateGame, type SimCard, type TurnLog } from '../sim/goldfish'
 import { evaluateHand } from '../sim/mulligan'
@@ -543,6 +544,8 @@ export interface Lesson {
   description: string
   /** Needs card data from Scryfall. */
   needsCards: boolean
+  /** Only for decks with this commander (e.g. the Ghalta lessons); without it, for every deck. */
+  forCommander?: (commander: string) => boolean
   /** Extra condition (e.g. rulings loaded); without it, needsCards decides. */
   ready?: (ctx: Omit<QuizContext, 'rng'>) => boolean
   /**
@@ -555,11 +558,11 @@ export interface Lesson {
 }
 
 export const LESSONS: Lesson[] = [
-  { id: 'ghalta', title: 'Ghalta Math', description: 'What does Ghalta cost with your board?', needsCards: false, remember: true, build: ghaltaLesson },
+  { id: 'ghalta', title: 'Ghalta Math', description: 'What does Ghalta cost with your board?', needsCards: false, forCommander: isGhalta, remember: true, build: ghaltaLesson },
   { id: 'combat', title: 'Combat & Trample', description: 'Blockers, trample and commander damage.', needsCards: false, remember: true, build: combatLesson },
   { id: 'rules', title: 'Commander Rules', description: 'Mulligan, stack, combat, brackets.', needsCards: false, remember: true, build: rulesLesson },
   { id: 'mulligan', title: 'Mulligan Trainer', description: 'Real opening hands from your deck.', needsCards: true, remember: false, build: mulliganLesson },
-  { id: 'goldfish', title: 'When Does Ghalta Land?', description: 'Simulated turns with your deck.', needsCards: true, remember: false, build: goldfishLesson },
+  { id: 'goldfish', title: 'When Does Ghalta Land?', description: 'Simulated turns with your deck.', needsCards: true, forCommander: isGhalta, remember: false, build: goldfishLesson },
   { id: 'cards', title: 'Know Your Cards', description: 'What each card costs, does and is for.', needsCards: true, remember: true, build: cardsLesson },
   {
     id: 'rulings',

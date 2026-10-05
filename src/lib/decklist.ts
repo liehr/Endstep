@@ -6,6 +6,8 @@ import type { DeckEntry } from './types'
 export const DEFAULT_COMMANDER = 'Ghalta, Primal Hunger'
 /** Foundations Commander Decks – set code on Scryfall. */
 export const DEFAULT_SET = 'fdc'
+/** The same precon on MTGJSON (see precons.ts). */
+export const DEFAULT_PRECON = 'TramplesaurusRex_FDC'
 
 const DEFAULT_LIST_TEXT = `
 1 Arasta of the Endless Web
@@ -182,11 +184,13 @@ export function sameDecklist(a: DeckEntry[], b: DeckEntry[]): boolean {
   return b.every((e) => map.get(key(e.name)) === e.qty)
 }
 
+export const isBasicLand = (name: string) => /^(snow-covered )?(forest|island|swamp|mountain|plains|wastes)$/i.test(name.trim())
+
 /** All card names of a deck (without basic lands), alphabetically. */
 export function deckCardNames(entries: DeckEntry[]): string[] {
   return entries
     .map((e) => e.name)
-    .filter((n) => !/^(snow-covered )?(forest|island|swamp|mountain|plains|wastes)$/i.test(n))
+    .filter((n) => !isBasicLand(n))
     .sort((a, b) => a.localeCompare(b, 'en'))
 }
 

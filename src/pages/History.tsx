@@ -103,7 +103,7 @@ export function GameDetail({ id }: { id: string }) {
 
   const rating = FOCUS_RATINGS.find((r) => r.id === game.focusRating)?.label
   const facts = [
-    game.ghaltaTurn !== null && `Ghalta on turn ${game.ghaltaTurn}`,
+    game.commanderTurn !== null && `Commander on turn ${game.commanderTurn}`,
     game.turns !== null && `${game.turns} turn${game.turns === 1 ? '' : 's'}`,
     game.mulligans !== null && `${game.mulligans} Mulligan${game.mulligans === 1 ? '' : 's'}`,
     game.wipe && WIPE_LABEL[game.wipe],
