@@ -20,7 +20,7 @@ export default defineConfig({
     VitePWA({
       // Neue Versionen werden im Hintergrund geladen; die App fragt dann „Aktualisieren?“.
       registerType: 'prompt',
-      includeAssets: ['favicon.ico', 'logo.svg', 'apple-touch-icon-180x180.png'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png'],
       manifest: {
         name: 'Endstep – Commander-Tracker',
         short_name: 'Endstep',
@@ -28,7 +28,8 @@ export default defineConfig({
         lang: 'de',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#0b1f14',
+        // Startbildschirm passend zum schwarzen App-Icon
+        background_color: '#000000',
         theme_color: '#0b1f14',
         icons: [
           { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
@@ -39,6 +40,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Quellbild der Icons, wird in der App nicht gebraucht
+        globIgnores: ['logo.png'],
       },
     }),
   ],

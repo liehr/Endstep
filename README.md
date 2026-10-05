@@ -75,7 +75,7 @@ npm run lint       # oxlint
 npm run build      # Produktions-Build nach dist/
 ```
 
-App-Icons ändern: `public/logo.svg` bearbeiten und `npm run generate-icons` ausführen.
+App-Icon ändern: `public/logo.png` (quadratisch, mind. 512 px) ersetzen und `npm run generate-icons` ausführen.
 
 ### Aufbau
 

@@ -1,13 +1,15 @@
 import { defineConfig, minimal2023Preset } from '@vite-pwa/assets-generator/config'
 
-// App-Icons aus public/logo.svg erzeugen: `npm run generate-icons`
-const background = '#0f2e1d'
+// App-Icons aus public/logo.png erzeugen: `npm run generate-icons`
+// Das Motiv füllt das ganze Quadrat, deshalb ohne zusätzlichen Rand.
+const resizeOptions = { background: '#000000' }
 
 export default defineConfig({
   preset: {
     ...minimal2023Preset,
-    maskable: { ...minimal2023Preset.maskable, resizeOptions: { background } },
-    apple: { ...minimal2023Preset.apple, resizeOptions: { background } },
+    transparent: { ...minimal2023Preset.transparent, padding: 0, resizeOptions },
+    maskable: { ...minimal2023Preset.maskable, padding: 0, resizeOptions },
+    apple: { ...minimal2023Preset.apple, padding: 0, resizeOptions },
   },
-  images: ['public/logo.svg'],
+  images: ['public/logo.png'],
 })
