@@ -265,6 +265,8 @@ function sanitizeQuiz(raw: unknown): QuizMemory {
       last: str(stat.last),
       seen: intOrNull(stat.seen, 0, 100000) ?? 0,
       wrong: intOrNull(stat.wrong, 0, 100000) ?? 0,
+      ...(typeof stat.at === 'number' && Number.isFinite(stat.at) && stat.at >= 0 ? { at: stat.at } : {}),
+      ...(typeof stat.group === 'string' && stat.group.length <= 200 ? { group: stat.group } : {}),
     }
   }
   return out

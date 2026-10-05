@@ -3,8 +3,9 @@ import { cardKey, fromScryfall } from '../cards'
 import type { DeckEntry } from '../types'
 import { FIXTURE_CARDS, FIXTURE_RULINGS } from '../scryfall.fixture'
 import { evaluateHand } from '../sim/mulligan'
-import { buildLesson, cardCoverage, LESSONS, rulingsReady, type Question } from './quiz'
-import { recordAnswer } from './memory'
+import { buildLesson, cardCoverage, LESSON_BY_ID, LESSONS, rulingsReady, type Question } from './quiz'
+import { mulberry32 } from '../sim/rng'
+import { recordAnswer, topicOf } from './memory'
 import { RULES_BANK } from './rulesBank'
 
 const cards = new Map(FIXTURE_CARDS.map((c) => [cardKey(c.name), fromScryfall(c)]))
@@ -110,7 +111,7 @@ describe('Answers are correct', () => {
 
   it('Ghalta Math: cost matches the cards shown', () => {
     for (let seed = 1; seed <= 60; seed++) {
-      for (const q of buildLesson('ghalta', ctx, seed).filter((q) => q.id.startsWith('ghalta-') && q.cards)) {
+      for (const q of buildLesson('ghalta', ctx, seed).filter((q) => q.key.startsWith('ghalta-cost:') && q.cards)) {
         const power = q.cards!.reduce((s, c) => s + (lookup(c.name)!.power ?? 0), 0)
         const m = q.context!.match(/cast (once|(\d) times) before/)
         const casts = m ? (m[2] ? Number(m[2]) : 1) : 0
@@ -135,7 +136,7 @@ describe('Answers are correct', () => {
 
   it('Combat: trample damage is power minus lethal damage to blockers', () => {
     for (let seed = 1; seed <= 40; seed++) {
-      for (const q of buildLesson('combat', ctx, seed).filter((q) => q.id.startsWith('trample-'))) {
+      for (const q of buildLesson('combat', ctx, seed).filter((q) => ['trample', 'deathtouch'].includes(topicOf(q.key)))) {
         const blockers = [...q.prompt.matchAll(/(\d)\/\1/g)].map((m) => Number(m[1]))
         const deathtouch = q.prompt.includes('Deathtouch')
         const lethal = blockers.reduce((s, t) => s + (deathtouch ? 1 : t), 0)
@@ -151,7 +152,7 @@ describe('Answers are correct', () => {
     for (let seed = 1; seed <= 30; seed++) {
       for (const q of buildLesson('combat', niv, seed)) {
         expect(q.prompt).not.toContain('Ghalta')
-        if (q.id.startsWith('trample-') && !q.prompt.includes('Deathtouch')) {
+        if (topicOf(q.key) === 'trample') {
           const blockers = [...q.prompt.matchAll(/(\d)\/\1(?! creature)/g)].map((m) => Number(m[1]))
           expect(q.prompt).toMatch(/^A 7\/7 creature with Trample/)
           expect(correctLabel(q)).toBe(String(Math.max(0, 7 - blockers.reduce((s, b) => s + b, 0))))
@@ -209,6 +210,76 @@ describe('Question memory in lessons', () => {
     for (let seed = 1; seed <= 40; seed++) {
       const groups = buildLesson('cards', ctx, seed).map((q) => q.group)
       expect(new Set(groups).size).toBe(groups.length)
+    }
+  })
+
+  it('Know Your Cards: goes through the whole deck before a card comes back', () => {
+    const deckNames = new Set(
+      decklist.map((e) => lookup(e.name)).filter((c) => c && !c.typeLine.startsWith('Basic Land')).map((c) => c!.name),
+    )
+    const rounds = Math.floor(deckNames.size / 5)
+    for (let start = 1; start <= 20; start++) {
+      let memory = {}
+      const asked: string[] = []
+      for (let lesson = 0; lesson < rounds; lesson++) {
+        for (const [i, q] of buildLesson('cards', ctx, start * 100 + lesson, memory, today).entries()) {
+          asked.push(q.group!)
+          memory = recordAnswer(memory, q.key, true, today, { at: lesson * 10 + i + 1, group: q.group })
+        }
+      }
+      expect(new Set(asked).size).toBe(asked.length)
+    }
+  })
+
+  it('brings at most 2 due reviews per lesson, the rest is new', () => {
+    let memory = {}
+    for (const q of RULES_BANK.slice(0, 6)) memory = recordAnswer(memory, `rule-${q.id}`, false, today)
+    for (let seed = 1; seed <= 20; seed++) {
+      const due = buildLesson('rules', ctx, seed, memory, today).filter((q) => q.key in memory)
+      expect(due).toHaveLength(2)
+    }
+  })
+})
+
+describe('Know Your Cards: new question types', () => {
+  const correctLabel = (q: Question) => q.options.find((o) => o.id === q.correct)!.label
+  const all = (topic: string) => {
+    const out: Question[] = []
+    for (let seed = 1; seed <= 150; seed++) {
+      out.push(...LESSON_BY_ID.cards.build({ ...ctx, lookup: withArt, rng: mulberry32(seed) }).filter((q) => q.key.startsWith(`${topic}:`)))
+    }
+    return out
+  }
+  // The fixture has no images; give every card its own artwork.
+  const withArt = (name: string) => {
+    const c = lookup(name)
+    return c && { ...c, art: `art:${c.name}` }
+  }
+  const card = (name: string) => withArt(name)!
+
+  it('every type shows up and has correct answers', () => {
+    for (const topic of ['card-art', 'card-text', 'card-pt', 'card-type', 'card-keyword', 'card-mv', 'card-compare', 'card-which-type']) {
+      expect(all(topic).length, topic).toBeGreaterThan(0)
+    }
+    for (const q of all('card-art')) expect(card(correctLabel(q)).art).toBe(q.face!.art)
+    for (const q of all('card-pt')) expect(`${card(q.group!).powerText}/${card(q.group!).toughness}`).toBe(correctLabel(q))
+    for (const q of all('card-mv')) expect(String(card(q.group!).cmc)).toBe(correctLabel(q))
+    for (const q of all('card-text')) expect(correctLabel(q)).toBe(q.group)
+    for (const q of all('card-keyword')) {
+      const text = card(q.group!).oracleText
+      expect(text.toLowerCase()).toContain(correctLabel(q).toLowerCase())
+      for (const o of q.options.filter((o) => o.id !== q.correct)) expect(text.toLowerCase()).not.toContain(o.label.toLowerCase())
+    }
+    for (const q of all('card-compare')) {
+      const values = q.options.map((o) => card(o.label).cmc)
+      const best = q.prompt.includes('highest') ? Math.max(...values) : Math.min(...values)
+      expect(card(correctLabel(q)).cmc).toBe(best)
+      expect(values.filter((v) => v === best)).toHaveLength(1)
+    }
+    for (const q of all('card-which-type')) {
+      const type = q.prompt.match(/is an? (\w+)\?/)![1]
+      const hasType = (name: string) => new RegExp(`\\b${type}\\b`, 'i').test(card(name).typeLine)
+      expect(q.options.filter((o) => hasType(o.label)).map((o) => o.id)).toEqual([q.correct])
     }
   })
 })

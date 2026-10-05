@@ -151,7 +151,7 @@ export function ptVariants(pt: string): string[] {
 }
 
 const NUMBER_WORDS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
-const KEYWORDS = ['Flying', 'Trample', 'Hexproof', 'Reach', 'Vigilance', 'Haste', 'Deathtouch', 'Indestructible', 'Flash', 'Lifelink', 'Ward']
+export const KEYWORDS = ['Flying', 'Trample', 'Hexproof', 'Reach', 'Vigilance', 'Haste', 'Deathtouch', 'Indestructible', 'Flash', 'Lifelink', 'Ward']
 
 export interface Gap {
   /** Text with the GAP placeholder at the blank. */
