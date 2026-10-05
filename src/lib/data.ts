@@ -1,4 +1,5 @@
 import { DEFAULT_DECK, DEFAULT_TABLE_INTRO, SKILLS, tableIntroFor, WHY_CATEGORIES, WIPE_OPTIONS } from './content'
+import { DAILY_GOALS } from './trainingStreak'
 import { today } from './dates'
 import { cardKey } from './cards'
 import { DEFAULT_COMMANDER, DEFAULT_DECKLIST, DEFAULT_PRECON, DEFAULT_SET, sameDecklist } from './decklist'
@@ -31,6 +32,7 @@ export function defaultSettings(): Settings {
     defaultPlayers: 4,
     tableIntro: DEFAULT_TABLE_INTRO,
     bracketCheckDone: false,
+    dailyGoal: 1,
   }
 }
 
@@ -161,6 +163,7 @@ function sanitizeSettings(raw: unknown): Settings {
     defaultPlayers: intOrNull(raw.defaultPlayers, 2, 8) ?? defaults.defaultPlayers,
     tableIntro: str(raw.tableIntro, defaults.tableIntro),
     bracketCheckDone: raw.bracketCheckDone === true,
+    dailyGoal: oneOf(raw.dailyGoal, DAILY_GOALS, defaults.dailyGoal),
   }
 }
 

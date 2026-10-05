@@ -3160,3 +3160,67 @@ main.with-dice .screen.flow {
   border-color: color-mix(in oklab, var(--c) 45%, var(--border));
   background: color-mix(in oklab, var(--c) 8%, var(--surface));
 }
+
+/* Daily training goal on the home page */
+.card.daily-goal {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.card.daily-goal.met {
+  border-color: color-mix(in oklab, var(--brand) 45%, var(--border));
+  background: var(--brand-soft);
+}
+.daily-goal-info {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  text-align: left;
+}
+.daily-goal-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.goal-ring {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: conic-gradient(var(--brand) var(--p), var(--border) 0);
+}
+.goal-ring > span {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--brand);
+  font-size: 20px;
+}
+.training-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 900;
+  font-size: 18px;
+  color: var(--subtle);
+}
+.training-streak svg {
+  font-size: 22px;
+}
+.training-streak.on {
+  color: var(--text);
+}
+.training-streak.on svg {
+  color: var(--gold);
+}
+.daily-goal .btn {
+  margin-bottom: 0;
+}

@@ -1,3 +1,4 @@
+import { addDays } from '../dates'
 import type { QuestionStat, QuizMemory } from '../types'
 
 // Question memory with a simple Leitner schedule: every question has a stable key.
@@ -11,11 +12,7 @@ const MAX_BOX = INTERVALS.length - 1
 /** "card-cost:Llanowar Elves" → "card-cost". Questions of one topic are spread out. */
 export const topicOf = (key: string) => key.split(':')[0]
 
-export function addDays(isoDate: string, days: number): string {
-  const [y, m, d] = isoDate.split('-').map(Number)
-  const date = new Date(Date.UTC(y, m - 1, d + days))
-  return date.toISOString().slice(0, 10)
-}
+export { addDays }
 
 /** Store the answer to a question (first try only; retries within a lesson don't count). */
 export function recordAnswer(
