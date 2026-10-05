@@ -1,28 +1,34 @@
+import { ChartBarIcon, ClockCounterClockwiseIcon, GearSixIcon, HouseIcon, type Icon } from '@phosphor-icons/react'
 import { useEffect } from 'react'
-import { GhaltaCalculator } from './components/GhaltaCalculator'
 import { UpdateBanner } from './components/UpdateBanner'
-import { navigate, useRoute } from './lib/route'
+import { SKILLS } from './lib/content'
+import { useRoute } from './lib/route'
 import { useToast } from './lib/toast'
+import type { SkillId } from './lib/types'
 import { GameDetail, GameEdit, History } from './pages/History'
 import { Home } from './pages/Home'
-import { More } from './pages/More'
-import { Round, RoundEnd } from './pages/Round'
+import { CheatSheet, GhaltaPage, More } from './pages/More'
+import { Round, RoundDone, RoundStart } from './pages/Round'
+import { RoundEnd } from './pages/RoundEnd'
 import { Stats } from './pages/Stats'
 
-const TABS = [
-  { path: '/', label: 'Start', icon: '🦖' },
-  { path: '/verlauf', label: 'Verlauf', icon: '📜' },
-  { path: '/statistik', label: 'Statistik', icon: '📊' },
-  { path: '/mehr', label: 'Mehr', icon: '⚙️' },
+const TABS: { path: string; label: string; icon: Icon }[] = [
+  { path: '/', label: 'Start', icon: HouseIcon },
+  { path: '/verlauf', label: 'Verlauf', icon: ClockCounterClockwiseIcon },
+  { path: '/statistik', label: 'Statistik', icon: ChartBarIcon },
+  { path: '/mehr', label: 'Mehr', icon: GearSixIcon },
 ]
 
+const SKILL_IDS = new Set<string>(SKILLS.map((s) => s.id))
+
 function Page({ route }: { route: string }) {
-  const game = route.match(/^\/spiel\/([^/]+)(\/bearbeiten)?$/)
-  if (game) return game[2] ? <GameEdit id={game[1]} /> : <GameDetail id={game[1]} />
+  let m: RegExpMatchArray | null
+  if ((m = route.match(/^\/spiel\/([^/]+)\/bearbeiten$/))) return <GameEdit id={m[1]} />
+  if ((m = route.match(/^\/spiel\/([^/]+)$/))) return <GameDetail id={m[1]} />
+  if ((m = route.match(/^\/runde\/neu\/([^/]+)$/)) && SKILL_IDS.has(m[1])) return <RoundStart skill={m[1] as SkillId} />
+  if ((m = route.match(/^\/runde\/fertig\/([^/]+)$/))) return <RoundDone id={m[1]} />
 
   switch (route) {
-    case '/':
-      return <Home />
     case '/runde':
       return <Round />
     case '/runde/ende':
@@ -33,25 +39,22 @@ function Page({ route }: { route: string }) {
       return <Stats />
     case '/mehr':
       return <More />
-    case '/ghalta':
-      return (
-        <div className="page">
-          <header className="page-header">
-            <button type="button" className="text back" onClick={() => navigate('/')}>
-              ‹ Start
-            </button>
-          </header>
-          <GhaltaCalculator />
-        </div>
-      )
+    case '/mehr/spickzettel':
+      return <CheatSheet />
+    case '/mehr/ghalta':
+      return <GhaltaPage />
     default:
       return <Home />
   }
 }
 
+/** Während einer Runde gibt es keine Tab-Leiste: volle Konzentration auf eine Sache. */
+const isFlow = (route: string) => route.startsWith('/runde') || route.endsWith('/bearbeiten')
+
 function activeTab(route: string): string {
   if (route.startsWith('/spiel') || route === '/verlauf') return '/verlauf'
-  if (route === '/statistik' || route === '/mehr') return route
+  if (route === '/statistik') return route
+  if (route.startsWith('/mehr')) return '/mehr'
   return '/'
 }
 
@@ -59,6 +62,7 @@ export function App() {
   const route = useRoute()
   const message = useToast()
   const tab = activeTab(route)
+  const flow = isFlow(route)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -67,22 +71,29 @@ export function App() {
   return (
     <>
       <UpdateBanner />
-      <main>
-        <Page route={route} />
+      <main className={flow ? 'flow-main' : ''}>
+        <Page key={route} route={route} />
       </main>
       {message && (
-        <div className="toast" role="status">
+        <div className={`toast ${flow ? 'flow' : ''}`} role="status">
           {message}
         </div>
       )}
-      <nav className="tabbar">
-        {TABS.map((t) => (
-          <a key={t.path} href={`#${t.path}`} className={tab === t.path ? 'active' : ''}>
-            <span aria-hidden="true">{t.icon}</span>
-            {t.label}
-          </a>
-        ))}
-      </nav>
+      {!flow && (
+        <nav className="tabbar" aria-label="Hauptnavigation">
+          {TABS.map(({ path, label, icon: IconCmp }) => {
+            const active = tab === path
+            return (
+              <a key={path} href={`#${path}`} className={active ? 'active' : ''} aria-current={active ? 'page' : undefined}>
+                <span className="tab-icon">
+                  <IconCmp weight={active ? 'fill' : 'bold'} aria-hidden="true" />
+                </span>
+                {label}
+              </a>
+            )
+          })}
+        </nav>
+      )}
     </>
   )
 }

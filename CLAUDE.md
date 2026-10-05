@@ -18,3 +18,13 @@ UI-Texte und Kommentare sind auf Deutsch.
 - Routing per Hash (`#/verlauf`), siehe `src/lib/route.ts`.
 - Versionen nicht von Hand ändern: Der Release-Workflow (`.github/workflows/release.yml`) erhöht
   die Version, taggt und deployt.
+
+## Design
+
+- Stil angelehnt an Duolingo: `Button` (3D-Lippe), `Choice` (Antwortkarten), `BottomSheet`,
+  `ConfirmSheet` aus `src/components/ui.tsx` verwenden statt eigener Varianten.
+- Farben nur über die Tokens in `src/styles.css` (hell + dunkel). Skill-Farben (`--skill-*`) wurden
+  mit dem Dataviz-Palette-Validator auf Farbfehlsichtigkeit geprüft; Reihenfolge nicht ändern und
+  Skill-Farbe immer zusammen mit Icon und Namen zeigen (`SkillBadge`, `skillStyle`).
+- Abläufe (Runde, Bearbeiten) laufen ohne Tab-Leiste mit fester Aktion unten (`flow-footer`).
+- `navigate()` aus `src/lib/route.ts` benutzen, nicht `location.hash` direkt setzen.

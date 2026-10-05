@@ -1,8 +1,81 @@
-import { useId, useState, type ReactNode } from 'react'
+import { HeartBreakIcon, TrophyIcon, XIcon, type Icon } from '@phosphor-icons/react'
+import { useEffect, useId, useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
+import { haptic } from '../lib/haptics'
 
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={`card ${className}`}>{children}</section>
+// --- Buttons ---------------------------------------------------------------
+
+type Variant = 'primary' | 'secondary' | 'danger' | 'ghost'
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: Variant
+  size?: 'md' | 'sm'
+  block?: boolean
+  icon?: Icon
 }
+
+/** Taktiler 3D-Button: dunklere „Lippe“ unten, sinkt beim Drücken ein. */
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  block = false,
+  icon: IconCmp,
+  className = '',
+  onClick,
+  children,
+  ...rest
+}: ButtonProps) {
+  return (
+    <button
+      type="button"
+      className={`btn btn-${variant} ${size === 'sm' ? 'btn-sm' : ''} ${block ? 'btn-block' : ''} ${className}`}
+      onClick={(e) => {
+        haptic()
+        onClick?.(e)
+      }}
+      {...rest}
+    >
+      {IconCmp && <IconCmp weight="bold" aria-hidden="true" />}
+      {children}
+    </button>
+  )
+}
+
+export function IconButton({ icon: IconCmp, label, onClick }: { icon: Icon; label: string; onClick: () => void }) {
+  return (
+    <button type="button" className="icon-btn" aria-label={label} onClick={onClick}>
+      <IconCmp weight="bold" />
+    </button>
+  )
+}
+
+// --- Flächen ---------------------------------------------------------------
+
+export function Card({
+  children,
+  className = '',
+  style,
+}: {
+  children: ReactNode
+  className?: string
+  style?: CSSProperties
+}) {
+  return (
+    <section className={`card ${className}`} style={style}>
+      {children}
+    </section>
+  )
+}
+
+export function ProgressBar({ value, label }: { value: number; label?: string }) {
+  const pct = Math.max(0, Math.min(1, value)) * 100
+  return (
+    <div className="progress" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
+      <div style={{ width: `${pct}%` }} />
+    </div>
+  )
+}
+
+// --- Eingaben --------------------------------------------------------------
 
 /** Beschriftetes Eingabefeld (input, textarea). */
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
@@ -29,37 +102,60 @@ export function Group({ label, hint, children }: { label: string; hint?: string;
   )
 }
 
-/** Auswahl als große Buttons statt Dropdown: auf dem Handy schneller zu treffen. */
+export interface ChoiceOption<T> {
+  id: T
+  label: string
+  icon?: Icon
+  /** Optionaler Untertitel unter dem Label. */
+  hint?: string
+  style?: CSSProperties
+}
+
+/** Auswahl als große Karten (wie bei Duolingo): schnell mit dem Daumen zu treffen. */
 export function Choice<T extends string | number>({
   options,
   value,
   onChange,
   allowNone = false,
-  columns,
+  layout = 'grid',
+  columns = 2,
 }: {
-  options: { id: T; label: string }[]
+  options: ChoiceOption<T>[]
   value: T | null
   onChange: (value: T | null) => void
   /** Erneutes Tippen hebt die Auswahl auf. */
   allowNone?: boolean
+  layout?: 'grid' | 'list'
   columns?: number
 }) {
   return (
     <div
-      className="choice"
+      className={`choice choice-${layout}`}
       role="radiogroup"
-      style={columns ? { gridTemplateColumns: `repeat(${columns}, 1fr)` } : undefined}
+      style={layout === 'grid' ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` } : undefined}
     >
-      {options.map((o) => (
+      {options.map(({ id, label, icon: IconCmp, hint, style }) => (
         <button
-          key={o.id}
+          key={id}
           type="button"
           role="radio"
-          aria-checked={value === o.id}
-          className={value === o.id ? 'selected' : ''}
-          onClick={() => onChange(allowNone && value === o.id ? null : o.id)}
+          aria-checked={value === id}
+          className={`option ${value === id ? 'selected' : ''}`}
+          style={style}
+          onClick={() => {
+            haptic()
+            onChange(allowNone && value === id ? null : id)
+          }}
         >
-          {o.label}
+          {IconCmp && (
+            <span className="option-icon">
+              <IconCmp weight="fill" aria-hidden="true" />
+            </span>
+          )}
+          <span className="option-text">
+            <span>{label}</span>
+            {hint && <small>{hint}</small>}
+          </span>
         </button>
       ))}
     </div>
@@ -79,13 +175,15 @@ export function Stepper({
   max?: number
   label: string
 }) {
-  const current = value ?? min
   return (
     <div className="stepper" aria-label={label}>
       <button
         type="button"
         aria-label={`${label} verringern`}
-        onClick={() => onChange(value === null || value <= min ? null : value - 1)}
+        onClick={() => {
+          haptic()
+          onChange(value === null || value <= min ? null : value - 1)
+        }}
       >
         −
       </button>
@@ -93,7 +191,10 @@ export function Stepper({
       <button
         type="button"
         aria-label={`${label} erhöhen`}
-        onClick={() => onChange(value === null ? min : Math.min(max, current + 1))}
+        onClick={() => {
+          haptic()
+          onChange(value === null ? min : Math.min(max, value + 1))
+        }}
       >
         +
       </button>
@@ -101,7 +202,7 @@ export function Stepper({
   )
 }
 
-/** Liste von Kartennamen mit Vorschlägen aus bisherigen Einträgen. */
+/** Kartennamen eingeben; frühere Einträge erscheinen als antippbare Vorschläge. */
 export function ChipInput({
   values,
   onChange,
@@ -114,29 +215,31 @@ export function ChipInput({
   placeholder: string
 }) {
   const [text, setText] = useState('')
-  const listId = useId()
+  const has = (name: string) => values.some((v) => v.toLowerCase() === name.toLowerCase())
 
   const add = (raw: string) => {
     const name = raw.trim()
-    if (name && !values.some((v) => v.toLowerCase() === name.toLowerCase())) {
+    if (name && !has(name)) {
+      haptic()
       onChange([...values, name])
     }
     setText('')
   }
 
+  const query = text.trim().toLowerCase()
+  const visibleSuggestions = suggestions
+    .filter((s) => !has(s) && (!query || s.toLowerCase().includes(query)))
+    .slice(0, 8)
+
   return (
     <div className="chips">
       {values.length > 0 && (
-        <ul>
+        <ul className="chip-list">
           {values.map((v) => (
-            <li key={v}>
+            <li key={v} className="chip selected">
               {v}
-              <button
-                type="button"
-                aria-label={`${v} entfernen`}
-                onClick={() => onChange(values.filter((x) => x !== v))}
-              >
-                ×
+              <button type="button" aria-label={`${v} entfernen`} onClick={() => onChange(values.filter((x) => x !== v))}>
+                <XIcon weight="bold" />
               </button>
             </li>
           ))}
@@ -145,7 +248,6 @@ export function ChipInput({
       <div className="chips-add">
         <input
           value={text}
-          list={listId}
           placeholder={placeholder}
           enterKeyHint="done"
           onChange={(e) => setText(e.target.value)}
@@ -155,30 +257,114 @@ export function ChipInput({
               add(text)
             }
           }}
-          onBlur={() => add(text)}
         />
-        <button type="button" className="secondary" onClick={() => add(text)}>
-          +
-        </button>
+        <Button variant="secondary" size="sm" disabled={!text.trim()} onClick={() => add(text)}>
+          Hinzufügen
+        </Button>
       </div>
-      <datalist id={listId}>
-        {suggestions.map((s) => (
-          <option key={s} value={s} />
-        ))}
-      </datalist>
+      {visibleSuggestions.length > 0 && (
+        <ul className="chip-list suggestions" aria-label="Vorschläge">
+          {visibleSuggestions.map((s) => (
+            <li key={s}>
+              <button type="button" className="chip" onClick={() => add(s)}>
+                + {s}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
 
-export function Collapsible({ title, children, open }: { title: string; children: ReactNode; open?: boolean }) {
+// --- Bottom Sheet ----------------------------------------------------------
+
+/** Panel, das von unten hereinfährt: bleibt im Daumenbereich. */
+export function BottomSheet({
+  open,
+  onClose,
+  title,
+  children,
+}: {
+  open: boolean
+  onClose: () => void
+  title?: string
+  children: ReactNode
+}) {
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    document.addEventListener('keydown', onKey)
+    document.body.classList.add('sheet-open')
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.classList.remove('sheet-open')
+    }
+  }, [open, onClose])
+
+  if (!open) return null
   return (
-    <details className="collapsible" open={open}>
-      <summary>{title}</summary>
-      <div className="collapsible-body">{children}</div>
-    </details>
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div className="sheet" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-handle" aria-hidden="true" />
+        <div className="sheet-header">
+          {title && <h2>{title}</h2>}
+          <IconButton icon={XIcon} label="Schließen" onClick={onClose} />
+        </div>
+        <div className="sheet-body">{children}</div>
+      </div>
+    </div>
   )
 }
 
-export function ResultBadge({ result }: { result: 'win' | 'loss' }) {
-  return <span className={`badge ${result}`}>{result === 'win' ? 'Sieg' : 'Niederlage'}</span>
+export function ConfirmSheet({
+  open,
+  title,
+  text,
+  confirmLabel,
+  onConfirm,
+  onClose,
+}: {
+  open: boolean
+  title: string
+  text: string
+  confirmLabel: string
+  onConfirm: () => void
+  onClose: () => void
+}) {
+  return (
+    <BottomSheet open={open} onClose={onClose} title={title}>
+      <p className="muted">{text}</p>
+      <div className="stack">
+        <Button variant="danger" block onClick={onConfirm}>
+          {confirmLabel}
+        </Button>
+        <Button variant="ghost" block onClick={onClose}>
+          Abbrechen
+        </Button>
+      </div>
+    </BottomSheet>
+  )
+}
+
+export function EmptyState({ title, text, children }: { title: string; text: string; children?: ReactNode }) {
+  return (
+    <div className="empty">
+      <img src={`${import.meta.env.BASE_URL}pwa-192x192.png`} alt="" className="mascot" />
+      <h2>{title}</h2>
+      <p className="muted">{text}</p>
+      {children}
+    </div>
+  )
+}
+
+/** Ergebnis als Pill: Farbe plus Icon plus Text, nie nur Farbe. */
+export function ResultPill({ result }: { result: 'win' | 'loss' }) {
+  const IconCmp = result === 'win' ? TrophyIcon : HeartBreakIcon
+  return (
+    <span className={`result-pill ${result}`}>
+      <IconCmp weight="fill" aria-hidden="true" />
+      {result === 'win' ? 'Sieg' : 'Niederlage'}
+    </span>
+  )
 }

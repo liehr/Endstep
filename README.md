@@ -90,7 +90,22 @@ src/
   deploy.yml    Bestimmte Version ausrollen (auch für Rollbacks)
 ```
 
-Stack: React + TypeScript + Vite, `vite-plugin-pwa` für Offline-Betrieb und Updates.
+Stack: React + TypeScript + Vite, `vite-plugin-pwa` für Offline-Betrieb und Updates,
+Phosphor-Icons und die Schrift Nunito (beides lokal eingebunden, funktioniert offline).
+
+### Design
+
+Angelehnt an Lern-Apps wie Duolingo:
+
+- **Eine Sache pro Bildschirm:** Nach dem Spiel kommt jede Frage einzeln, mit Fortschrittsbalken.
+  Einfachauswahlen springen automatisch weiter, alles außer dem Ergebnis lässt sich überspringen.
+- **Lernpfad statt Liste:** Die Fokus-Rotation ist ein Pfad aus Knoten; der nächste Skill pulsiert.
+- **Daumenzone:** Die Hauptaktion steht immer unten; Zusatzinfos öffnen sich als Bottom Sheet.
+- **Taktile Elemente:** Buttons und Karten haben eine 3D-„Lippe“ und sinken beim Tippen ein,
+  auf Android mit kurzer Vibration.
+- **Belohnung:** Wochen-Serie (🔥), Feier-Bildschirm mit Konfetti nach jeder Runde.
+- **Farben:** Jeder Skill hat eine feste Farbe plus Icon. Die Palette ist auf Farbfehlsichtigkeit
+  geprüft (hell und dunkel); Farben stehen nie allein, immer mit Icon und Text.
 
 ### Später denkbar
 

@@ -1,20 +1,55 @@
-import { Card, ResultBadge } from '../components/ui'
+import { CheckIcon, WarningIcon, XIcon } from '@phosphor-icons/react'
+import type { ReactNode } from 'react'
+import { SkillBadge } from '../components/skills'
+import { EmptyState } from '../components/ui'
 import { PATTERN_THRESHOLD, SKILL_BY_ID, WHY_LABEL } from '../lib/content'
+import { today } from '../lib/dates'
 import { computeStats, type Tally } from '../lib/stats'
+import { weekStreak } from '../lib/streak'
 import { useData } from '../lib/store'
 
 const percent = (v: number | null) => (v === null ? '–' : `${Math.round(v * 100)} %`)
-const oneDecimal = (v: number | null) =>
-  v === null ? '–' : v.toLocaleString('de-DE', { maximumFractionDigits: 1 })
+const oneDecimal = (v: number | null) => (v === null ? '–' : v.toLocaleString('de-DE', { maximumFractionDigits: 1 }))
 
-function TallyList({ items, empty, highlightFrom }: { items: Tally[]; empty: string; highlightFrom?: number }) {
-  if (items.length === 0) return <p className="muted">{empty}</p>
+function StatTile({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+  return (
+    <div className="stat-tile">
+      <span className="stat-label">{label}</span>
+      <strong className="stat-value">{value}</strong>
+      {sub && <span className="stat-sub">{sub}</span>}
+    </div>
+  )
+}
+
+/** Horizontaler Balken mit Beschriftung und Wert: eine Reihe, eine Farbe. */
+function BarRow({ label, value, max, lead }: { label: string; value: number; max: number; lead?: ReactNode }) {
+  return (
+    <li className="bar-row">
+      {lead}
+      <div className="bar-main">
+        <div className="bar-head">
+          <span>{label}</span>
+          <strong>{value}</strong>
+        </div>
+        <div className="bar-track">
+          {value > 0 && <div className="bar-fill" style={{ width: `${(value / max) * 100}%` }} />}
+        </div>
+      </div>
+    </li>
+  )
+}
+
+function TallyList({ items, empty }: { items: Tally[]; empty: string }) {
+  if (items.length === 0) return <p className="muted small">{empty}</p>
   return (
     <ul className="tally">
-      {items.slice(0, 10).map((t) => (
-        <li key={t.name} className={highlightFrom && t.count >= highlightFrom ? 'hot' : ''}>
+      {items.slice(0, 8).map((t) => (
+        <li key={t.name}>
           <span>{t.name}</span>
-          <strong>{t.count}×</strong>
+          <span className="tally-count">
+            {t.count >= PATTERN_THRESHOLD && <WarningIcon weight="fill" aria-label="3× oder öfter" />}
+            {t.count}×
+          </span>
         </li>
       ))}
     </ul>
@@ -24,133 +59,131 @@ function TallyList({ items, empty, highlightFrom }: { items: Tally[]; empty: str
 export function Stats() {
   const { games, settings } = useData()
   const s = computeStats(games, settings.defaultDeck)
+  const streak = weekStreak(games, today())
 
   if (s.total === 0) {
     return (
-      <div className="page">
-        <header className="page-header">
+      <div className="screen">
+        <header className="screen-header">
           <h1>Statistik</h1>
         </header>
-        <Card>
-          <p>Noch keine Runden. Nach dem ersten Spiel siehst du hier deine Entwicklung.</p>
-        </Card>
+        <EmptyState title="Noch nichts zu zählen" text="Nach deiner ersten Runde siehst du hier, wo du besser wirst." />
       </div>
     )
   }
 
-  const maxWhy = Math.max(1, ...s.whyCounts.map((w) => w.count))
+  const maxMistakes = Math.max(...s.skills.map((k) => k.mistakes))
+  const maxWhy = Math.max(...s.whyCounts.map((w) => w.count))
+  const recent = [...games].sort((a, b) => b.playedAt.localeCompare(a.playedAt) || b.createdAt.localeCompare(a.createdAt)).slice(0, 10)
 
   return (
-    <div className="page">
-      <header className="page-header">
+    <div className="screen">
+      <header className="screen-header">
         <h1>Statistik</h1>
       </header>
 
-      <div className="kpis">
-        <div>
-          <strong>{s.total}</strong>
-          <span>Runden</span>
-        </div>
-        <div>
-          <strong>{s.wins}</strong>
-          <span>Siege</span>
-        </div>
-        <div>
-          <strong>{percent(s.winRate)}</strong>
-          <span>Siegquote</span>
-        </div>
+      <div className="stat-grid">
+        <StatTile label="Runden" value={s.total} />
+        <StatTile label="Siegquote" value={percent(s.winRate)} sub={`${s.wins} ${s.wins === 1 ? 'Sieg' : 'Siege'}`} />
+        <StatTile label="Serie" value={`${streak.current} Wo.`} sub={`Rekord: ${streak.best}`} />
+        <StatTile
+          label="Ø Ghalta-Zug"
+          value={oneDecimal(s.avgGhaltaTurn)}
+          sub={s.avgMulligans === null ? undefined : `Ø ${oneDecimal(s.avgMulligans)} Mulligans`}
+        />
       </div>
 
-      <Card>
+      <section className="panel">
         <h2>Letzte Runden</h2>
-        <div className="recent">
-          {s.recent.map((r, i) => (
-            <ResultBadge key={i} result={r} />
+        <ol className="recent" aria-label="Letzte Runden, neueste zuerst">
+          {recent.map((g) => (
+            <li key={g.id} className={`recent-dot ${g.result}`} title={g.result === 'win' ? 'Sieg' : 'Niederlage'}>
+              {g.result === 'win' ? <CheckIcon weight="bold" aria-label="Sieg" /> : <XIcon weight="bold" aria-label="Niederlage" />}
+            </li>
           ))}
-        </div>
-        <p className="muted small">
-          Eine einzelne schlechte Runde beweist nichts. Erst wenn dasselbe Problem zum dritten Mal
-          auftaucht, ist es ein Muster.
-        </p>
-      </Card>
+        </ol>
+        <p className="muted small">Eine einzelne Runde beweist nichts. Erst ab 3× ist es ein Muster.</p>
+      </section>
 
-      <Card>
-        <h2>Skills</h2>
-        <table className="skills">
+      <section className="panel">
+        <h2>Woran du arbeiten kannst</h2>
+        <p className="muted small">So oft wurde ein Skill als „eine Entscheidung anders“ notiert.</p>
+        {maxMistakes === 0 ? (
+          <p className="muted small">Noch keine Entscheidungen einem Skill zugeordnet.</p>
+        ) : (
+          <ul className="bars">
+            {[...s.skills]
+              .sort((a, b) => b.mistakes - a.mistakes)
+              .filter((k) => k.mistakes > 0)
+              .map((k) => (
+                <BarRow
+                  key={k.id}
+                  label={`${SKILL_BY_ID[k.id].name}${k.mistakes >= PATTERN_THRESHOLD ? ' · Muster' : ''}`}
+                  value={k.mistakes}
+                  max={maxMistakes}
+                  lead={<SkillBadge id={k.id} size={36} />}
+                />
+              ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="panel">
+        <h2>Fokus geübt</h2>
+        <table className="table">
           <thead>
             <tr>
-              <th>Skill</th>
-              <th title="Runden mit diesem Fokus">Fokus</th>
-              <th title="Ø Selbsteinschätzung (1–3)">Ø</th>
-              <th title="So oft als „anders entscheiden“ notiert">Fehler</th>
+              <th scope="col">Skill</th>
+              <th scope="col">Runden</th>
+              <th scope="col" title="Selbsteinschätzung 1–3">
+                Ø Gefühl
+              </th>
             </tr>
           </thead>
           <tbody>
             {s.skills.map((k) => (
-              <tr key={k.id} className={k.mistakes >= PATTERN_THRESHOLD ? 'hot' : ''}>
-                <td>{SKILL_BY_ID[k.id].name}</td>
+              <tr key={k.id}>
+                <td>
+                  <span className="table-skill">
+                    <SkillBadge id={k.id} size={28} muted={k.games === 0} />
+                    {SKILL_BY_ID[k.id].name}
+                  </span>
+                </td>
                 <td>{k.games}</td>
-                <td>{oneDecimal(k.avgRating)}</td>
-                <td>{k.mistakes}</td>
+                <td>{k.avgRating === null ? '–' : `${oneDecimal(k.avgRating)} / 3`}</td>
               </tr>
             ))}
           </tbody>
         </table>
-      </Card>
+      </section>
 
-      {s.whyCounts.some((w) => w.count > 0) && (
-        <Card>
+      {maxWhy > 0 && (
+        <section className="panel">
           <h2>Warum verloren?</h2>
           <ul className="bars">
             {s.whyCounts.map((w) => (
-              <li key={w.id}>
-                <span>{WHY_LABEL[w.id]}</span>
-                <div className="bar">
-                  <div style={{ width: `${(w.count / maxWhy) * 100}%` }} />
-                </div>
-                <strong>{w.count}</strong>
-              </li>
+              <BarRow key={w.id} label={WHY_LABEL[w.id]} value={w.count} max={maxWhy} />
             ))}
           </ul>
-        </Card>
+        </section>
       )}
 
-      <Card>
-        <h2>Karten in {settings.defaultDeck}</h2>
+      <section className="panel">
+        <h2>Karten</h2>
+        <p className="muted small">{settings.defaultDeck}</p>
         <h3>Tot auf der Hand</h3>
-        <TallyList
-          items={s.deadCards}
-          empty="Noch keine toten Karten notiert."
-          highlightFrom={PATTERN_THRESHOLD}
-        />
-        {s.upgradeCandidates.length > 0 && (
-          <p className="muted small">Ab {PATTERN_THRESHOLD}× tot: Kandidat für die nächste Swap-Runde.</p>
-        )}
+        <TallyList items={s.deadCards} empty="Noch keine toten Karten notiert." />
         <h3>Überperformer</h3>
         <TallyList items={s.starCards} empty="Noch keine Überperformer notiert." />
-      </Card>
+      </section>
 
-      <Card>
-        <h2>Spielverlauf</h2>
-        <dl className="details">
-          <div className="detail">
-            <dt>Ø Ghalta-Zug</dt>
-            <dd>{oneDecimal(s.avgGhaltaTurn)}</dd>
-          </div>
-          <div className="detail">
-            <dt>Ø Mulligans</dt>
-            <dd>{oneDecimal(s.avgMulligans)}</dd>
-          </div>
-          <div className="detail">
-            <dt>Wipes mit Nachschub auf der Hand</dt>
-            <dd>{s.wipes.kept}</dd>
-          </div>
-          <div className="detail">
-            <dt>Wipes, bei denen alles weg war</dt>
-            <dd>{s.wipes.overextended}</dd>
-          </div>
-        </dl>
-      </Card>
+      <section className="panel">
+        <h2>Board Wipes</h2>
+        <div className="stat-grid">
+          <StatTile label="Nachschub behalten" value={s.wipes.kept} />
+          <StatTile label="Alles verloren" value={s.wipes.overextended} />
+        </div>
+      </section>
     </div>
   )
 }

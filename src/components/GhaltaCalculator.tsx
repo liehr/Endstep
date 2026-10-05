@@ -1,37 +1,48 @@
+import { MinusIcon, PlusIcon } from '@phosphor-icons/react'
 import { useState } from 'react'
+import { haptic } from '../lib/haptics'
 import { ghaltaCost } from '../lib/ghalta'
-import { Card, Stepper } from './ui'
+
+function Counter({ label, value, onChange, max }: { label: string; value: number; onChange: (v: number) => void; max: number }) {
+  const change = (delta: number) => {
+    haptic()
+    onChange(Math.max(0, Math.min(max, value + delta)))
+  }
+  return (
+    <div className="counter">
+      <span className="counter-label">{label}</span>
+      <div className="counter-row">
+        <button type="button" aria-label={`${label} verringern`} onClick={() => change(-1)}>
+          <MinusIcon weight="bold" />
+        </button>
+        <output>{value}</output>
+        <button type="button" aria-label={`${label} erhöhen`} onClick={() => change(1)}>
+          <PlusIcon weight="bold" />
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export function GhaltaCalculator() {
   const [power, setPower] = useState(0)
   const [casts, setCasts] = useState(0)
   const cost = ghaltaCost(power, casts)
+  const ready = cost.generic === 0
 
   return (
-    <Card className="ghalta">
-      <h2>Ghalta-Rechner</h2>
-      <div className="ghalta-cost" aria-live="polite">
-        <span className="ghalta-label">Kostet jetzt</span>
-        <strong>{cost.label}</strong>
-        <span className="ghalta-sub">
-          {cost.missingPowerForGG > 0
-            ? `Noch ${cost.missingPowerForGG} Stärke bis GG`
-            : 'Nur noch GG. Los!'}
-        </span>
+    <section className={`ghalta ${ready ? 'ready' : ''}`} aria-label="Ghalta-Rechner">
+      <div className="ghalta-head">
+        <span className="ghalta-eyebrow">Ghalta kostet</span>
+        <strong className="ghalta-cost" aria-live="polite">
+          {cost.label}
+        </strong>
+        <span className="ghalta-sub">{ready ? 'Nur noch GG. Los!' : `Noch ${cost.missingPowerForGG} Stärke bis GG`}</span>
       </div>
-      <div className="ghalta-inputs">
-        <div>
-          <span className="field-label">Stärke deiner Kreaturen</span>
-          <Stepper label="Stärke" value={power} min={0} max={99} onChange={(v) => setPower(v ?? 0)} />
-        </div>
-        <div>
-          <span className="field-label">Schon gecastet (Steuer)</span>
-          <Stepper label="Casts" value={casts} min={0} max={10} onChange={(v) => setCasts(v ?? 0)} />
-        </div>
+      <div className="ghalta-counters">
+        <Counter label="Stärke auf dem Feld" value={power} onChange={setPower} max={99} />
+        <Counter label="Schon gecastet" value={casts} onChange={setCasts} max={10} />
       </div>
-      <p className="muted small">
-        Steuer (+2 je Cast) wird zuerst addiert, dann senkt die Gesamtstärke den generischen Teil.
-      </p>
-    </Card>
+    </section>
   )
 }

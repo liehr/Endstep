@@ -39,7 +39,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Schrift nur für lateinische Zeichen vorab laden (Deutsch/Englisch), Rest bei Bedarf.
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}', '**/nunito-latin-*.woff2'],
         // Quellbild der Icons, wird in der App nicht gebraucht
         globIgnores: ['logo.png'],
       },

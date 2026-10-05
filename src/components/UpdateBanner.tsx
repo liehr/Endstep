@@ -1,4 +1,5 @@
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import { Button } from './ui'
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000
 
@@ -24,9 +25,9 @@ export function UpdateBanner() {
   return (
     <div className="update-banner" role="status">
       <span>Neue Version verfügbar</span>
-      <button type="button" className="primary" onClick={() => void updateServiceWorker(true)}>
+      <Button size="sm" onClick={() => void updateServiceWorker(true)}>
         Aktualisieren
-      </button>
+      </Button>
     </div>
   )
 }

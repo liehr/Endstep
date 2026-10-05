@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { emptyInput, loadData, mergeGames, saveData } from './data'
 import { nextFocus } from './focus'
-import type { AppData, Game, GameInput, Settings } from './types'
+import type { AppData, Game, GameInput, Settings, SkillId } from './types'
 
 // Ein kleiner globaler Speicher: Daten liegen nur auf dem Gerät (localStorage).
 
@@ -33,13 +33,10 @@ function requestPersistence() {
 }
 
 export const actions = {
-  startDraft() {
+  startDraft(focus: SkillId = nextFocus(data.games)) {
     commit({
       ...data,
-      draft: {
-        startedAt: new Date().toISOString(),
-        form: emptyInput(data.settings, nextFocus(data.games)),
-      },
+      draft: { startedAt: new Date().toISOString(), form: emptyInput(data.settings, focus) },
     })
   },
 
