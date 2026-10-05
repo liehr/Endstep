@@ -163,89 +163,126 @@ const fetchedLand = (from: string): CardInfo => ({
   collectorNumber: '',
 })
 
-/** One goldfish game with a given opening hand, library and commander. */
-export function playOut(
-  hand: SimCard[],
-  library: SimCard[],
-  commander: SimCommander,
-  maxTurns = MAX_TURNS,
-): Omit<GameSim, 'hand' | 'mulligans'> {
+type Known = SimCard & { info: CardInfo }
+
+/**
+ * A goldfish game you can play step by step: the autopilot below uses it, and so do the
+ * turn scenarios in training, where you make the decisions yourself.
+ */
+export interface Goldfish {
+  readonly turn: number
+  readonly hand: readonly SimCard[]
+  /** Creatures and mana sources on the battlefield (lands included). */
+  readonly board: readonly Permanent[]
+  /** Mana left this turn, one entry per mana with the colors it can be. */
+  readonly pool: readonly number[]
+  readonly landPlayed: boolean
+  readonly commanderCast: boolean
+  /** Untap, draw a card (on turn 1 too, as in a multiplayer game) and refill the mana. */
+  beginTurn(): SimCard | null
+  totalPower(): number
+  /** Untapped mana sources that can tap now. */
+  sources(): string[]
+  canPlayLand(card: SimCard): card is Known
+  playLand(card: SimCard): boolean
+  /** Spells the simulation knows how to play: creatures, mana rocks and land ramp. */
+  isPlayable(card: SimCard): card is Known
+  canCast(card: SimCard): card is Known
+  cast(card: SimCard): boolean
+  commanderGeneric(): number
+  canCastCommander(): boolean
+  castCommander(): boolean
+}
+
+export type { Permanent }
+
+export function createGoldfish(hand: SimCard[], library: SimCard[], commander: SimCommander): Goldfish {
   const inHand = [...hand]
   const deck = [...library]
   const board: Permanent[] = []
-  const log: TurnLog[] = []
+  let pool: number[] = []
+  let turn = 0
+  let landPlayed = false
+  let commanderCast = false
+  /** The pool already counts the ferocious bonus (Ilysian Caryatid with a 4-power creature). */
+  let ferociousPool = false
 
   const forests = () => board.filter((p) => isForest(p.card)).length
-  const totalPower = () =>
-    board.filter((p) => isCreature(p.card)).reduce((sum, p) => sum + boardPower(p.card, forests()), 0)
+  const totalPower = () => board.filter((p) => isCreature(p.card)).reduce((sum, p) => sum + boardPower(p.card, forests()), 0)
   const ferocious = () => board.some((p) => isCreature(p.card) && boardPower(p.card, forests()) >= 4)
-  const colorsOnBoard = () => board.reduce((m, p) => m | (p.mana?.mask ?? 0), 0)
+  const canTap = (p: Permanent) => !p.tapped && !(p.sick && isCreature(p.card)) && p.mana !== null
+  const manaOf = (p: Permanent) => Array.from({ length: ferocious() ? p.mana!.ferociousAmount : p.mana!.amount }, () => p.mana!.mask)
+  const tryPay = (generic: number, pips: number[], from = pool) => payFrom(from, generic, pips)
+  const generic = () => commanderGeneric(commander, totalPower())
 
-  for (let turn = 1; turn <= maxTurns; turn++) {
-    for (const p of board) {
-      p.sick = false
-      p.tapped = false
-    }
-    const drawn = deck.shift() ?? null
-    if (drawn) inHand.push(drawn)
-
-    // Play a land: untapped ones first, preferring new colors; fetch lands, then tapped ones last.
-    const lands = inHand.filter((c): c is SimCard & { info: CardInfo } => c.info !== null && isLand(c.info))
-    const have = colorsOnBoard()
-    const rank = (c: CardInfo) => {
-      const ability = manaAbility(c)
-      if (!ability) return fetchesLand(c) ? 15 : 30
-      return (entersTapped(c) ? 20 : 0) - bits(ability.mask & ~have)
-    }
-    const land = lands.sort((a, b) => rank(a.info) - rank(b.info))[0]
-    if (land) {
-      inHand.splice(inHand.indexOf(land), 1)
-      if (fetchesLand(land.info)) board.push({ card: fetchedLand(land.name), sick: false, tapped: true, mana: FETCHED })
-      else board.push({ card: land.info, sick: false, tapped: entersTapped(land.info), mana: manaAbility(land.info) })
-    }
-
-    // Available mana: one unit per mana, each with the colors it can be.
-    let pool: number[] = []
-    const sources: string[] = []
-    for (const p of board) {
-      if (p.tapped || (p.sick && isCreature(p.card)) || !p.mana) continue
-      const amount = ferocious() ? p.mana.ferociousAmount : p.mana.amount
-      pool.push(...Array.from({ length: amount }, () => p.mana!.mask))
-      sources.push(p.card.name)
-    }
-    const manaAtStart = pool.length
-    const powerAtStart = totalPower()
-    const boardAtStart = board.filter((p) => isCreature(p.card)).map((p) => p.card.name)
-    const tryPay = (generic: number, pips: number[], from = pool) => payFrom(from, generic, pips)
-    const canCastAtStart = tryPay(commanderGeneric(commander, powerAtStart), commander.cost.pips) !== null
-
-    const cast: string[] = []
-    let commanderNow = false
-    const castCommander = (): boolean => {
-      const left = tryPay(commanderGeneric(commander, totalPower()), commander.cost.pips)
-      if (!left) return false
-      pool = left
-      cast.push(commander.name)
+  const g: Goldfish = {
+    get turn() {
+      return turn
+    },
+    get hand() {
+      return inHand
+    },
+    get board() {
+      return board
+    },
+    get pool() {
+      return pool
+    },
+    get landPlayed() {
+      return landPlayed
+    },
+    get commanderCast() {
+      return commanderCast
+    },
+    beginTurn() {
+      turn++
+      landPlayed = false
+      for (const p of board) {
+        p.sick = false
+        p.tapped = false
+      }
+      const drawn = deck.shift() ?? null
+      if (drawn) inHand.push(drawn)
+      pool = board.filter(canTap).flatMap(manaOf)
+      ferociousPool = ferocious()
+      return drawn
+    },
+    totalPower,
+    sources: () => board.filter(canTap).map((p) => p.card.name),
+    canPlayLand: (c): c is Known => !landPlayed && c.info !== null && isLand(c.info) && inHand.includes(c),
+    playLand(c) {
+      if (!g.canPlayLand(c)) return false
+      inHand.splice(inHand.indexOf(c), 1)
+      landPlayed = true
+      const p: Permanent = fetchesLand(c.info)
+        ? { card: fetchedLand(c.name), sick: false, tapped: true, mana: FETCHED }
+        : { card: c.info, sick: false, tapped: entersTapped(c.info), mana: manaAbility(c.info) }
+      board.push(p)
+      // A Forest can make Dungrove Elder big enough for ferocious: the other sources tap for more.
+      if (!ferociousPool && ferocious()) {
+        for (const q of board.filter((q) => q !== p && canTap(q)))
+          pool.push(...Array.from({ length: q.mana!.ferociousAmount - q.mana!.amount }, () => q.mana!.mask))
+        ferociousPool = true
+      }
+      if (canTap(p)) pool.push(...manaOf(p))
       return true
-    }
-
-    const castable = () =>
-      inHand.filter((c): c is SimCard & { info: CardInfo } => {
-        if (!c.info || isLand(c.info)) return false
-        const cost = parseCost(c.info.manaCost)
-        if (cost.hasX) return false
-        const useful = isCreature(c.info) || manaAbility(c.info) !== null || rampsLand(c.info) !== null
-        return useful && tryPay(cost.generic, cost.pips) !== null
-      })
-
-    const play = (c: SimCard & { info: CardInfo }) => {
+    },
+    isPlayable: (c): c is Known => {
+      if (!c.info || isLand(c.info) || parseCost(c.info.manaCost).hasX) return false
+      return isCreature(c.info) || manaAbility(c.info) !== null || rampsLand(c.info) !== null
+    },
+    canCast: (c): c is Known => {
+      if (!g.isPlayable(c) || !inHand.includes(c)) return false
+      const cost = parseCost(c.info.manaCost)
+      return tryPay(cost.generic, cost.pips) !== null
+    },
+    cast(c) {
+      if (!g.canCast(c)) return false
       const cost = parseCost(c.info.manaCost)
       pool = tryPay(cost.generic, cost.pips) ?? pool
       inHand.splice(inHand.indexOf(c), 1)
-      cast.push(c.name)
       const ability = manaAbility(c.info)
-      const permanent = isCreature(c.info) || ability !== null
-      if (permanent) board.push({ card: c.info, sick: isCreature(c.info), tapped: false, mana: ability })
+      if (isCreature(c.info) || ability !== null) board.push({ card: c.info, sick: isCreature(c.info), tapped: false, mana: ability })
       // Mana rocks (Sol Ring) produce mana right away.
       if (ability && !isCreature(c.info)) pool.push(...Array.from({ length: ability.amount }, () => ability.mask))
       const fetched = rampsLand(c.info)
@@ -253,45 +290,89 @@ export function playOut(
         board.push({ card: fetchedLand(c.name), sick: false, tapped: fetched.tapped, mana: FETCHED })
         if (!fetched.tapped) pool.push(ANY)
       }
-    }
+      return true
+    },
+    commanderGeneric: generic,
+    canCastCommander: () => !commanderCast && tryPay(generic(), commander.cost.pips) !== null,
+    castCommander() {
+      const left = commanderCast ? null : tryPay(generic(), commander.cost.pips)
+      if (!left) return false
+      pool = left
+      commanderCast = true
+      return true
+    },
+  }
+  return g
+}
 
-    while (!commanderNow) {
-      if (castCommander()) {
-        commanderNow = true
+/** The land the autopilot plays: untapped ones first, preferring new colors; fetch lands, then tapped ones last. */
+export function autopilotLand(g: Goldfish): Known | undefined {
+  const have = g.board.reduce((m, p) => m | (p.mana?.mask ?? 0), 0)
+  const rank = (c: CardInfo) => {
+    const ability = manaAbility(c)
+    if (!ability) return fetchesLand(c) ? 15 : 30
+    return (entersTapped(c) ? 20 : 0) - bits(ability.mask & ~have)
+  }
+  return g.hand.filter((c): c is Known => c.info !== null && isLand(c.info)).sort((a, b) => rank(a.info) - rank(b.info))[0]
+}
+
+/** The autopilot's next spell (after the land), or null when it's done for the turn. */
+export function autopilotSpell(g: Goldfish, commander: SimCommander): Known | null {
+  const options = g.hand.filter((c): c is Known => g.canCast(c))
+  if (options.length === 0) return null
+  const forests = g.board.filter((p) => isForest(p.card)).length
+
+  // 1) Is there a creature that still enables the commander this turn (Ghalta's reduction)?
+  if (commander.reducedByPower) {
+    const enabler = options
+      .filter((c) => isCreature(c.info))
+      .find((c) => {
+        const cost = parseCost(c.info.manaCost)
+        const after = payFrom(g.pool as number[], cost.generic, cost.pips)
+        if (!after) return false
+        const power = g.totalPower() + boardPower(c.info, forests)
+        return payFrom(after, commanderGeneric(commander, power), commander.cost.pips) !== null
+      })
+    if (enabler) return enabler
+  }
+
+  // 2) Ramp first (cheapest), 3) then the biggest creature.
+  const ramp = options.filter((c) => manaAbility(c.info) !== null || rampsLand(c.info) !== null).sort((a, b) => a.info.cmc - b.info.cmc)
+  if (ramp.length > 0) return ramp[0]
+  return options.sort((a, b) => boardPower(b.info, forests) - boardPower(a.info, forests) || a.info.cmc - b.info.cmc)[0]
+}
+
+/** One goldfish game with a given opening hand, library and commander. */
+export function playOut(
+  hand: SimCard[],
+  library: SimCard[],
+  commander: SimCommander,
+  maxTurns = MAX_TURNS,
+): Omit<GameSim, 'hand' | 'mulligans'> {
+  const g = createGoldfish(hand, library, commander)
+  const log: TurnLog[] = []
+
+  for (let turn = 1; turn <= maxTurns; turn++) {
+    const drawn = g.beginTurn()
+    const land = autopilotLand(g)
+    if (land) g.playLand(land)
+
+    const manaAtStart = g.pool.length
+    const powerAtStart = g.totalPower()
+    const boardAtStart = g.board.filter((p) => isCreature(p.card)).map((p) => p.card.name)
+    const sources = g.sources()
+    const canCastAtStart = g.canCastCommander()
+
+    const cast: string[] = []
+    while (!g.commanderCast) {
+      if (g.castCommander()) {
+        cast.push(commander.name)
         break
       }
-      const options = castable()
-      if (options.length === 0) break
-
-      // 1) Is there a creature that still enables the commander this turn (Ghalta's reduction)?
-      const enabler = commander.reducedByPower
-        ? options
-            .filter((c) => isCreature(c.info))
-            .find((c) => {
-              const cost = parseCost(c.info.manaCost)
-              const after = tryPay(cost.generic, cost.pips)
-              if (!after) return false
-              const power = totalPower() + boardPower(c.info, forests())
-              return tryPay(commanderGeneric(commander, power), commander.cost.pips, after) !== null
-            })
-        : undefined
-      if (enabler) {
-        play(enabler)
-        continue
-      }
-
-      // 2) Ramp first (cheapest), 3) then the biggest creature.
-      const ramp = options
-        .filter((c) => manaAbility(c.info) !== null || rampsLand(c.info) !== null)
-        .sort((a, b) => a.info.cmc - b.info.cmc)
-      if (ramp.length > 0) {
-        play(ramp[0])
-        continue
-      }
-      const biggest = options.sort(
-        (a, b) => boardPower(b.info, forests()) - boardPower(a.info, forests()) || a.info.cmc - b.info.cmc,
-      )[0]
-      play(biggest)
+      const next = autopilotSpell(g, commander)
+      if (!next) break
+      g.cast(next)
+      cast.push(next.name)
     }
 
     log.push({
@@ -303,11 +384,11 @@ export function playOut(
       boardAtStart,
       sourcesAtStart: sources,
       canCastAtStart,
-      power: totalPower(),
+      power: g.totalPower(),
       mana: manaAtStart,
-      commander: commanderNow,
+      commander: g.commanderCast,
     })
-    if (commanderNow) return { commanderTurn: turn, log }
+    if (g.commanderCast) return { commanderTurn: turn, log }
   }
   return { commanderTurn: null, log }
 }

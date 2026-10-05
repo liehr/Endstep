@@ -1,3 +1,4 @@
+import { addDays } from '../dates'
 import type { QuestionStat, QuizMemory } from '../types'
 
 // Question memory with a simple Leitner schedule: every question has a stable key.
@@ -11,11 +12,7 @@ const MAX_BOX = INTERVALS.length - 1
 /** "card-cost:Llanowar Elves" → "card-cost". Questions of one topic are spread out. */
 export const topicOf = (key: string) => key.split(':')[0]
 
-export function addDays(isoDate: string, days: number): string {
-  const [y, m, d] = isoDate.split('-').map(Number)
-  const date = new Date(Date.UTC(y, m - 1, d + days))
-  return date.toISOString().slice(0, 10)
-}
+export { addDays }
 
 /** Store the answer to a question (first try only; retries within a lesson don't count). */
 export function recordAnswer(
@@ -37,6 +34,18 @@ export function recordAnswer(
     ...(group !== undefined ? { group } : {}),
   }
   return { ...memory, [key]: stat }
+}
+
+/** Mistakes count for the review lesson this many days. */
+export const MISTAKE_DAYS = 7
+
+/** Questions answered wrong in the last few days and not answered right since; newest first. */
+export function mistakeKeys(memory: QuizMemory, today: string, days = MISTAKE_DAYS): string[] {
+  const since = addDays(today, -days)
+  return Object.entries(memory)
+    .filter(([, s]) => s.box === 0 && s.wrong > 0 && s.last >= since)
+    .sort((a, b) => (b[1].at ?? 0) - (a[1].at ?? 0) || (a[0] < b[0] ? -1 : 1))
+    .map(([key]) => key)
 }
 
 /** 0 = due for review, 1 = new, 2 = seen and not due yet. */

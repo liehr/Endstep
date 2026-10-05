@@ -1,4 +1,5 @@
 import { DEFAULT_DECK, DEFAULT_TABLE_INTRO, RANKS, SKILLS, tableIntroFor, WHY_CATEGORIES, WIPE_OPTIONS } from './content'
+import { DAILY_GOALS } from './trainingStreak'
 import { today } from './dates'
 import { cardKey } from './cards'
 import { DEFAULT_COMMANDER, DEFAULT_DECKLIST, DEFAULT_PRECON, DEFAULT_SET, sameDecklist } from './decklist'
@@ -32,6 +33,7 @@ export function defaultSettings(): Settings {
     defaultPlayers: 4,
     tableIntro: DEFAULT_TABLE_INTRO,
     bracketCheckDone: false,
+    dailyGoal: 1,
   }
 }
 
@@ -163,6 +165,7 @@ function sanitizeSettings(raw: unknown): Settings {
     defaultPlayers: intOrNull(raw.defaultPlayers, 2, 8) ?? defaults.defaultPlayers,
     tableIntro: str(raw.tableIntro, defaults.tableIntro),
     bracketCheckDone: raw.bracketCheckDone === true,
+    dailyGoal: oneOf(raw.dailyGoal, DAILY_GOALS, defaults.dailyGoal),
   }
 }
 
@@ -238,7 +241,7 @@ function sanitizeSavedDeck(raw: unknown, settings: Settings): SavedDeck | null {
 const otherDecks = (decks: SavedDeck[], active: string) =>
   decks.filter((d, i) => cardKey(d.name) !== cardKey(active) && decks.findIndex((x) => cardKey(x.name) === cardKey(d.name)) === i)
 
-const LESSON_IDS = ['ghalta', 'combat', 'rules', 'mulligan', 'goldfish', 'cards', 'rulings'] as const
+const LESSON_IDS = ['ghalta', 'combat', 'rules', 'mulligan', 'goldfish', 'cards', 'rulings', 'scenario', 'mistakes', 'challenge'] as const
 
 function sanitizeTraining(raw: unknown): TrainingResult | null {
   if (!isObj(raw) || !LESSON_IDS.includes(raw.lessonId as never)) return null

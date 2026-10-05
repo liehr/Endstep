@@ -81,7 +81,8 @@ export function rankProgress(promotions: Promotion[], games: Game[], training: T
   const rank = currentRank(promotions)
   const since = rankStart(promotions)
   const gamesIn = games.filter((g) => g.createdAt >= since).length
-  const lessonsIn = training.filter((t) => t.createdAt >= since && t.correct >= RANK_LESSON_SCORE).length
+  // Ghalta Rush scores count answers in a minute, not out of 5: it doesn't count here.
+  const lessonsIn = training.filter((t) => t.createdAt >= since && t.lessonId !== 'challenge' && t.correct >= RANK_LESSON_SCORE).length
   const top = rank >= TOP_RANK
   return {
     rank,

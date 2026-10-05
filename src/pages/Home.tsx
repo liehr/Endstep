@@ -1,5 +1,6 @@
 import { ArrowsLeftRightIcon, CheckIcon, FlagCheckeredIcon, LockIcon, PlayIcon, TreasureChestIcon } from '@phosphor-icons/react'
 import { useState, type CSSProperties } from 'react'
+import { DailyGoal } from '../components/DailyGoal'
 import { InstallHint } from '../components/InstallHint'
 import { SKILL_ICON, SkillBadge, skillStyle } from '../components/skills'
 import { TopStats } from '../components/TopStats'
@@ -37,6 +38,8 @@ export function Home() {
   return (
     <div className="screen">
       <TopStats />
+
+      <DailyGoal />
 
       {draft && (
         <Card className="draft-banner" style={skillStyle(draft.form.focus)}>

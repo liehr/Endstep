@@ -1,22 +1,28 @@
 import {
   ArrowClockwiseIcon,
+  ArrowCounterClockwiseIcon,
   CardsIcon,
   CardsThreeIcon,
   CloudArrowDownIcon,
   CrosshairIcon,
   FlaskIcon,
+  FootprintsIcon,
   GraduationCapIcon,
   HourglassIcon,
   LockIcon,
   PlayIcon,
   ScalesIcon,
   SwordIcon,
+  TimerIcon,
   type Icon,
 } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Button, EmptyState } from '../components/ui'
 import { shortName } from '../lib/commander'
-import { LESSONS, type Lesson } from '../lib/quiz/quiz'
+import { SKILL_BY_ID } from '../lib/content'
+import { nextFocus } from '../lib/focus'
+import { currentRank, unlockedSkills } from '../lib/ranks'
+import { LESSON_BY_ID, LESSONS, lessonOpen, MIN_COVERAGE, reviewCount, warmUpLesson, type Lesson } from '../lib/quiz/quiz'
 import { navigate } from '../lib/route'
 import { buildLibrary, seedFor, simCommander, simulateGame, summarize, type Distribution } from '../lib/sim/goldfish'
 import { randomSeed } from '../lib/sim/rng'
@@ -35,6 +41,9 @@ export const LESSON_ICON: Record<LessonId, Icon> = {
   goldfish: HourglassIcon,
   cards: CardsThreeIcon,
   rulings: ScalesIcon,
+  scenario: FootprintsIcon,
+  mistakes: ArrowCounterClockwiseIcon,
+  challenge: TimerIcon,
 }
 
 /** Colors (with matching icon color) from the validated skill palette, so everything fits together. */
@@ -46,12 +55,12 @@ const LESSON_SKILL: Record<LessonId, SkillId> = {
   goldfish: 'politics',
   cards: 'removal',
   rulings: 'wipe',
+  scenario: 'sequencing',
+  mistakes: 'threat',
+  challenge: 'combat',
 }
 
 export const lessonStyle = (id: LessonId): CSSProperties => skillStyle(LESSON_SKILL[id])
-
-/** At least this share of deck cards must be loaded for simulations to make sense. */
-const MIN_COVERAGE = 0.9
 
 type DeckCards = ReturnType<typeof useDeckCards>
 
@@ -61,15 +70,19 @@ export function lessonLocked(lesson: Lesson, deck: DeckCards): boolean {
   return (lesson.needsCards && !ready) || (ready && lesson.ready !== undefined && !lesson.ready(deck))
 }
 
-/** Lessons for your deck that can be played right now (for the rank exam). */
+/** Question lessons for your deck that can be played right now (for the rank exam). */
 export function openLessons(deck: DeckCards): LessonId[] {
-  return LESSONS.filter((l) => (!l.forCommander || l.forCommander(deck.commander)) && !lessonLocked(l, deck)).map((l) => l.id)
+  return LESSONS.filter((l) => !l.page && !l.reviewOnly && (!l.forCommander || l.forCommander(deck.commander)) && !lessonLocked(l, deck)).map((l) => l.id)
 }
 
 export function Training() {
-  const { training } = useData()
+  const { training, quiz, games, promotions } = useData()
+  const review = reviewCount(quiz, games)
+  const mistakes = review.questions + review.games
+  const focus = nextFocus(games, unlockedSkills(currentRank(promotions)))
   const deck = useDeckCards()
   const ready = deck.coverage >= MIN_COVERAGE
+  const warmUp = warmUpLesson(focus, (id) => lessonOpen(LESSON_BY_ID[id], deck))
 
   const totalCorrect = training.reduce((s, t) => s + t.correct, 0)
   const totalAnswered = training.reduce((s, t) => s + t.total, 0)
@@ -101,8 +114,23 @@ export function Training() {
 
       {!ready && <CardDataNotice deck={deck} />}
 
+      {mistakes > 0 && (
+        <button type="button" className="lesson-card mistakes-card" style={lessonStyle('mistakes')} onClick={() => navigate('/training/mistakes')}>
+          <span className="lesson-icon" aria-hidden="true">
+            <ArrowCounterClockwiseIcon weight="bold" />
+          </span>
+          <span className="lesson-text">
+            <strong>Your Mistakes</strong>
+            <span className="muted small">
+              {reviewText(review)}
+            </span>
+          </span>
+          <PlayIcon weight="fill" className="lesson-play" aria-hidden="true" />
+        </button>
+      )}
+
       <ul className="lessons">
-        {LESSONS.filter((l) => !l.forCommander || l.forCommander(deck.commander)).map((lesson) => {
+        {LESSONS.filter((l) => !l.reviewOnly && (!l.forCommander || l.forCommander(deck.commander))).map((lesson) => {
           const IconCmp = LESSON_ICON[lesson.id]
           const results = training.filter((t) => t.lessonId === lesson.id)
           const best = results.reduce((m, t) => Math.max(m, t.correct), 0)
@@ -131,7 +159,15 @@ export function Training() {
                       : locked
                         ? "Needs your deck's card data."
                         : lesson.description}</span>
-                  {results.length > 0 && (
+                  {!locked && lesson.id === warmUp && (
+                    <span className="warmup-tag small">Warm-up for {SKILL_BY_ID[focus].name}, your next game’s focus</span>
+                  )}
+                  {results.length > 0 && lesson.id === 'challenge' && (
+                    <span className="small muted">
+                      Best: {best} correct · {results.length}× played
+                    </span>
+                  )}
+                  {results.length > 0 && lesson.id !== 'challenge' && (
                     <span className="lesson-progress">
                       {Array.from({ length: 5 }, (_, i) => (
                         <span key={i} className={i < best ? 'on' : ''} />
@@ -152,6 +188,14 @@ export function Training() {
       {ready && deck.lookup(deck.commander) ? <GoldfishLab /> : null}
     </div>
   )
+}
+
+function reviewText({ questions, games }: { questions: number; games: number }): string {
+  const parts = [
+    questions ? `${questions} question${questions > 1 ? 's' : ''} you got wrong lately` : '',
+    games ? `what you’d change from ${games > 1 ? `${games} recent games` : 'your last game'}` : '',
+  ].filter(Boolean)
+  return `${parts.join(', plus ')}. Get it right this time.`.replace(/^./, (c) => c.toUpperCase())
 }
 
 function CardDataNotice({ deck }: { deck: ReturnType<typeof useDeckCards> }) {

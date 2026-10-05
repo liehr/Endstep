@@ -19,6 +19,8 @@ import { Stats } from './pages/Stats'
 // Load Training and Deck only when needed (faster startup); offline they live in the service worker cache.
 const Training = lazy(() => import('./pages/Training').then((m) => ({ default: m.Training })))
 const Lesson = lazy(() => import('./pages/Lesson').then((m) => ({ default: m.Lesson })))
+const Challenge = lazy(() => import('./pages/Challenge').then((m) => ({ default: m.Challenge })))
+const Scenario = lazy(() => import('./pages/Scenario').then((m) => ({ default: m.Scenario })))
 const DeckPage = lazy(() => import('./pages/Deck').then((m) => ({ default: m.DeckPage })))
 const SwapFlow = lazy(() => import('./pages/Deck').then((m) => ({ default: m.SwapFlow })))
 const DeckPicker = lazy(() => import('./pages/DeckPicker').then((m) => ({ default: m.DeckPicker })))
@@ -39,6 +41,8 @@ function Page({ route }: { route: string }) {
   if ((m = route.match(/^\/spiel\/([^/]+)$/))) return <GameDetail id={m[1]} />
   if ((m = route.match(/^\/runde\/neu\/([^/]+)$/)) && SKILL_IDS.has(m[1])) return <RoundStart skill={m[1] as SkillId} />
   if ((m = route.match(/^\/runde\/fertig\/([^/]+)$/))) return <RoundDone id={m[1]} />
+  if (route === '/training/scenario') return <Scenario />
+  if (route === '/training/challenge') return <Challenge />
   if ((m = route.match(/^\/training\/([^/]+)$/)) && m[1] in LESSON_BY_ID) return <Lesson id={m[1] as LessonId} />
 
   switch (route) {

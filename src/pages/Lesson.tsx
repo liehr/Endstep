@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { AnswerLabel, CardFrame, type Slot } from '../components/CardFrame'
 import { CardGrid, PickCardGrid, type PickState } from '../components/CardImage'
 import { Confetti } from '../components/Confetti'
-import { Button, IconButton, ProgressBar } from '../components/ui'
+import { Button, EmptyState, IconButton, ProgressBar } from '../components/ui'
 import { haptic } from '../lib/haptics'
 import type { FieldId } from '../lib/quiz/cardQuiz'
 import { buildExam } from '../lib/quiz/exam'
@@ -41,11 +41,11 @@ interface Item {
  */
 export function Lesson({ id = 'rules', exam = false }: { id?: LessonId; exam?: boolean }) {
   const deck = useDeckCards({ autoLoad: false })
-  const { quiz, promotions } = useData()
+  const { quiz, promotions, games } = useData()
   // The rank you take the lesson or exam in (stays put when the exam promotes you).
   const [rank] = useState(() => currentRank(promotions))
   const build = (seed: number): Item[] => {
-    const ctx = { decklist: deck.decklist, commander: deck.commander, lookup: deck.lookup, rulings: deck.rulings }
+    const ctx = { decklist: deck.decklist, commander: deck.commander, lookup: deck.lookup, rulings: deck.rulings, games }
     if (exam) return buildExam(openLessons(deck), ctx, seed, rank).map((e) => ({ ...e, retry: false }))
     return buildLesson(id, ctx, seed, quiz, undefined, rank).map((question) => ({ question, lessonId: id, retry: false }))
   }
@@ -87,6 +87,14 @@ export function Lesson({ id = 'rules', exam = false }: { id?: LessonId; exam?: b
 
   if (exam && done) return hearts > 0 ? <Promotion rank={rank + 1} /> : <ExamFailed rank={rank} correct={score} onAgain={restart} />
   if (done) return <LessonDone id={id} score={score} total={firstTryTotal} onAgain={restart} />
+  if (queue.length === 0)
+    return (
+      <div className="screen flow">
+        <EmptyState title="Nothing to review" text="No recent mistakes left. Nice work!">
+          <Button onClick={() => navigate('/training', { replace: true })}>Back to Training</Button>
+        </EmptyState>
+      </div>
+    )
   if (!item) return null
 
   const q = item.question
@@ -108,7 +116,10 @@ export function Lesson({ id = 'rules', exam = false }: { id?: LessonId; exam?: b
 
   const check = () => {
     setChecked(true)
-    if (!item.retry && lesson.remember) actions.recordQuizAnswer(q.key, correct, q.group)
+    if (!item.retry && lesson.remember) {
+      actions.recordQuizAnswer(q.key, correct, q.group)
+      if (q.reviewOf) actions.recordQuizAnswer(q.reviewOf, correct)
+    }
     if (correct) {
       haptic(12)
       if (!item.retry) setScore((s) => s + 1)
@@ -209,6 +220,7 @@ export function Lesson({ id = 'rules', exam = false }: { id?: LessonId; exam?: b
           <span className="eyebrow">
             {exam && <RankEmblem rank={rank} size={18} />} {exam ? `Exam · ${lesson.title}` : lesson.title}
           </span>
+          {q.note && <p className="question-note small">{q.note}</p>}
           <h1>{q.prompt}</h1>
           {q.context && <p className="muted">{q.context}</p>}
           <div className="question-body">

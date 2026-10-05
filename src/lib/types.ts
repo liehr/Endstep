@@ -65,6 +65,8 @@ export interface Settings {
   tableIntro: string
   /** Bracket check (milestone on the path) already answered. */
   bracketCheckDone: boolean
+  /** Lessons per day for the training streak. */
+  dailyGoal: number
 }
 
 /** Counters during a game: current turn and Ghalta calculator. */
@@ -105,7 +107,7 @@ export interface Swap {
   createdAt: string
 }
 
-export type LessonId = 'ghalta' | 'combat' | 'rules' | 'mulligan' | 'goldfish' | 'cards' | 'rulings'
+export type LessonId = 'ghalta' | 'combat' | 'rules' | 'mulligan' | 'goldfish' | 'cards' | 'rulings' | 'scenario' | 'mistakes' | 'challenge'
 
 export interface TrainingResult {
   lessonId: LessonId

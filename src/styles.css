@@ -3392,3 +3392,170 @@ main.with-dice .screen.flow {
   margin: 4px 0;
   padding-left: 22px;
 }
+
+/* Turn by Turn scenarios */
+.scenario {
+  padding-bottom: calc(var(--footer-h) + env(safe-area-inset-bottom) + 40px);
+}
+.scenario-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.scenario-stats .stat-value {
+  font-size: 22px;
+}
+.scenario-stats .stat-value .mana {
+  font-size: 16px;
+}
+.hand-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.mtg-card.pickable.dim .mtg-card-btn {
+  opacity: 0.45;
+}
+.scenario-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.footer-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+  text-align: center;
+}
+.scenario-tips {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+.done .panel {
+  margin-top: 12px;
+}
+
+/* Mistakes lesson: stands out above the list while there's something to review */
+.lesson-card.mistakes-card {
+  height: auto;
+  margin-bottom: 12px;
+  border-color: color-mix(in oklab, var(--c) 45%, var(--border));
+  background: color-mix(in oklab, var(--c) 8%, var(--surface));
+}
+
+/* Daily training goal on the home page */
+.card.daily-goal {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.card.daily-goal.met {
+  border-color: color-mix(in oklab, var(--brand) 45%, var(--border));
+  background: var(--brand-soft);
+}
+.daily-goal-info {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  text-align: left;
+}
+.daily-goal-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.goal-ring {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: conic-gradient(var(--brand) var(--p), var(--border) 0);
+}
+.goal-ring > span {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--brand);
+  font-size: 20px;
+}
+.training-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 900;
+  font-size: 18px;
+  color: var(--subtle);
+}
+.training-streak svg {
+  font-size: 22px;
+}
+.training-streak.on {
+  color: var(--text);
+}
+.training-streak.on svg {
+  color: var(--gold);
+}
+.daily-goal .btn {
+  margin-bottom: 0;
+}
+.warmup-tag {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--c) 14%, var(--surface));
+  color: var(--text);
+  font-weight: 800;
+}
+.question-note {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--warn-soft);
+  color: var(--warn-text);
+  font-weight: 700;
+}
+.daily-goal-next {
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Ghalta Rush */
+.challenge-clock {
+  min-width: 2ch;
+  font-size: 20px;
+  font-weight: 900;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.challenge-clock.low {
+  color: var(--loss);
+}
+.challenge-board {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.challenge-board li {
+  padding: 6px 12px;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-weight: 800;
+}
+.challenge-options .option {
+  min-height: 72px;
+}

@@ -24,7 +24,9 @@ const decklist: DeckEntry[] = [
 ]
 const rulings = (name: string) => FIXTURE_RULINGS[cardKey(name)]
 const ctx = { decklist, commander: 'Ghalta, Primal Hunger', lookup, rulings }
-const ALL: LessonId[] = LESSONS.map((l) => l.id)
+/** Lessons made of questions (not the turn scenarios, Ghalta Rush or the mistakes lesson). */
+const QUESTION_LESSONS = LESSONS.filter((l) => !l.page && !l.reviewOnly)
+const ALL: LessonId[] = QUESTION_LESSONS.map((l) => l.id)
 
 describe('question levels', () => {
   it('every question kind the lessons generate has a rank', () => {
@@ -46,7 +48,7 @@ describe('question levels', () => {
   })
 
   it('every lesson still has 5 questions at every rank', () => {
-    for (const lesson of LESSONS) {
+    for (const lesson of QUESTION_LESSONS) {
       for (let rank = 0; rank < RANKS.length; rank++) {
         expect(buildLesson(lesson.id, ctx, rank + 1, {}, '2026-10-05', rank)).toHaveLength(5)
       }

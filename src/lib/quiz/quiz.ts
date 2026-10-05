@@ -17,12 +17,13 @@ import { evaluateHand, ruleText } from '../sim/mulligan'
 import { mulberry32, shuffle } from '../sim/rng'
 import { today as todayIso } from '../dates'
 import type { Ruling } from '../scryfall'
-import type { LessonId, QuizMemory } from '../types'
+import { formatDate, addDays } from '../dates'
+import type { Game, LessonId, QuizMemory, SkillId } from '../types'
 import { classify, costVariants, faceOf, findGap, hideSelfName, KEYWORDS, ptVariants, ROLES, typeLabel, type Role } from './cardQuiz'
 import { combatQuestions } from './combatQuiz'
 import { ghaltaMathQuestions } from './ghaltaMath'
 import { orderQuestions, tapCardQuestions, tapCombatQuestions, tapGhaltaQuestion } from './interactive'
-import { selectQuestions } from './memory'
+import { MISTAKE_DAYS, mistakeKeys, selectQuestions, topicOf } from './memory'
 import { filterByLevel } from '../ranks'
 import { RULES_BANK } from './rulesBank'
 
@@ -759,11 +760,24 @@ export interface Lesson {
    * hands and simulations that won't come back anyway.
    */
   remember: boolean
+  /** Has its own page instead of questions (the turn scenarios). */
+  page?: boolean
+  /** Only brings back your recent mistakes from the other lessons. */
+  reviewOnly?: boolean
   /** Candidate questions; buildLesson picks 5 of them. */
   build: (ctx: QuizContext) => Question[]
 }
 
 export const LESSONS: Lesson[] = [
+  {
+    id: 'mistakes',
+    title: 'Your Mistakes',
+    description: 'Questions you got wrong in the last few days.',
+    needsCards: false,
+    remember: true,
+    reviewOnly: true,
+    build: () => [],
+  },
   { id: 'ghalta', title: 'Ghalta Math', description: 'What does Ghalta cost with your board?', needsCards: false, forCommander: isGhalta, remember: true, build: ghaltaLesson },
   { id: 'combat', title: 'Combat & Trample', description: 'Blocks, first strike, trample and commander damage.', needsCards: false, remember: true, build: combatLesson },
   { id: 'rules', title: 'Commander Rules', description: 'Mulligan, stack, combat, brackets.', needsCards: false, remember: true, build: rulesLesson },
@@ -787,6 +801,26 @@ export const LESSONS: Lesson[] = [
     remember: true,
     build: rulingsLesson,
   },
+  {
+    id: 'challenge',
+    title: 'Ghalta Rush',
+    description: '60 seconds of Ghalta Math. How many can you get?',
+    needsCards: false,
+    forCommander: isGhalta,
+    remember: false,
+    page: true,
+    build: () => [],
+  },
+  {
+    id: 'scenario',
+    title: 'Turn by Turn',
+    description: 'Play the turns yourself and race the autopilot to your commander.',
+    needsCards: true,
+    ready: (ctx) => ctx.lookup(ctx.commander) !== undefined,
+    remember: false,
+    page: true,
+    build: () => [],
+  },
 ]
 
 export const LESSON_BY_ID = Object.fromEntries(LESSONS.map((l) => [l.id, l])) as Record<LessonId, Lesson>
@@ -805,8 +839,131 @@ export function buildLesson(
   maxLevel: number = Infinity,
 ): Question[] {
   const lesson = LESSON_BY_ID[id]
+  if (lesson.reviewOnly) return mistakesLesson(ctx, seed, memory, today, maxLevel)
   const candidates = filterByLevel(lesson.build({ ...ctx, rng: mulberry32(seed) }), maxLevel, 2 * QUESTIONS_PER_LESSON)
   if (!lesson.remember) return candidates.slice(0, QUESTIONS_PER_LESSON)
   return selectQuestions(candidates, memory, today, QUESTIONS_PER_LESSON)
 }
 
+
+/** At least this share of deck cards must be loaded for card lessons and simulations. */
+export const MIN_COVERAGE = 0.9
+
+/** Can you play this lesson with the deck's card data as loaded? */
+export function lessonOpen(lesson: Lesson, deck: Omit<QuizContext, 'rng'> & { coverage: number }): boolean {
+  if (lesson.forCommander && !lesson.forCommander(deck.commander)) return false
+  const cardsReady = deck.coverage >= MIN_COVERAGE
+  if (lesson.needsCards && !cardsReady) return false
+  return !lesson.ready || lesson.ready(deck)
+}
+
+/** Lessons whose questions can come back in the mistakes lesson. */
+const reviewable = (ctx: Omit<QuizContext, 'rng'>) =>
+  LESSONS.filter((l) => l.remember && !l.reviewOnly && !l.page && (!l.forCommander || l.forCommander(ctx.commander)) && (!l.ready || l.ready(ctx)))
+
+// --- Link to real games ---------------------------------------------------------------
+
+/** Which lesson trains each focus skill best (first one you can play wins). */
+export const WARM_UP: Record<SkillId, LessonId[]> = {
+  mulligan: ['mulligan', 'rules'],
+  sequencing: ['scenario', 'goldfish', 'rules'],
+  threat: ['rules', 'combat'],
+  combat: ['combat', 'ghalta'],
+  wipe: ['cards', 'rules'],
+  removal: ['cards', 'rulings', 'rules'],
+  politics: ['rules'],
+}
+
+/** The warm-up lesson for a skill, among the lessons you can play right now. */
+export function warmUpLesson(skill: SkillId, open: (id: LessonId) => boolean): LessonId {
+  return WARM_UP[skill].find(open) ?? 'rules'
+}
+
+/** Key in the question memory for "reviewed the decision from this game". */
+const gameKey = (game: Game) => `game-review:${game.id}`
+
+/**
+ * Recent games where you noted a decision you'd make differently (or lost to your own
+ * mistake): each brings questions about that skill into the mistakes lesson, until you
+ * get one right.
+ */
+export function gamesToReview(games: Game[], memory: QuizMemory, today: string): Game[] {
+  const since = addDays(today, -MISTAKE_DAYS)
+  return games
+    .filter((g) => g.playedAt >= since && (g.decisionSkill !== null || g.whyCategory === 'mistake'))
+    .filter((g) => (memory[gameKey(g)]?.box ?? 0) === 0)
+    .sort((a, b) => b.playedAt.localeCompare(a.playedAt) || b.createdAt.localeCompare(a.createdAt))
+}
+
+/** Your mistakes from the question memory (without the game reviews, which count per game). */
+const questionMistakes = (memory: QuizMemory, today: string) => mistakeKeys(memory, today).filter((k) => topicOf(k) !== 'game-review')
+
+/** Up to 2 questions about the skill from a game's decision. */
+function gameReviewQuestions(ctx: Omit<QuizContext, 'rng'>, game: Game, seed: number, memory: QuizMemory, today: string, maxLevel: number): Question[] {
+  const skill = game.decisionSkill ?? game.focus
+  const lessons = reviewable(ctx)
+  const id = warmUpLesson(skill, (l) => lessons.some((x) => x.id === l))
+  const lesson = LESSON_BY_ID[id]
+  if (!lessons.includes(lesson)) return []
+  const said = game.decision.trim()
+  const note = `From your game on ${formatDate(game.playedAt)}${said ? `: you’d change “${said}”` : ''}.`
+  const candidates = filterByLevel(lesson.build({ ...ctx, rng: mulberry32(seed) }), maxLevel, 2 * QUESTIONS_PER_LESSON)
+  return selectQuestions(candidates, memory, today, 2).map((q) => ({ ...q, reviewOf: gameKey(game), note }))
+}
+
+
+/** How many seeds to search for the exact missed question before taking one of the same kind. */
+const MISTAKE_SEEDS = 12
+
+/**
+ * The mistakes lesson: your latest wrong answers, rebuilt from the lessons. Questions with
+ * random numbers (Ghalta Math, combat) may not come up again exactly; then a question of the
+ * same kind stands in for them.
+ */
+function mistakesLesson(ctx: Omit<QuizContext, 'rng'>, seed: number, memory: QuizMemory, today: string, maxLevel = Infinity): Question[] {
+  // Your games first: one decision per game, two questions each, at most 2 games.
+  const fromGames = gamesToReview(ctx.games ?? [], memory, today)
+    .slice(0, 2)
+    .flatMap((g, i) => gameReviewQuestions(ctx, g, seed + i, memory, today, maxLevel))
+  const wanted = questionMistakes(memory, today)
+  if (wanted.length === 0) return fromGames.slice(0, QUESTIONS_PER_LESSON)
+  const topics = new Set(wanted.map(topicOf))
+  const byKey = new Map<string, Question>()
+  const byTopic = new Map<string, Question[]>()
+  let lessons = reviewable(ctx)
+  for (let i = 0; i < MISTAKE_SEEDS && wanted.some((k) => !byKey.has(k)); i++) {
+    const relevant: Lesson[] = []
+    for (const lesson of lessons) {
+      const qs = lesson.build({ ...ctx, rng: mulberry32(seed + i * 7919) })
+      if (!qs.some((q) => topics.has(topicOf(q.key)))) continue
+      relevant.push(lesson)
+      for (const q of qs) {
+        if (!byKey.has(q.key)) byKey.set(q.key, q)
+        const topic = topicOf(q.key)
+        if (topics.has(topic)) byTopic.set(topic, [...(byTopic.get(topic) ?? []), q])
+      }
+    }
+    // After the first round, only build the lessons that have these topics at all.
+    lessons = relevant
+  }
+
+  const out: Question[] = fromGames.slice(0, QUESTIONS_PER_LESSON - 1)
+  const used = new Set(out.map((q) => q.key))
+  const groups = new Set(out.flatMap((q) => (q.group !== undefined ? [q.group] : [])))
+  const free = (q: Question) => !used.has(q.key) && (q.group === undefined || !groups.has(q.group))
+  for (const key of wanted) {
+    if (out.length >= QUESTIONS_PER_LESSON) break
+    const exact = byKey.get(key)
+    const q = exact && free(exact) ? exact : (byTopic.get(topicOf(key)) ?? []).find((c) => free(c) && !wanted.includes(c.key))
+    if (!q) continue
+    used.add(q.key)
+    if (q.group !== undefined) groups.add(q.group)
+    out.push(q.key === key ? q : { ...q, reviewOf: key })
+  }
+  return out
+}
+
+/** What the mistakes lesson has for you right now. */
+export function reviewCount(memory: QuizMemory, games: Game[], today: string = todayIso()): { questions: number; games: number } {
+  return { questions: questionMistakes(memory, today).length, games: gamesToReview(games, memory, today).length }
+}
