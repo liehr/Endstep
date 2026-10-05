@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { cardKey, type CardInfo } from './cards'
 import { cardCoverage } from './quiz/quiz'
-import { ensureCards, satisfies, useCardState, type CardRequest } from './scryfall'
+import { ensureCards, ensureRulings, satisfies, useCardState, type CardRequest, type Ruling } from './scryfall'
 import { useData } from './store'
 
 /** Decklist plus card data from Scryfall; loads anything missing automatically when online. */
@@ -21,10 +21,19 @@ export function useDeckCards({ autoLoad = true } = {}) {
     if (autoLoad && pending.length > 0 && cardState.status === 'idle' && navigator.onLine) void ensureCards(requests)
   }, [autoLoad, pending.length, cardState.status, requests])
 
+  // Once the cards are there, fetch their rulings in the background (for the rulings lesson).
+  const cardsReady = autoLoad && pending.length === 0 && cardState.status === 'idle'
+  useEffect(() => {
+    if (cardsReady && cardState.rulingsStatus === 'idle') void ensureRulings(requests.map((r) => r.name))
+  }, [cardsReady, cardState.rulingsStatus, cardState.cards, requests])
+  const rulings = useCallback((name: string): Ruling[] | undefined => cardState.rulings[cardKey(name)], [cardState.rulings])
+
   return {
     decklist,
     commander,
     lookup,
+    rulings,
+    rulingsStatus: cardState.rulingsStatus,
     coverage: cardCoverage({ decklist, lookup }),
     missing,
     notFound: cardState.notFound,

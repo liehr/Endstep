@@ -3,6 +3,7 @@ import { emptyInput, emptyTracker, loadData, mergeImport, saveData } from './dat
 import { applySwap } from './decklist'
 import { today } from './dates'
 import { nextFocus } from './focus'
+import { recordAnswer } from './quiz/memory'
 import type { AppData, DeckEntry, Game, GameInput, LessonId, Settings, SkillId, Swap, Tracker } from './types'
 
 // A small global store: data lives only on the device (localStorage).
@@ -116,5 +117,10 @@ export const actions = {
       ...data,
       training: [...data.training, { lessonId, correct, total, date: today(), createdAt: new Date().toISOString() }],
     })
+  },
+
+  /** Remember a first-try answer for the review schedule. */
+  recordQuizAnswer(key: string, correct: boolean) {
+    commit({ ...data, quiz: recordAnswer(data.quiz, key, correct, today()) })
   },
 }

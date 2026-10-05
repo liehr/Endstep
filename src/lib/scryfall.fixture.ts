@@ -1,4 +1,5 @@
 import type { ScryfallCard } from './cards'
+import type { Ruling } from './scryfall'
 
 // Fake Scryfall responses for tests (fields as in the real API).
 
@@ -57,3 +58,37 @@ export const FIXTURE_CARDS: ScryfallCard[] = [
     oracle_text: 'Enchant creature\nWhen this Aura enters, draw a card.\nEnchanted creature loses all abilities and is a green Elk creature with base power and toughness 3/3.',
   },
 ]
+
+/** Real rulings (from Scryfall) for some fixture cards; key = card name in lower case. */
+export const FIXTURE_RULINGS: Record<string, Ruling[]> = {
+  'ghalta, primal hunger': [
+    { date: '2018-01-19', text: "Ghalta's first ability can't reduce its cost below {G}{G}." },
+    {
+      date: '2018-01-19',
+      text: 'The total cost to cast Ghalta is locked in before you pay that cost. For example, if you control three 2/2 creatures, including one you can sacrifice to add {C}, the total cost of Ghalta is {4}{G}{G}.',
+    },
+  ],
+  'steel leaf champion': [
+    {
+      date: '2018-04-27',
+      text: 'Once a creature with power 3 or greater has blocked this creature, changing the power of the blocking creature won’t cause this creature to become unblocked.',
+    },
+  ],
+  'dungrove elder': [
+    {
+      date: '2011-09-22',
+      text: 'Dungrove Elder’s power and toughness are each equal to the number of lands you control with the land type Forest, not necessarily lands named Forest.',
+    },
+    { date: '2011-09-22', text: 'Dungrove Elder’s power and toughness will change as the number of Forests you control changes.' },
+  ],
+  'ilysian caryatid': [
+    { date: '2020-01-24', text: 'Ilysian Caryatid’s activated ability is a mana ability. It doesn’t use the stack and can’t be responded to.' },
+  ],
+  'pugnacious hammerskull': [
+    {
+      date: '2023-11-10',
+      text: "If you didn't control another Dinosaur when you declared Pugnacious Hammerskull as an attacker, it doesn't matter whether or not you control one as its ability resolves.",
+    },
+  ],
+  'sol ring': [],
+}

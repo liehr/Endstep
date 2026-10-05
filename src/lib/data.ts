@@ -9,6 +9,7 @@ import type {
   FocusRating,
   Game,
   GameInput,
+  QuizMemory,
   Result,
   Settings,
   SkillId,
@@ -42,6 +43,7 @@ export function emptyData(): AppData {
     decklist: DEFAULT_DECKLIST.map((e) => ({ ...e })),
     swaps: [],
     training: [],
+    quiz: {},
   }
 }
 
@@ -202,7 +204,7 @@ function sanitizeSwap(raw: unknown): Swap | null {
   }
 }
 
-const LESSON_IDS = ['ghalta', 'combat', 'rules', 'mulligan', 'goldfish', 'cards'] as const
+const LESSON_IDS = ['ghalta', 'combat', 'rules', 'mulligan', 'goldfish', 'cards', 'rulings'] as const
 
 function sanitizeTraining(raw: unknown): TrainingResult | null {
   if (!isObj(raw) || !LESSON_IDS.includes(raw.lessonId as never)) return null
@@ -216,6 +218,33 @@ function sanitizeTraining(raw: unknown): TrainingResult | null {
     total,
     createdAt: str(raw.createdAt, new Date().toISOString()),
   }
+}
+
+function sanitizeQuiz(raw: unknown): QuizMemory {
+  if (!isObj(raw)) return {}
+  const out: QuizMemory = {}
+  for (const [key, stat] of Object.entries(raw)) {
+    if (!isObj(stat) || key.length > 300) continue
+    const box = intOrNull(stat.box, 0, 4)
+    if (box === null || !DATE_RE.test(str(stat.due)) || !DATE_RE.test(str(stat.last))) continue
+    out[key] = {
+      box,
+      due: str(stat.due),
+      last: str(stat.last),
+      seen: intOrNull(stat.seen, 0, 100000) ?? 0,
+      wrong: intOrNull(stat.wrong, 0, 100000) ?? 0,
+    }
+  }
+  return out
+}
+
+/** Merge question memory: per question, the more recently answered state wins. */
+export function mergeQuiz(current: QuizMemory, incoming: QuizMemory): QuizMemory {
+  const out = { ...current }
+  for (const [key, stat] of Object.entries(incoming)) {
+    if (!out[key] || stat.last > out[key].last) out[key] = stat
+  }
+  return out
 }
 
 const listOf = <T>(raw: unknown, fn: (x: unknown) => T | null): T[] =>
@@ -240,6 +269,7 @@ export function sanitizeData(raw: unknown): AppData {
     decklist: sanitizeDecklist(raw.decklist) ?? defaults.decklist,
     swaps: listOf(raw.swaps, sanitizeSwap),
     training: listOf(raw.training, sanitizeTraining),
+    quiz: sanitizeQuiz(raw.quiz),
   }
 }
 
@@ -279,7 +309,7 @@ export function mergeGames(current: Game[], incoming: Game[]): Game[] {
 }
 
 /**
- * Restore a backup: games, swaps and training results are merged.
+ * Restore a backup: games, swaps, training results and question memory are merged.
  * The decklist from the backup is taken over if the unchanged default list
  * is still here (typical when moving to a new phone).
  */
@@ -295,6 +325,7 @@ export function mergeImport(current: AppData, imported: AppData): { data: AppDat
       games,
       swaps: mergeBy(current.swaps, imported.swaps, (s) => s.id),
       training: mergeBy(current.training, imported.training, (t) => `${t.lessonId}|${t.createdAt}`),
+      quiz: mergeQuiz(current.quiz, imported.quiz),
       commander: takeDeck ? imported.commander : current.commander,
       commanderSet: takeDeck ? imported.commanderSet : current.commanderSet,
       decklist: takeDeck ? imported.decklist : current.decklist,

@@ -102,7 +102,7 @@ export interface Swap {
   createdAt: string
 }
 
-export type LessonId = 'ghalta' | 'combat' | 'rules' | 'mulligan' | 'goldfish' | 'cards'
+export type LessonId = 'ghalta' | 'combat' | 'rules' | 'mulligan' | 'goldfish' | 'cards' | 'rulings'
 
 export interface TrainingResult {
   lessonId: LessonId
@@ -111,6 +111,21 @@ export interface TrainingResult {
   total: number
   createdAt: string
 }
+
+/** Review state of one quiz question (Leitner box). */
+export interface QuestionStat {
+  /** 0 = just answered wrong … 4 = known well. */
+  box: number
+  /** Next review date (YYYY-MM-DD). */
+  due: string
+  seen: number
+  wrong: number
+  /** Last answered (YYYY-MM-DD). */
+  last: string
+}
+
+/** Question key → review state. */
+export type QuizMemory = Record<string, QuestionStat>
 
 export interface AppData {
   schemaVersion: 1
@@ -125,4 +140,6 @@ export interface AppData {
   decklist: DeckEntry[]
   swaps: Swap[]
   training: TrainingResult[]
+  /** Which quiz questions you've seen and when they're due again. */
+  quiz: QuizMemory
 }
