@@ -18,7 +18,6 @@ import { CardImage } from '../components/CardImage'
 import { BottomSheet, Button, ConfirmSheet, Field, IconButton } from '../components/ui'
 import { cardKey, isArtifact, isCreature, isLand, type CardInfo } from '../lib/cards'
 import { formatDate } from '../lib/dates'
-import { UPGRADE_EVERY_GAMES } from '../lib/content'
 import {
   deckCardNames,
   deckSize,
@@ -352,7 +351,7 @@ export function SwapFlow() {
     </BottomSheet>
   )
 
-  const stats = computeStats(games, settings.defaultDeck, { swaps: allSwaps, decklist, promotions })
+  const stats = computeStats(games, settings.defaultDeck, { swaps: allSwaps, decklist, promotions, upgradeEvery: settings.upgradeEvery })
   const maxCards = stats.upgrade.cards
   const deadCount = new Map(stats.deadCards.map((t) => [cardKey(t.name), t.count]))
   const names = deckCardNames(decklist)
@@ -373,7 +372,7 @@ export function SwapFlow() {
   const save = () => {
     actions.addSwap(out, into, note.trim())
     void ensureCards(into)
-    toast(`Swap saved. Now test it for ${UPGRADE_EVERY_GAMES} games.`)
+    toast(`Swap saved. Now test it for ${settings.upgradeEvery} games.`)
     navigate('/mehr/deck', { replace: true })
   }
 

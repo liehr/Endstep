@@ -95,3 +95,26 @@ describe('bracketCheck', () => {
     expect(bracketCheck(80, true)).toMatchObject({ due: false, done: true })
   })
 })
+
+describe('settings', () => {
+  it('opens the upgrade chest after the chosen number of games', () => {
+    const games = Array.from({ length: 5 }, (_, i) => makeGame({ id: `g${i}` }))
+    expect(upgradeStatus(games, [])).toMatchObject({ target: 8, ready: false })
+    expect(upgradeStatus(games, [], 0, 4)).toMatchObject({ target: 4, ready: true })
+    expect(computeStats(games, games[0].deck, { upgradeEvery: 4 }).upgradeReady).toBe(true)
+  })
+
+  it('turns the bracket check off with 0', () => {
+    expect(bracketCheck(100, false, 0)).toMatchObject({ due: false, target: 0 })
+    expect(bracketCheck(32, false, 32).due).toBe(true)
+  })
+
+  it('calls something a pattern from the chosen count on', () => {
+    const games = [makeGame({ id: 'a', deadCards: ['Rock'], decisionSkill: 'combat' }), makeGame({ id: 'b', deadCards: ['Rock'], decisionSkill: 'combat' })]
+    const deck = games[0].deck
+    expect(computeStats(games, deck).upgradeCandidates).toEqual([])
+    expect(computeStats(games, deck).patterns).toEqual([])
+    expect(computeStats(games, deck, { patternThreshold: 2 }).upgradeCandidates.map((c) => c.name)).toEqual(['Rock'])
+    expect(computeStats(games, deck, { patternThreshold: 2 }).patterns.map((p) => p.id)).toEqual(['combat'])
+  })
+})

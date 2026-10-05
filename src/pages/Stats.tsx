@@ -2,7 +2,7 @@ import { CheckIcon, WarningIcon, XIcon } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { SkillBadge } from '../components/skills'
 import { EmptyState } from '../components/ui'
-import { PATTERN_THRESHOLD, SKILL_BY_ID, WHY_LABEL } from '../lib/content'
+import { SKILL_BY_ID, WHY_LABEL } from '../lib/content'
 import { today } from '../lib/dates'
 import { computeStats, type Tally } from '../lib/stats'
 import { weekStreak } from '../lib/streak'
@@ -39,7 +39,7 @@ function BarRow({ label, value, max, lead }: { label: string; value: number; max
   )
 }
 
-function TallyList({ items, empty }: { items: Tally[]; empty: string }) {
+function TallyList({ items, empty, pattern }: { items: Tally[]; empty: string; pattern: number }) {
   if (items.length === 0) return <p className="muted small">{empty}</p>
   return (
     <ul className="tally">
@@ -47,7 +47,7 @@ function TallyList({ items, empty }: { items: Tally[]; empty: string }) {
         <li key={t.name}>
           <span>{t.name}</span>
           <span className="tally-count">
-            {t.count >= PATTERN_THRESHOLD && <WarningIcon weight="fill" aria-label="3× or more" />}
+            {t.count >= pattern && <WarningIcon weight="fill" aria-label={`${pattern}× or more`} />}
             {t.count}×
           </span>
         </li>
@@ -58,7 +58,13 @@ function TallyList({ items, empty }: { items: Tally[]; empty: string }) {
 
 export function Stats() {
   const { games, settings, swaps, decklist, promotions } = useData()
-  const s = computeStats(games, settings.defaultDeck, { swaps, decklist, promotions })
+  const s = computeStats(games, settings.defaultDeck, {
+    swaps,
+    decklist,
+    promotions,
+    upgradeEvery: settings.upgradeEvery,
+    patternThreshold: settings.patternThreshold,
+  })
   const streak = weekStreak(games, today())
 
   if (s.total === 0) {
@@ -104,7 +110,7 @@ export function Stats() {
               </li>
             ))}
           </ol>
-          <p className="muted small">A single game proves nothing. Only from 3× on is it a pattern.</p>
+          <p className="muted small">A single game proves nothing. Only from {settings.patternThreshold}× on is it a pattern.</p>
         </section>
 
         <section className="panel">
@@ -120,7 +126,7 @@ export function Stats() {
                 .map((k) => (
                   <BarRow
                     key={k.id}
-                    label={`${SKILL_BY_ID[k.id].name}${k.mistakes >= PATTERN_THRESHOLD ? ' · Pattern' : ''}`}
+                    label={`${SKILL_BY_ID[k.id].name}${k.mistakes >= settings.patternThreshold ? ' · Pattern' : ''}`}
                     value={k.mistakes}
                     max={maxMistakes}
                     lead={<SkillBadge id={k.id} size={36} />}
@@ -174,9 +180,9 @@ export function Stats() {
           <h2>Cards</h2>
           <p className="muted small">{settings.defaultDeck}</p>
           <h3>Dead in hand</h3>
-          <TallyList items={s.deadCards} empty="No dead cards noted yet." />
+          <TallyList items={s.deadCards} empty="No dead cards noted yet." pattern={settings.patternThreshold} />
           <h3>Overperformers</h3>
-          <TallyList items={s.starCards} empty="No overperformers noted yet." />
+          <TallyList items={s.starCards} empty="No overperformers noted yet." pattern={settings.patternThreshold} />
         </section>
 
         {s.upgrade.phases.length > 1 && (

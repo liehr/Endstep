@@ -76,8 +76,8 @@ export function openLessons(deck: DeckCards): LessonId[] {
 }
 
 export function Training() {
-  const { training, quiz, games, promotions } = useData()
-  const review = reviewCount(quiz, games)
+  const { training, quiz, games, promotions, settings } = useData()
+  const review = reviewCount(quiz, games, undefined, settings.mistakeDays)
   const mistakes = review.questions + review.games
   const focus = nextFocus(games, unlockedSkills(currentRank(promotions)))
   const deck = useDeckCards()
@@ -134,6 +134,8 @@ export function Training() {
           const IconCmp = LESSON_ICON[lesson.id]
           const results = training.filter((t) => t.lessonId === lesson.id)
           const best = results.reduce((m, t) => Math.max(m, t.correct), 0)
+          // Five dots for your best share, whatever the lesson length was.
+          const bestDots = results.reduce((m, t) => Math.max(m, t.total ? Math.round((5 * t.correct) / t.total) : 0), 0)
           const needsRulings = ready && lesson.ready !== undefined && !lesson.ready(deck)
           const locked = lessonLocked(lesson, deck)
           return (
@@ -159,7 +161,7 @@ export function Training() {
                       : locked
                         ? "Needs your deck's card data."
                         : lesson.description}</span>
-                  {!locked && lesson.id === warmUp && (
+                  {!locked && settings.warmUps && lesson.id === warmUp && (
                     <span className="warmup-tag small">Warm-up for {SKILL_BY_ID[focus].name}, your next game’s focus</span>
                   )}
                   {results.length > 0 && lesson.id === 'challenge' && (
@@ -170,7 +172,7 @@ export function Training() {
                   {results.length > 0 && lesson.id !== 'challenge' && (
                     <span className="lesson-progress">
                       {Array.from({ length: 5 }, (_, i) => (
-                        <span key={i} className={i < best ? 'on' : ''} />
+                        <span key={i} className={i < bestDots ? 'on' : ''} />
                       ))}
                       <span className="small muted">
                         {results.length}× played

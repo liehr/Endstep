@@ -76,7 +76,7 @@ function isEmpty(step: StepId, form: GameInput): boolean {
 
 /** After the game: one question per screen, like Duolingo. */
 export function RoundEnd() {
-  const { draft, games, decklist } = useData()
+  const { draft, games, decklist, settings } = useData()
   const [index, setIndex] = useState(0)
   const [resultPicked, setResultPicked] = useState(false)
   const advanceTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -227,7 +227,7 @@ export function RoundEnd() {
             placeholder="e.g. Attack the player with the engine sooner."
             onChange={(e) => set({ decision: e.target.value })}
           />
-          <Group label="Which skill does it belong to?" hint="If a skill shows up 3×, the app shows you a pattern.">
+          <Group label="Which skill does it belong to?" hint={`If a skill shows up ${settings.patternThreshold}×, the app shows you a pattern.`}>
             <Choice
               options={SKILLS.map((s) => ({ id: s.id, label: s.name, icon: SKILL_ICON[s.id], style: skillStyle(s.id) }))}
               value={form.decisionSkill}
@@ -240,7 +240,7 @@ export function RoundEnd() {
       break
     case 'cards':
       content = (
-        <Question title="Card check" hint="After 8 games you’ll see which cards should go out.">
+        <Question title="Card check" hint={`After ${settings.upgradeEvery} games you’ll see which cards should go out.`}>
           <Group label="Which cards were dead in your hand?">
             <ChipInput
               values={form.deadCards}

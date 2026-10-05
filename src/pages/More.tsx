@@ -7,6 +7,7 @@ import {
   ChatCircleDotsIcon,
   DeviceMobileIcon,
   DownloadSimpleIcon,
+  SlidersHorizontalIcon,
   StackIcon,
   SwapIcon,
   UploadSimpleIcon,
@@ -115,6 +116,14 @@ export function More() {
       </section>
 
       <section className="list-group">
+        <h2 className="list-title">App</h2>
+        <ul className="list settings">
+          <Row icon={SlidersHorizontalIcon} color="var(--select)" label="Settings" value="Training, games, look" onClick={() => navigate('/mehr/einstellungen')} />
+          {!isStandalone() && <Row icon={DeviceMobileIcon} color="var(--brand)" label="Install as app" onClick={() => setSheet('install')} />}
+        </ul>
+      </section>
+
+      <section className="list-group">
         <h2 className="list-title">Tools</h2>
         <ul className="list settings">
           <Row icon={BookOpenIcon} color="var(--skill-mulligan)" label="Cheat sheet" onClick={() => navigate('/mehr/spickzettel')} />
@@ -150,15 +159,6 @@ export function More() {
           }}
         />
       </section>
-
-      {!isStandalone() && (
-        <section className="list-group">
-          <h2 className="list-title">App</h2>
-          <ul className="list settings">
-            <Row icon={DeviceMobileIcon} color="var(--brand)" label="Install as app" onClick={() => setSheet('install')} />
-          </ul>
-        </section>
-      )}
 
       <p className="muted small center">
         Endstep v{__APP_VERSION__} ({__APP_COMMIT__})

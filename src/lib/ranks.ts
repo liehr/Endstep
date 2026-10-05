@@ -1,4 +1,4 @@
-import { QUESTION_LEVELS, RANK_GAMES, RANK_LESSONS, RANK_LESSON_SCORE, RANKS } from './content'
+import { QUESTION_LEVELS, RANK_GAMES, RANK_LESSON_SCORE, RANK_LESSON_SHARE, RANK_LESSONS, RANKS } from './content'
 import type { Game, Promotion, SkillId, Swap, TrainingResult } from './types'
 
 // Ranks from Bronze to Grandmaster (content in content.ts). Your rank is the highest one you
@@ -77,12 +77,15 @@ export interface RankProgress {
   top: boolean
 }
 
+/** A lesson that counts toward the exam: 4 of 5, 7 of 8, 8 of 10 (see Settings → lesson length). */
+export const goodLesson = (t: TrainingResult) => t.correct >= RANK_LESSON_SCORE && t.correct >= RANK_LESSON_SHARE * t.total
+
 export function rankProgress(promotions: Promotion[], games: Game[], training: TrainingResult[]): RankProgress {
   const rank = currentRank(promotions)
   const since = rankStart(promotions)
   const gamesIn = games.filter((g) => g.createdAt >= since).length
-  // Ghalta Rush scores count answers in a minute, not out of 5: it doesn't count here.
-  const lessonsIn = training.filter((t) => t.createdAt >= since && t.lessonId !== 'challenge' && t.correct >= RANK_LESSON_SCORE).length
+  // Ghalta Rush scores count answers in a minute, not out of a lesson: it doesn't count here.
+  const lessonsIn = training.filter((t) => t.createdAt >= since && t.lessonId !== 'challenge' && goodLesson(t)).length
   const top = rank >= TOP_RANK
   return {
     rank,

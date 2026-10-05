@@ -9,7 +9,6 @@ import type { FieldId } from '../lib/quiz/cardQuiz'
 import { buildExam } from '../lib/quiz/exam'
 import { buildLesson, LESSON_BY_ID, orderIsCorrect, selectIsCorrect, selectSolution, type Question } from '../lib/quiz/quiz'
 import { currentRank } from '../lib/ranks'
-import { EXAM_HEARTS } from '../lib/content'
 import { RankEmblem, rankStyle } from '../components/RankEmblem'
 import { ExamFailed, Promotion } from './Ranks'
 import { navigate } from '../lib/route'
@@ -41,13 +40,15 @@ interface Item {
  */
 export function Lesson({ id = 'rules', exam = false }: { id?: LessonId; exam?: boolean }) {
   const deck = useDeckCards({ autoLoad: false })
-  const { quiz, promotions, games } = useData()
+  const { quiz, promotions, games, settings } = useData()
+  // Fixed for the whole lesson, even if the settings change meanwhile.
+  const [{ lessonLength, mistakeDays, examHearts }] = useState(() => settings)
   // The rank you take the lesson or exam in (stays put when the exam promotes you).
   const [rank] = useState(() => currentRank(promotions))
   const build = (seed: number): Item[] => {
     const ctx = { decklist: deck.decklist, commander: deck.commander, lookup: deck.lookup, rulings: deck.rulings, games }
     if (exam) return buildExam(openLessons(deck), ctx, seed, rank).map((e) => ({ ...e, retry: false }))
-    return buildLesson(id, ctx, seed, quiz, undefined, rank).map((question) => ({ question, lessonId: id, retry: false }))
+    return buildLesson(id, ctx, seed, quiz, undefined, rank, { count: lessonLength, mistakeDays }).map((question) => ({ question, lessonId: id, retry: false }))
   }
   const [queue, setQueue] = useState<Item[]>(() => build(randomSeed()))
   const [index, setIndex] = useState(0)
@@ -62,7 +63,7 @@ export function Lesson({ id = 'rules', exam = false }: { id?: LessonId; exam?: b
   const [checked, setChecked] = useState(false)
   const [score, setScore] = useState(0)
   const [done, setDone] = useState(false)
-  const [hearts, setHearts] = useState(EXAM_HEARTS)
+  const [hearts, setHearts] = useState(examHearts)
 
   const firstTryTotal = queue.filter((i) => !i.retry).length
   const item = queue[index]
@@ -82,7 +83,7 @@ export function Lesson({ id = 'rules', exam = false }: { id?: LessonId; exam?: b
     reset()
     setScore(0)
     setDone(false)
-    setHearts(EXAM_HEARTS)
+    setHearts(examHearts)
   }
 
   if (exam && done) return hearts > 0 ? <Promotion rank={rank + 1} /> : <ExamFailed rank={rank} correct={score} onAgain={restart} />
@@ -206,8 +207,8 @@ export function Lesson({ id = 'rules', exam = false }: { id?: LessonId; exam?: b
         <IconButton icon={XIcon} label={exam ? 'End exam' : 'End lesson'} onClick={() => navigate(exam ? '/raenge' : '/training')} />
         <ProgressBar value={index / queue.length} label={`Question ${index + 1} of ${queue.length}`} />
         {exam && (
-          <span className="hearts" aria-label={`${hearts} of ${EXAM_HEARTS} hearts left`}>
-            {Array.from({ length: EXAM_HEARTS }, (_, i) => (
+          <span className="hearts" aria-label={`${hearts} of ${examHearts} hearts left`}>
+            {Array.from({ length: examHearts }, (_, i) => (
               <HeartIcon key={i} weight="fill" className={i < hearts ? '' : 'lost'} />
             ))}
           </span>

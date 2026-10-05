@@ -29,9 +29,15 @@ export function Home() {
   const currentIndex = unlocked.indexOf(current)
   // Your skills, plus a preview of what the next rank unlocks.
   const pathSkills = SKILL_PATH.filter((id) => skillRank(id) <= progress.rank + 1)
-  const stats = computeStats(games, settings.defaultDeck, { swaps, decklist, promotions })
+  const stats = computeStats(games, settings.defaultDeck, {
+    swaps,
+    decklist,
+    promotions,
+    upgradeEvery: settings.upgradeEvery,
+    patternThreshold: settings.patternThreshold,
+  })
   const chest = stats.upgrade
-  const bracket = bracketCheck(stats.deckGames, settings.bracketCheckDone)
+  const bracket = bracketCheck(stats.deckGames, settings.bracketCheckDone, settings.bracketCheckGames)
   const cardsLabel = `${chest.cards} card${chest.cards === 1 ? '' : 's'}`
   const bonusNote = chest.bonus ? ' (one is your rank bonus)' : ''
 
@@ -39,7 +45,7 @@ export function Home() {
     <div className="screen">
       <TopStats />
 
-      <DailyGoal />
+      {settings.showDailyGoal && <DailyGoal />}
 
       {draft && (
         <Card className="draft-banner" style={skillStyle(draft.form.focus)}>
@@ -117,6 +123,7 @@ export function Home() {
             </small>
           </span>
         </li>
+        {bracket.target > 0 && (
         <li
           className={`path-step chest ${bracket.due ? 'ready' : ''} ${bracket.done ? 'done' : ''}`}
           style={{ '--offset': '52px' } as CSSProperties}
@@ -134,6 +141,7 @@ export function Home() {
             <small>{bracket.done ? 'done' : `${Math.min(bracket.games, bracket.target)}/${bracket.target} games`}</small>
           </span>
         </li>
+        )}
       </ol>
 
       <InstallHint compact />
@@ -154,10 +162,10 @@ export function Home() {
             </p>
             {stats.upgradeCandidates.length > 0 ? (
               <p>
-                Candidates (dead 3× or more): <strong>{stats.upgradeCandidates.map((c) => c.name).join(', ')}</strong>
+                Candidates (dead {settings.patternThreshold}× or more): <strong>{stats.upgradeCandidates.map((c) => c.name).join(', ')}</strong>
               </p>
             ) : (
-              <p className="muted">No card has been dead 3× yet. Note dead cards after every game.</p>
+              <p className="muted">No card has been dead {settings.patternThreshold}× yet. Note dead cards after every game.</p>
             )}
           </>
         ) : (

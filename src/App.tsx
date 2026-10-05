@@ -5,12 +5,14 @@ import { UpdateBanner } from './components/UpdateBanner'
 import { SKILLS } from './lib/content'
 import { useRoute } from './lib/route'
 import { useData } from './lib/store'
+import { setHaptics } from './lib/haptics'
 import { useToast } from './lib/toast'
 import type { LessonId, SkillId } from './lib/types'
 import { LESSON_BY_ID } from './lib/quiz/quiz'
 import { GameDetail, GameEdit, History } from './pages/History'
 import { Home } from './pages/Home'
 import { CheatSheet, GhaltaPage, More } from './pages/More'
+import { SettingsPage } from './pages/Settings'
 import { Round, RoundDone, RoundStart } from './pages/Round'
 import { Ranks } from './pages/Ranks'
 import { RoundEnd } from './pages/RoundEnd'
@@ -56,6 +58,8 @@ function Page({ route }: { route: string }) {
       return <Stats />
     case '/mehr':
       return <More />
+    case '/mehr/einstellungen':
+      return <SettingsPage />
     case '/mehr/spickzettel':
       return <CheatSheet />
     case '/mehr/ghalta':
@@ -92,16 +96,24 @@ function activeTab(route: string): string {
 export function App() {
   const route = useRoute()
   const message = useToast()
-  const { deckChosen } = useData()
+  const { deckChosen, settings } = useData()
   const tab = activeTab(route)
   // First launch: pick a deck before anything else, without the tab bar.
   const flow = isFlow(route) || !deckChosen
   // Dice are one tap away everywhere, except inside a quiz lesson or exam and before a deck is chosen.
-  const dice = deckChosen && !route.startsWith('/training/') && route !== '/pruefung'
+  const dice = settings.diceButton && deckChosen && !route.startsWith('/training/') && route !== '/pruefung'
 
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [route])
+
+  useEffect(() => setHaptics(settings.haptics), [settings.haptics])
+
+  // "system" leaves the colors to prefers-color-scheme (see styles.css).
+  useEffect(() => {
+    if (settings.theme === 'system') delete document.documentElement.dataset.theme
+    else document.documentElement.dataset.theme = settings.theme
+  }, [settings.theme])
 
   return (
     <>

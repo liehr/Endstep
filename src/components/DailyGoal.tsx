@@ -20,9 +20,9 @@ export function DailyGoal() {
   const day = trainingDay(training, today(), settings.dailyGoal)
   const progress = Math.min(1, day.done / day.goal)
   // Mistakes first, otherwise a warm-up for the next game's focus skill.
-  const review = reviewCount(quiz, games)
+  const review = reviewCount(quiz, games, undefined, settings.mistakeDays)
   const next = review.questions + review.games > 0 ? 'mistakes' : warmUpLesson(nextFocus(games, unlockedSkills(currentRank(promotions))), (id) => lessonOpen(LESSON_BY_ID[id], deck))
-  const nextLabel = next === 'mistakes' ? 'Your Mistakes' : `${LESSON_BY_ID[next].title} (warm-up)`
+  const nextLabel = next === 'mistakes' ? 'Your Mistakes' : `${LESSON_BY_ID[next].title}${settings.warmUps ? ' (warm-up)' : ''}`
 
   return (
     <>

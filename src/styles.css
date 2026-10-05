@@ -93,8 +93,9 @@
   color-scheme: light;
 }
 
+/* Dark mode: follows the system unless Settings → Theme forces light or dark (data-theme on <html>). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #131f24;
     --surface: #131f24;
     --surface-2: #1c2b33;
@@ -156,6 +157,69 @@
     --rank-grandmaster-lip: #922626;
     color-scheme: dark;
   }
+}
+
+:root[data-theme='dark'] {
+  --bg: #131f24;
+  --surface: #131f24;
+  --surface-2: #1c2b33;
+  --border: #37464f;
+  --text: #f1f7fb;
+  --muted: #a3b4bd;
+  --subtle: #627883;
+
+  --brand: #58cc02;
+  --brand-lip: #3f9a00;
+  --on-brand: #131f24;
+  --brand-soft: #1f3a12;
+  --brand-text: #8be04e;
+
+  --select: #49c0f8;
+  --select-soft: #1b3644;
+  --select-border: #2f7ea3;
+
+  --danger: #e66767;
+  --danger-lip: #a94545;
+
+  --win: #58cc02;
+  --win-soft: #1f3a12;
+  --win-text: #8be04e;
+  --loss: #ff7a7a;
+  --loss-soft: #3d1f22;
+  --loss-text: #ff9b9b;
+
+  --warn-soft: #362c0c;
+  --warn-border: #a87b00;
+  --warn-text: #ffd060;
+
+  --chart: #3987e5;
+
+  --skill-mulligan: #d95926;
+  --skill-sequencing: #3987e5;
+  --skill-threat: #e66767;
+  --skill-combat: #199e70;
+  --skill-combat-ink: #ffffff;
+  --skill-wipe: #c98500;
+  --skill-wipe-ink: #ffffff;
+  --skill-removal: #d55181;
+  --skill-removal-ink: #ffffff;
+  --skill-politics: #9085e9;
+
+  --rank-bronze: #c47d40;
+  --rank-bronze-lip: #7d4820;
+  --rank-silver: #a3afb9;
+  --rank-silver-lip: #66727c;
+  --rank-gold: #f0bb00;
+  --rank-gold-lip: #a87f00;
+  --rank-platinum: #2fb3a2;
+  --rank-platinum-lip: #1b7066;
+  --rank-diamond: #3aa6e2;
+  --rank-diamond-lip: #186a9a;
+  --rank-master: #9a62de;
+  --rank-master-lip: #5e3196;
+  --rank-grandmaster: #e04848;
+  --rank-grandmaster-lip: #922626;
+  color-scheme: dark;
 }
 
 /* ==========================================================================

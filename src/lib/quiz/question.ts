@@ -73,6 +73,8 @@ export interface QuizContext {
   rulings?: (name: string) => Ruling[] | undefined
   /** Your games, so the mistakes lesson can bring up what you'd change from recent ones. */
   games?: Game[]
+  /** Questions per lesson (setting); lessons that build a fixed number use it. */
+  count?: number
 }
 
 export const QUESTIONS_PER_LESSON = 5

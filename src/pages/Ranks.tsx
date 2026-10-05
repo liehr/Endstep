@@ -4,7 +4,7 @@ import { Confetti } from '../components/Confetti'
 import { RankEmblem, rankStyle } from '../components/RankEmblem'
 import { SkillBadge } from '../components/skills'
 import { Button, IconButton, ProgressBar } from '../components/ui'
-import { EXAM_HEARTS, EXAM_QUESTIONS, RANKS, SKILL_BY_ID } from '../lib/content'
+import { EXAM_QUESTIONS, RANKS, SKILL_BY_ID } from '../lib/content'
 import { haptic } from '../lib/haptics'
 import { rankProgress, type RankProgress } from '../lib/ranks'
 import { navigate } from '../lib/route'
@@ -51,7 +51,7 @@ export function RankGoals({ progress }: { progress: RankProgress }) {
       </div>
       <div className="rank-goal">
         <span className="rank-goal-head">
-          <span>Lessons with 4 or 5 right</span>
+          <span>Lessons with 80% or more right</span>
           <span>
             {Math.min(progress.lessons, progress.lessonsTarget)}/{progress.lessonsTarget}
           </span>
@@ -64,7 +64,7 @@ export function RankGoals({ progress }: { progress: RankProgress }) {
 
 /** The ladder: all ranks from Bronze to Grandmaster, like Duolingo's leagues. */
 export function Ranks() {
-  const { promotions, games, training } = useData()
+  const { promotions, games, training, settings } = useData()
   const progress = rankProgress(promotions, games, training)
   const rank = RANKS[progress.rank]
   const next = RANKS[progress.rank + 1]
@@ -100,7 +100,7 @@ export function Ranks() {
         <section className="panel">
           <h2>Exam for {next.name}</h2>
           <p className="muted">
-            {EXAM_QUESTIONS} questions from all your lessons up to {rank.name}, with {EXAM_HEARTS} hearts. Unlocks after the games and lessons below.
+            {EXAM_QUESTIONS} questions from all your lessons up to {rank.name}, with {settings.examHearts} hearts. Unlocks after the games and lessons below.
           </p>
           <RankGoals progress={progress} />
           {progress.examReady ? (

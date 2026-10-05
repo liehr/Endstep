@@ -67,7 +67,32 @@ export interface Settings {
   bracketCheckDone: boolean
   /** Lessons per day for the training streak. */
   dailyGoal: number
+  theme: Theme
+  /** Vibration on taps and answers (Android). */
+  haptics: boolean
+  /** Confetti after wins, good lessons and promotions. */
+  celebrations: boolean
+  /** Floating dice button on every screen. */
+  diceButton: boolean
+  /** Daily goal card on the home page. */
+  showDailyGoal: boolean
+  /** Questions per lesson. */
+  lessonLength: number
+  /** Tag the lesson that warms up your next game's focus skill. */
+  warmUps: boolean
+  /** How far back "Your Mistakes" looks. */
+  mistakeDays: number
+  /** Wrong answers allowed in the rank exam. */
+  examHearts: number
+  /** Games between swap rounds (upgrade chest). */
+  upgradeEvery: number
+  /** Games until the bracket check; 0 = off. */
+  bracketCheckGames: number
+  /** How often a dead card or a skill mistake must come up to count as a pattern. */
+  patternThreshold: number
 }
+
+export type Theme = 'system' | 'light' | 'dark'
 
 /** Counters during a game: current turn and Ghalta calculator. */
 export interface Tracker {
