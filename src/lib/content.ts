@@ -14,7 +14,7 @@ export const SKILLS: Skill[] = [
   {
     id: 'mulligan',
     name: 'Mulligan',
-    tip: 'The first mulligan is free. Keep 3–4 lands or mana creatures plus at least one early big creature.',
+    tip: 'The first mulligan is free. Keep 3–4 lands or mana sources plus something to cast early, in the colors your spells need.',
     task: 'Check your opening hand on purpose and calmly send back a “meh” hand.',
   },
   {

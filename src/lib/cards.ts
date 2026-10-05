@@ -1,5 +1,7 @@
 // Compact card data (from Scryfall) and helpers to read it for the quiz and simulation.
 
+import { ANY, maskOf } from './mana'
+
 export interface CardInfo {
   name: string
   typeLine: string
@@ -38,65 +40,79 @@ export const isArtifact = (c: CardInfo) => /\bArtifact\b/.test(c.typeLine)
 
 export interface ManaCost {
   generic: number
-  /** Green symbols (incl. hybrid/Phyrexian green). */
-  green: number
-  /** Other colored symbols (W/U/B/R) – the green deck can't pay these. */
-  otherColors: number
+  /** One entry per colored or colorless symbol: the colors that can pay it (see mana.ts). */
+  pips: number[]
   hasX: boolean
 }
 
-/** "{2}{G}{G}" → 2 generic, 2 green. */
+/** "{2}{G}{G}" → 2 generic, two pips that need green. Hybrid {G/U} accepts either color. */
 export function parseCost(manaCost: string): ManaCost {
-  const cost: ManaCost = { generic: 0, green: 0, otherColors: 0, hasX: false }
+  const cost: ManaCost = { generic: 0, pips: [], hasX: false }
   for (const [, sym] of manaCost.matchAll(/\{([^}]+)\}/g)) {
     if (/^\d+$/.test(sym)) cost.generic += Number(sym)
-    else if (sym === 'X') cost.hasX = true
-    else if (sym === 'C') cost.generic += 1
-    else if (sym.includes('G')) cost.green += 1
-    else if (/^[WUBR](\/P)?$/.test(sym) || /^[WUBR]\/[WUBR]$/.test(sym)) cost.otherColors += 1
-    else if (/^2\/[WUBR]$/.test(sym)) cost.generic += 2
+    else if (/^[XYZ]$/.test(sym)) cost.hasX = true
+    else if (sym === 'S') cost.generic += 1
+    else if (/^2\/[WUBRG]$/.test(sym)) cost.generic += 2
+    else if (/^[WUBRGC](\/[WUBRG])?(\/P)?$/.test(sym)) cost.pips.push(maskOf(sym[0]) | (sym[1] === '/' && sym[2] !== 'P' ? maskOf(sym[2]) : 0))
   }
   return cost
 }
+
+/** Colors a cost asks for (bit mask, without colorless). */
+export const costColors = (cost: ManaCost) => cost.pips.reduce((m, p) => m | p, 0) & ANY
 
 export interface ManaAbility {
   /** Mana per tap in the normal case. */
   amount: number
   /** Mana when you control a creature with power 4+ (Ilysian Caryatid, Whisperer of the Wilds). */
   ferociousAmount: number
-  /** Can it produce green mana? (Otherwise colorless only, e.g. Sol Ring.) */
-  green: boolean
+  /** Which colors each mana can be (bit mask, see mana.ts), e.g. only {C} for Sol Ring. */
+  mask: number
+}
+
+const NUMBER_WORDS: Record<string, number> = { one: 1, two: 2, three: 3 }
+
+/** One "Add …" clause: how much mana, which colors. */
+function parseAdd(clause: string): { amount: number; mask: number } | null {
+  const symbols = clause.match(/\{[WUBRGC]\}/g) ?? []
+  let mask = symbols.reduce((m, s) => m | maskOf(s[1]), 0)
+  if (/any color|any one color|commander's color identity|any combination of colors/i.test(clause)) mask |= ANY
+  if (mask === 0) return null
+  const word = clause.match(/^(one|two|three) mana/i)
+  if (word) return { amount: NUMBER_WORDS[word[1].toLowerCase()], mask }
+  // "{R} or {G}" and "{W}, {U}, or {B}" are one mana; "{C}{C}" is two.
+  const first = clause.split(/,? or |, /)[0]
+  return { amount: first.match(/\{[WUBRGC]\}/g)?.length || 1, mask }
 }
 
 /** Reads "{T}: Add …" from the rules text. null if the card produces no mana. */
 export function manaAbility(card: CardInfo): ManaAbility | null {
   const text = card.oracleText
-  const clauses = [...text.matchAll(/\{T\}(?:,[^:]*)?: Add ([^.]+)\./g)].map((m) => m[1])
-  if (clauses.length === 0) {
+  const adds = [...text.matchAll(/\{T\}(?:,[^:]*)?: Add ([^.]+)\./g)].map((m) => parseAdd(m[1])).filter((a) => a !== null)
+  if (adds.length === 0) {
     if (card.producedMana.length === 0) return null
     // Fallback: produced_mana without readable text (should be rare).
-    return { amount: 1, ferociousAmount: 1, green: card.producedMana.includes('G') }
+    return { amount: 1, ferociousAmount: 1, mask: card.producedMana.reduce((m, l) => m | maskOf(l), 0) }
   }
 
-  const amountOf = (clause: string) => {
-    const symbols = clause.match(/\{[WUBRGC]\}/g)?.length ?? 0
-    if (symbols > 0) return symbols
-    if (/^two mana/i.test(clause)) return 2
-    if (/^three mana/i.test(clause)) return 3
-    if (/^one mana/i.test(clause)) return 1
-    return 0
-  }
-
-  const amounts = clauses.map(amountOf).filter((n) => n > 0)
-  if (amounts.length === 0) return null
-  const base = amounts[0]
+  const base = adds[0].amount
   let ferocious = base
   if (/power 4 or greater/i.test(text)) {
     const twoInstead = /add two mana/i.test(text) ? 2 : 0
-    ferocious = Math.max(base, twoInstead, ...amounts)
+    ferocious = Math.max(base, twoInstead, ...adds.map((a) => a.amount))
   }
-  const green = clauses.some((c) => /\{G\}|any color|any one color|commander's color identity/i.test(c))
-  return { amount: base, ferociousAmount: ferocious, green }
+  return { amount: base, ferociousAmount: ferocious, mask: adds.reduce((m, a) => m | a.mask, 0) }
+}
+
+/** Lands like Evolving Wilds that fetch a basic land instead of tapping for mana. */
+export const fetchesLand = (card: CardInfo) =>
+  isLand(card) && !manaAbility(card) && /search your library for [^.]*(basic land|land card|Plains|Island|Swamp|Mountain|Forest)/i.test(card.oracleText)
+
+/** Spells and creatures that put a land from the library onto the battlefield (Cultivate, Wood Elves). */
+export function rampsLand(card: CardInfo): { tapped: boolean } | null {
+  if (isLand(card)) return null
+  const m = card.oracleText.match(/search your library for [^.]*land[^.]*onto the battlefield( tapped)?/i)
+  return m ? { tapped: m[1] !== undefined } : null
 }
 
 export const entersTapped = (card: CardInfo) => /enters( the battlefield)? tapped/i.test(card.oracleText)

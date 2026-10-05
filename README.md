@@ -24,14 +24,15 @@ It started with the Tramplesaurus Rex (Ghalta) precon and now works with any Com
   at the end):
   - *Combat & Trample*, *Commander Rules*, plus *Ghalta Math* for Ghalta decks
   - *Mulligan Trainer:* real opening hands from your deck, rated by the rule of thumb from the learning plan
-  - *When Does Ghalta Land?:* simulated turns with your deck (Ghalta decks for now)
+    (enough mana, early plays in the right colors; big-creature decks like Ghalta want an early big creature)
+  - *When Does Your Commander Land?:* simulated turns with your deck and your commander's real cost and colors
   - *Know Your Cards:* parts of a card are hidden (name, cost, power, a bit of text). Guess them or
     build the card from tiles; plus the card's role in the game plan (Ramp, Big creature, Card
     advantage, Interaction, Protection, Finisher).
   - *Card Rulings:* official rulings (from Scryfall) for the cards in your deck: which card is it about?
   - **Question memory:** the app remembers every answer. Wrong answers come back in the next lesson,
     right ones only after 1, 3, 7 and 16 days, and new questions come before ones you already know.
-- **Goldfish Lab (Ghalta decks for now):** 1,000 simulated games show on which turn Ghalta lands. Run it again
+- **Goldfish Lab:** 1,000 simulated games show on which turn your commander lands. Run it again
   after a swap round: did the deck get faster?
 - **Deck & swap rounds:** decklist with card images, swap rounds ("out" / "in") with a log and undo,
   win rate per deck version.

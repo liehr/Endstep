@@ -57,6 +57,36 @@ describe('Lessons', () => {
     })
   }
 
+  it('work for a blue-red deck too (lessons for Ghalta are left out)', () => {
+    const izzet: DeckEntry[] = [
+      { name: 'Island', qty: 30 },
+      { name: 'Mountain', qty: 30 },
+      { name: 'Spirebluff Canal', qty: 4 },
+      { name: 'Command Tower', qty: 1 },
+      { name: 'Evolving Wilds', qty: 4 },
+      { name: 'Arcane Signet', qty: 4 },
+      { name: 'Talrand, Sky Summoner', qty: 6 },
+      { name: 'Guttersnipe', qty: 6 },
+      { name: 'Counterspell', qty: 5 },
+      { name: 'Lightning Bolt', qty: 4 },
+      { name: 'Izzet Charm', qty: 3 },
+      { name: 'Brainstorm', qty: 2 },
+    ]
+    const izzetCtx = { decklist: izzet, commander: 'Niv-Mizzet, Parun', lookup, rulings }
+    expect(izzet.reduce((n, e) => n + e.qty, 0)).toBe(99)
+    const lessons = LESSONS.filter((l) => !l.forCommander || l.forCommander(izzetCtx.commander))
+    expect(lessons.map((l) => l.id)).not.toContain('ghalta')
+    for (const lesson of lessons.filter((l) => l.id !== 'rulings')) {
+      for (let seed = 1; seed <= 20; seed++) {
+        const qs = buildLesson(lesson.id, izzetCtx, seed)
+        expect(qs.length).toBeGreaterThanOrEqual(lesson.id === 'cards' ? 3 : 5)
+        qs.forEach(checkShape)
+        if (lesson.id === 'goldfish') expect(qs.some((q) => q.prompt.includes('Niv-Mizzet'))).toBe(true)
+        if (lesson.id === 'goldfish') expect(qs.every((q) => !q.prompt.includes('Ghalta'))).toBe(true)
+      }
+    }
+  })
+
   it('is reproducible with the same seed', () => {
     expect(buildLesson('goldfish', ctx, 9)).toEqual(buildLesson('goldfish', ctx, 9))
   })
@@ -94,7 +124,7 @@ describe('Answers are correct', () => {
     const answers: string[] = []
     for (let seed = 1; seed <= 20; seed++) {
       for (const q of buildLesson('mulligan', ctx, seed)) {
-        const keep = evaluateHand(q.cards!.map((c) => lookup(c.name)!)).keep
+        const keep = evaluateHand(q.cards!.map((c) => lookup(c.name)!), { bigCreature: true }).keep
         expect(correctLabel(q)).toBe(keep ? 'Keep' : 'Mulligan')
         answers.push(correctLabel(q))
       }

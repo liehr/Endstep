@@ -1,26 +1,57 @@
-import { isCreature, isLand, manaAbility, type CardInfo } from '../cards'
+import { fetchesLand, isCreature, isLand, manaAbility, parseCost, rampsLand, type CardInfo } from '../cards'
+import { ANY } from '../mana'
 
-// Rule of thumb from the study plan: "Keep hands with 3–4 lands or mana creatures
-// plus at least one early big creature." The first mulligan is free.
+// Rule of thumb from the study plan: "Keep hands with 3–4 lands or mana sources plus
+// something to do early, in the right colors." The first mulligan is free.
+// Decks built around big creatures (Ghalta) want an early big creature instead.
+
+export interface HandRule {
+  /** Big-creature deck: wants a creature with power 4+ for at most 4 mana. */
+  bigCreature: boolean
+}
+
+export const DEFAULT_RULE: HandRule = { bigCreature: false }
 
 export interface HandReport {
   lands: number
-  /** Mana creatures and mana artifacts (e.g. Sol Ring). */
+  /** Mana creatures, mana rocks and land ramp (e.g. Sol Ring, Cultivate). */
   ramp: number
-  /** Creatures with power 4+ for at most 4 mana. */
-  earlyBig: string[]
+  /** Early plays: creatures with power 4+ for at most 4 mana (big-creature rule) or spells for at most 3 mana. */
+  early: string[]
   keep: boolean
   reasons: string[]
 }
 
-export const isRamp = (c: CardInfo) => !isLand(c) && manaAbility(c) !== null
+/** The rule in one sentence, for explanations. */
+export const ruleText = (rule: HandRule) =>
+  rule.bigCreature
+    ? '3–4 lands or mana sources plus an early big creature'
+    : '3–4 lands or mana sources plus something to cast in the first turns, in the right colors'
+
+export const isRamp = (c: CardInfo) => !isLand(c) && (manaAbility(c) !== null || rampsLand(c) !== null)
 export const isEarlyBig = (c: CardInfo) => isCreature(c) && !isRamp(c) && (c.power ?? 0) >= 4 && c.cmc <= 4
 
-export function evaluateHand(hand: (CardInfo | null)[]): HandReport {
+/** Colors the lands and mana sources in a hand can make. */
+function handColors(cards: CardInfo[]): number {
+  return cards.reduce((mask, c) => {
+    if (fetchesLand(c) || rampsLand(c)) return mask | ANY
+    const ability = isLand(c) || isRamp(c) ? manaAbility(c) : null
+    return ability ? mask | ability.mask : mask
+  }, 0)
+}
+
+/** Can the hand's mana sources make every colored symbol of this card (ignoring how much mana)? */
+const colorsFit = (c: CardInfo, colors: number) => parseCost(c.manaCost).pips.every((pip) => pip & colors)
+
+export function evaluateHand(hand: (CardInfo | null)[], rule: HandRule = DEFAULT_RULE): HandReport {
   const cards = hand.filter((c): c is CardInfo => c !== null)
   const lands = cards.filter(isLand).length
   const ramp = cards.filter(isRamp).length
-  const earlyBig = cards.filter(isEarlyBig).map((c) => c.name)
+  const colors = handColors(cards)
+  const spells = cards.filter((c) => !isLand(c))
+  const early = rule.bigCreature
+    ? cards.filter(isEarlyBig).map((c) => c.name)
+    : spells.filter((c) => c.cmc <= 3 && colorsFit(c, colors)).map((c) => c.name)
   const sources = lands + ramp
   const reasons: string[] = []
 
@@ -41,10 +72,20 @@ export function evaluateHand(hand: (CardInfo | null)[]): HandReport {
     reasons.push(`${landWord(lands)}${rampText}: the mana works.`)
   }
 
-  if (earlyBig.length > 0) reasons.push(`Early big creature: ${earlyBig.join(', ')}.`)
-  else reasons.push('No early big creature (power 4+ for at most 4 mana).')
+  // Lands that can't cast any of the spells in hand.
+  let colorsOk = true
+  if (manaOk && spells.length > 0 && !spells.some((c) => colorsFit(c, colors))) {
+    colorsOk = false
+    reasons.push('Your lands don’t make the colors your spells need.')
+  }
 
-  return { lands, ramp, earlyBig, keep: manaOk && earlyBig.length > 0, reasons }
+  if (rule.bigCreature) {
+    if (early.length > 0) reasons.push(`Early big creature: ${early.join(', ')}.`)
+    else reasons.push('No early big creature (power 4+ for at most 4 mana).')
+  } else if (early.length > 0) reasons.push(`Early plays: ${early.join(', ')}.`)
+  else if (colorsOk) reasons.push('Nothing to cast in the first three turns.')
+
+  return { lands, ramp, early, keep: manaOk && colorsOk && early.length > 0, reasons }
 }
 
 /** Looser rule after a mulligan: as long as the mana works. */

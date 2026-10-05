@@ -1,8 +1,19 @@
 import { boardPower, isCreature, isLand, type CardInfo } from '../cards'
-import { isGhalta } from '../commander'
+import { isGhalta, shortName } from '../commander'
 import { ghaltaCost } from '../ghalta'
-import { buildLibrary, MAX_TURNS, simulateGame, type SimCard, type TurnLog } from '../sim/goldfish'
-import { evaluateHand } from '../sim/mulligan'
+import {
+  buildLibrary,
+  commanderCostLabel,
+  commanderGeneric,
+  handRuleFor,
+  MAX_TURNS,
+  simCommander,
+  simulateGame,
+  type SimCard,
+  type SimCommander,
+  type TurnLog,
+} from '../sim/goldfish'
+import { evaluateHand, ruleText } from '../sim/mulligan'
 import { mulberry32, shuffle, type Rng } from '../sim/rng'
 import { today as todayIso } from '../dates'
 import type { Ruling } from '../scryfall'
@@ -266,11 +277,12 @@ const handKey = (hand: { name: string }[]) => hand.map((c) => c.name).sort().joi
 
 function mulliganLesson(ctx: QuizContext): Question[] {
   const library = deckLibrary(ctx).filter((c) => c.info)
+  const rule = handRuleFor(commanderOf(ctx))
   const questions: Question[] = []
   let keeps = 0
   for (let attempt = 0; questions.length < QUESTIONS_PER_LESSON && attempt < 200; attempt++) {
     const hand = shuffle(library, ctx.rng).slice(0, 7)
-    const report = evaluateHand(hand.map((c) => c.info))
+    const report = evaluateHand(hand.map((c) => c.info), rule)
     // Keep it balanced: 2–3 hands to keep, the rest mulligans.
     const wantKeep = keeps < 3 && (questions.length - keeps >= 2 || ctx.rng() < 0.5)
     if (report.keep !== wantKeep && attempt < 150) continue
@@ -283,71 +295,89 @@ function mulliganLesson(ctx: QuizContext): Question[] {
       cardsLabel: 'Your opening hand',
       cards: hand.map((c) => ({ name: c.name })),
       ...ordered(['Keep', 'Mulligan'], report.keep ? 0 : 1),
-      explanation: `${report.keep ? 'Keep' : 'Mulligan'} by the rule of thumb (3–4 lands or mana creatures plus an early big creature). ${report.reasons.join(' ')}`,
+      explanation: `${report.keep ? 'Keep' : 'Mulligan'} by the rule of thumb (${ruleText(rule)}). ${report.reasons.join(' ')}`,
     })
   }
   return questions
 }
 
-// --- Lesson 5: When Does Ghalta Land? (simulation) ---------------------------------
+// --- Lesson 5: When Does Your Commander Land? (simulation) -------------------------
 
 const TURN_BUCKETS = ['Turn 3 or earlier', 'Turn 4', 'Turn 5', 'Turn 6', 'Turn 7 or later']
 const bucketOf = (turn: number | null) => (turn === null ? 4 : Math.min(4, Math.max(0, turn - 3)))
 
-export function describeTurn(t: TurnLog): string {
+export function describeTurn(t: TurnLog, commander: string): string {
   const parts = [`Turn ${t.turn}:`]
   if (t.drew) parts.push(`draws ${t.drew}`)
   if (t.land) parts.push(`· plays ${t.land}`)
-  const spells = t.cast.filter((c) => !c.startsWith('Ghalta'))
+  const spells = t.cast.filter((c) => c !== commander)
   if (spells.length) parts.push(`· casts ${spells.join(', ')}`)
-  if (t.ghalta) parts.push('· casts GHALTA!')
+  if (t.commander) parts.push(`· casts ${shortName(commander).toUpperCase()}!`)
   parts.push(`(power ${t.power}, ${t.mana} mana)`)
   return parts.join(' ')
 }
 
-function whenQuestion(ctx: QuizContext, library: SimCard[], n: number): Question {
-  const game = simulateGame(library, Math.floor(ctx.rng() * 2 ** 31))
-  const correct = bucketOf(game.ghaltaTurn)
-  const shown = game.log.slice(0, game.ghaltaTurn ?? MAX_TURNS)
+/** The commander for the simulation; null while its card data is missing. */
+function commanderOf(ctx: Pick<QuizContext, 'commander' | 'lookup'>): SimCommander | null {
+  const card = ctx.lookup(ctx.commander)
+  return card ? simCommander(card) : null
+}
+
+function whenQuestion(ctx: QuizContext, library: SimCard[], commander: SimCommander, n: number): Question {
+  const game = simulateGame(library, Math.floor(ctx.rng() * 2 ** 31), commander)
+  const correct = bucketOf(game.commanderTurn)
+  const shown = game.log.slice(0, game.commanderTurn ?? MAX_TURNS)
+  const name = shortName(commander.name)
   return {
     id: `when-${n}`,
     key: `when:${handKey(game.hand)}`,
-    prompt: 'When can Ghalta land with this opening hand?',
-    context: `The autopilot plays a land every turn, mana creatures first, then the strongest creatures. No opponents.${game.mulligans ? ` (After ${game.mulligans} mulligan${game.mulligans > 1 ? 's' : ''}.)` : ''}`,
+    prompt: `When can ${name} land with this opening hand?`,
+    context: `The autopilot plays a land every turn, ramp first, then the strongest creatures. No opponents.${game.mulligans ? ` (After ${game.mulligans} mulligan${game.mulligans > 1 ? 's' : ''}.)` : ''}`,
     cardsLabel: 'Your opening hand',
     cards: game.hand.map((c) => ({ name: c.name })),
     ...ordered(TURN_BUCKETS, correct),
     explanation:
-      game.ghaltaTurn === null
-        ? `With this hand, Ghalta didn’t land by turn ${MAX_TURNS}.`
-        : `In this simulation, Ghalta landed on turn ${game.ghaltaTurn}.`,
-    details: { title: 'How the simulation went', lines: shown.map(describeTurn) },
+      game.commanderTurn === null
+        ? `With this hand, ${name} didn’t land by turn ${MAX_TURNS}.`
+        : `In this simulation, ${name} landed on turn ${game.commanderTurn}.`,
+    details: { title: 'How the simulation went', lines: shown.map((t) => describeTurn(t, commander.name)) },
   }
 }
 
-function castNowQuestion(ctx: QuizContext, library: SimCard[], n: number): Question | null {
-  const game = simulateGame(library, Math.floor(ctx.rng() * 2 ** 31))
-  const candidates = game.log.filter((t) => t.turn >= 2 && t.boardAtStart.length > 0)
+function castNowQuestion(ctx: QuizContext, library: SimCard[], commander: SimCommander, n: number): Question | null {
+  const game = simulateGame(library, Math.floor(ctx.rng() * 2 ** 31), commander)
+  const byPower = commander.reducedByPower
+  const candidates = game.log.filter((t) => t.turn >= 2 && (byPower ? t.boardAtStart : t.sourcesAtStart).length > 0)
   if (candidates.length === 0) return null
   const t = pick(candidates, ctx.rng)
-  const cost = ghaltaCost(t.powerAtStart, 0)
-  const can = t.mana >= cost.total
+  const name = shortName(commander.name)
+  const label = commanderCostLabel(commander, t.powerAtStart)
+  const total = commanderGeneric(commander, t.powerAtStart) + commander.cost.pips.length
+  const can = t.canCastAtStart
+  const verdict = can
+    ? `${t.mana} mana in the right colors is enough.`
+    : t.mana >= total
+      ? `${t.mana} mana would be enough, but not in the right colors.`
+      : `${t.mana} mana isn’t enough.`
+  const shownCards = byPower ? t.boardAtStart : t.sourcesAtStart
   return {
     id: `cast-now-${n}`,
-    key: `cast-now:${t.turn}:${t.mana}:${t.boardAtStart.join('|')}`,
-    prompt: `Turn ${t.turn}: You have ${t.mana} mana. Can you cast Ghalta now without playing anything first?`,
-    cardsLabel: 'Your creatures on the battlefield',
-    cards: t.boardAtStart.map((name) => ({ name })),
+    key: `cast-now:${t.turn}:${t.mana}:${shownCards.join('|')}`,
+    prompt: `Turn ${t.turn}: You have ${t.mana} mana. Can you cast ${name} now without playing anything first?`,
+    cardsLabel: byPower ? 'Your creatures on the battlefield' : 'Your untapped mana sources',
+    cards: shownCards.map((card) => ({ name: card })),
     ...ordered(['Yes', 'No'], can ? 0 : 1),
-    explanation: `Power ${t.powerAtStart} → Ghalta costs ${cost.label} (${cost.total} mana). ${can ? `${t.mana} mana is enough.` : `${t.mana} mana isn’t enough.`}`,
+    explanation: `${byPower ? `Power ${t.powerAtStart} → ` : ''}${name} costs ${label} (${total} mana). ${verdict}`,
   }
 }
 
 function goldfishLesson(ctx: QuizContext): Question[] {
+  const commander = commanderOf(ctx)
+  if (!commander) return []
   const library = deckLibrary(ctx)
-  const qs: Question[] = [0, 1, 2].map((i) => whenQuestion(ctx, library, i))
+  const qs: Question[] = [0, 1, 2].map((i) => whenQuestion(ctx, library, commander, i))
   for (let i = 0; qs.length < QUESTIONS_PER_LESSON && i < 10; i++) {
-    const q = castNowQuestion(ctx, library, i)
+    const q = castNowQuestion(ctx, library, commander, i)
     if (q) qs.splice(int(1, qs.length, ctx.rng), 0, q)
   }
   return qs
@@ -562,7 +592,15 @@ export const LESSONS: Lesson[] = [
   { id: 'combat', title: 'Combat & Trample', description: 'Blockers, trample and commander damage.', needsCards: false, remember: true, build: combatLesson },
   { id: 'rules', title: 'Commander Rules', description: 'Mulligan, stack, combat, brackets.', needsCards: false, remember: true, build: rulesLesson },
   { id: 'mulligan', title: 'Mulligan Trainer', description: 'Real opening hands from your deck.', needsCards: true, remember: false, build: mulliganLesson },
-  { id: 'goldfish', title: 'When Does Ghalta Land?', description: 'Simulated turns with your deck.', needsCards: true, forCommander: isGhalta, remember: false, build: goldfishLesson },
+  {
+    id: 'goldfish',
+    title: 'When Does Your Commander Land?',
+    description: 'Simulated turns with your deck.',
+    needsCards: true,
+    ready: (ctx) => ctx.lookup(ctx.commander) !== undefined,
+    remember: false,
+    build: goldfishLesson,
+  },
   { id: 'cards', title: 'Know Your Cards', description: 'What each card costs, does and is for.', needsCards: true, remember: true, build: cardsLesson },
   {
     id: 'rulings',
