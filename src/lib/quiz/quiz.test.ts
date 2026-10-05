@@ -3,7 +3,7 @@ import { cardKey, fromScryfall } from '../cards'
 import type { DeckEntry } from '../types'
 import { FIXTURE_CARDS, FIXTURE_RULINGS } from '../scryfall.fixture'
 import { evaluateHand } from '../sim/mulligan'
-import { buildLesson, cardCoverage, LESSON_BY_ID, LESSONS, rulingsReady, type Question } from './quiz'
+import { buildLesson, cardCoverage, LESSON_BY_ID, LESSONS, rulingsReady, selectIsCorrect, selectSolution, type Question } from './quiz'
 import { mulberry32 } from '../sim/rng'
 import { recordAnswer, topicOf } from './memory'
 import { RULES_BANK } from './rulesBank'
@@ -31,6 +31,15 @@ const ctx = { decklist, commander: 'Ghalta, Primal Hunger', lookup, rulings }
 const checkShape = (q: Question) => {
   expect(q.prompt.length).toBeGreaterThan(5)
   expect(q.explanation.length).toBeGreaterThan(10)
+  if (q.kind === 'order') {
+    expect([...q.bank!].sort()).toEqual([...q.order!].sort())
+    return
+  }
+  if (q.kind === 'select') {
+    expect(q.cards!.length).toBeGreaterThanOrEqual(4)
+    expect(selectIsCorrect(q.select!, selectSolution(q.select!))).toBe(true)
+    return
+  }
   if (q.kind === 'build') {
     const answers = q.blanks!.map((b) => b.answer)
     expect(q.blanks!.length).toBeGreaterThanOrEqual(2)
@@ -223,7 +232,7 @@ describe('Question memory in lessons', () => {
       const asked: string[] = []
       for (let lesson = 0; lesson < rounds; lesson++) {
         for (const [i, q] of buildLesson('cards', ctx, start * 100 + lesson, memory, today).entries()) {
-          asked.push(q.group!)
+          if (q.group !== 'tap-type') asked.push(q.group!)
           memory = recordAnswer(memory, q.key, true, today, { at: lesson * 10 + i + 1, group: q.group })
         }
       }
