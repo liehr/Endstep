@@ -1,17 +1,17 @@
 name: Release
 
-# Neue Version veröffentlichen: Actions → Release → Run workflow.
-#   patch = kleine Korrektur        (0.1.0 → 0.1.1)
-#   minor = neue Funktion           (0.1.0 → 0.2.0)
-#   major = große Umstellung        (0.1.0 → 1.0.0)
-# Der Workflow prüft die App, erhöht die Version, legt Tag und GitHub-Release
-# an und rollt die neue Version aus. Die installierte App meldet sich dann mit
-# „Neue Version verfügbar“.
+# Publish a new version: Actions → Release → Run workflow.
+#   patch = small fix               (0.1.0 → 0.1.1)
+#   minor = new feature             (0.1.0 → 0.2.0)
+#   major = big change              (0.1.0 → 1.0.0)
+# The workflow checks the app, bumps the version, creates the tag and GitHub
+# release and rolls out the new version. The installed app then shows
+# "New version available".
 on:
   workflow_dispatch:
     inputs:
       bump:
-        description: Art der Änderung
+        description: Type of change
         type: choice
         options: [patch, minor, major]
         default: patch
@@ -31,10 +31,10 @@ jobs:
     outputs:
       tag: ${{ steps.version.outputs.tag }}
     steps:
-      - name: Nur von master aus
+      - name: Only from master
         if: github.ref != 'refs/heads/master'
         run: |
-          echo "::error::Releases bitte von master aus starten (gewählt: ${{ github.ref_name }})."
+          echo "::error::Please start releases from master (selected: ${{ github.ref_name }})."
           exit 1
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -45,16 +45,16 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-      - name: Version erhöhen
+      - name: Bump version
         id: version
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           npm version "${{ inputs.bump }}" -m "Release v%s"
           echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
-      - name: Commit und Tag pushen
+      - name: Push commit and tag
         run: git push --atomic origin HEAD:master "${{ steps.version.outputs.tag }}"
-      - name: GitHub-Release anlegen
+      - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "${{ steps.version.outputs.tag }}" --title "${{ steps.version.outputs.tag }}" --generate-notes

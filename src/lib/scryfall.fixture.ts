@@ -1,6 +1,6 @@
 import type { ScryfallCard } from './cards'
 
-// Nachgebaute Scryfall-Antworten für Tests (Felder wie in der echten API).
+// Fake Scryfall responses for tests (fields as in the real API).
 
 const creature = (
   name: string,

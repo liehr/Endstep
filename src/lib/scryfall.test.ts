@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { autocomplete, fetchCards, satisfies } from './scryfall'
 import { FIXTURE_CARDS } from './scryfall.fixture'
 
-/** Nachgebaute Scryfall-API auf Basis der Testkarten (alle mit Set „fdc“, Basics in „fdn“). */
+/** Fake Scryfall API based on the test cards (all in set "fdc", basics in "fdn"). */
 function fakeApi() {
   const byName = new Map(FIXTURE_CARDS.map((c) => [c.name.toLowerCase(), c]))
   return vi.fn(async (url: string, init?: RequestInit) => {
@@ -33,16 +33,16 @@ function fakeApi() {
 }
 
 describe('fetchCards', () => {
-  it('lädt Karten gesammelt und sucht Unbekanntes unscharf nach', async () => {
+  it('loads cards in bulk and fuzzy-searches unknown ones', async () => {
     const api = fakeApi()
-    const { found, notFound } = await fetchCards(['Forest', 'llanowar elves', 'Steel Leaf', 'Gibt es nicht'], api as unknown as typeof fetch, 0)
+    const { found, notFound } = await fetchCards(['Forest', 'llanowar elves', 'Steel Leaf', 'Does not exist'], api as unknown as typeof fetch, 0)
     expect(found.get('forest')?.name).toBe('Forest')
     expect(found.get('llanowar elves')?.name).toBe('Llanowar Elves')
     expect(found.get('steel leaf')?.name).toBe('Steel Leaf Champion')
-    expect(notFound).toEqual(['Gibt es nicht'])
+    expect(notFound).toEqual(['Does not exist'])
   })
 
-  it('teilt große Decks in Anfragen zu je 75 Karten', async () => {
+  it('splits large decks into requests of 75 cards each', async () => {
     const api = fakeApi()
     const names = Array.from({ length: 100 }, (_, i) => (i % 2 ? 'Forest' : 'Sol Ring') + ' '.repeat(i % 2) + `#${i}`)
     await fetchCards(names, api as unknown as typeof fetch, 0).catch(() => {})
@@ -52,15 +52,15 @@ describe('fetchCards', () => {
 })
 
 describe('autocomplete', () => {
-  it('fragt erst ab zwei Zeichen', async () => {
+  it('only queries from two characters on', async () => {
     const api = fakeApi()
     expect(await autocomplete('G', api as unknown as typeof fetch)).toEqual([])
     expect(await autocomplete('Gha', api as unknown as typeof fetch)).toContain('Ghalta, Primal Hunger')
   })
 })
 
-describe('Druckversionen', () => {
-  it('lädt genau die gewünschte Druckversion (Set und Sammlernummer)', async () => {
+describe('printings', () => {
+  it('loads exactly the requested printing (set and collector number)', async () => {
     const api = fakeApi()
     const elves = FIXTURE_CARDS.find((c) => c.name === 'Llanowar Elves')!
     const { found } = await fetchCards([{ name: 'Llanowar Elves', set: 'fdc', number: elves.collector_number }], api as unknown as typeof fetch, 0)
@@ -68,14 +68,14 @@ describe('Druckversionen', () => {
     expect(found.get('llanowar elves')?.requestedSet).toBeUndefined()
   })
 
-  it('nimmt die Standardversion, wenn es die Karte im Set nicht gibt, und markiert das', async () => {
+  it('takes the default version if the card is not in the set, and marks it', async () => {
     const api = fakeApi()
-    // Sol Ring hat in den Testdaten kein Set → gibt es in „fdc“ nicht.
+    // Sol Ring has no set in the test data → it does not exist in "fdc".
     const { found } = await fetchCards([{ name: 'Sol Ring', set: 'fdc' }], api as unknown as typeof fetch, 0)
     expect(found.get('sol ring')).toMatchObject({ name: 'Sol Ring', requestedSet: 'fdc' })
   })
 
-  it('erkennt, ob eine gespeicherte Karte zur Druckversion passt', () => {
+  it('detects whether a stored card matches the printing', () => {
     const card = { set: 'fdc', collectorNumber: '12' } as Parameters<typeof satisfies>[0]
     expect(satisfies(card, { name: 'x' })).toBe(true)
     expect(satisfies(card, { name: 'x', set: 'fdc' })).toBe(true)

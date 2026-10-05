@@ -11,7 +11,7 @@ import {
 import type { CSSProperties } from 'react'
 import type { SkillId } from '../lib/types'
 
-/** Jeder Skill hat ein festes Icon und eine feste Farbe (Farben in styles.css, farbfehlsichtig geprüft). */
+/** Each skill has a fixed icon and a fixed colour (colours in styles.css, checked for colour vision deficiency). */
 export const SKILL_ICON: Record<SkillId, Icon> = {
   mulligan: CardsIcon,
   sequencing: ListNumbersIcon,
@@ -22,7 +22,7 @@ export const SKILL_ICON: Record<SkillId, Icon> = {
   politics: HandshakeIcon,
 }
 
-/** CSS-Variablen für die Skill-Farbe: --c (Fläche) und --c-ink (Icon/Text darauf). */
+/** CSS variables for the skill colour: --c (surface) and --c-ink (icon/text on top). */
 export function skillStyle(id: SkillId): CSSProperties {
   return { '--c': `var(--skill-${id})`, '--c-ink': `var(--skill-${id}-ink)` } as CSSProperties
 }

@@ -1,9 +1,9 @@
-/** Kurzes Vibrieren als Rückmeldung (Android; iOS-Browser unterstützen das nicht). */
+/** Short vibration as feedback (Android; iOS browsers don't support it). */
 export function haptic(pattern: number | number[] = 8) {
   try {
     navigator.vibrate?.(pattern)
   } catch {
-    // ignorieren
+    // ignore
   }
 }
 

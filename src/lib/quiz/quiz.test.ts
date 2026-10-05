@@ -31,7 +31,7 @@ const checkShape = (q: Question) => {
   if (q.kind === 'build') {
     const answers = q.blanks!.map((b) => b.answer)
     expect(q.blanks!.length).toBeGreaterThanOrEqual(2)
-    // Jede richtige Kachel liegt in der Bank, und es gibt Ablenkungen.
+    // Every correct tile is in the bank, and there are distractors.
     for (const a of answers) expect(q.bank).toContain(a)
     expect(q.bank!.length).toBeGreaterThan(answers.length)
     expect(new Set(q.bank).size).toBe(q.bank!.length)
@@ -44,9 +44,9 @@ const checkShape = (q: Question) => {
   expect(q.explanation.length).toBeGreaterThan(10)
 }
 
-describe('Lektionen', () => {
+describe('Lessons', () => {
   for (const lesson of LESSONS) {
-    it(`${lesson.title}: 5 gültige Fragen, über viele Seeds`, () => {
+    it(`${lesson.title}: 5 valid questions across many seeds`, () => {
       for (let seed = 1; seed <= 40; seed++) {
         const qs = buildLesson(lesson.id, ctx, seed)
         expect(qs).toHaveLength(5)
@@ -55,11 +55,11 @@ describe('Lektionen', () => {
     })
   }
 
-  it('ist mit gleichem Seed reproduzierbar', () => {
+  it('is reproducible with the same seed', () => {
     expect(buildLesson('goldfish', ctx, 9)).toEqual(buildLesson('goldfish', ctx, 9))
   })
 
-  it('funktioniert ohne Kartendaten für die Lektionen, die keine brauchen', () => {
+  it('works without card data for the lessons that don’t need it', () => {
     const empty = { ...ctx, lookup: () => undefined }
     expect(cardCoverage(empty)).toBe(0)
     for (const lesson of LESSONS.filter((l) => !l.needsCards)) {
@@ -68,34 +68,35 @@ describe('Lektionen', () => {
   })
 })
 
-describe('Antworten stimmen', () => {
+describe('Answers are correct', () => {
   const correctLabel = (q: Question) => q.options.find((o) => o.id === q.correct)!.label
 
-  it('Ghalta-Mathe: Kosten passen zu den gezeigten Karten', () => {
+  it('Ghalta Math: cost matches the cards shown', () => {
     for (let seed = 1; seed <= 60; seed++) {
       for (const q of buildLesson('ghalta', ctx, seed).filter((q) => q.id.startsWith('ghalta-') && q.cards)) {
         const power = q.cards!.reduce((s, c) => s + (lookup(c.name)!.power ?? 0), 0)
-        const casts = Number(q.context!.match(/schon (\d)×/)?.[1] ?? 0)
+        const m = q.context!.match(/cast (once|(\d) times) before/)
+        const casts = m ? (m[2] ? Number(m[2]) : 1) : 0
         const generic = Math.max(0, 10 + 2 * casts - power)
         expect(correctLabel(q)).toBe(generic > 0 ? `${generic}GG` : 'GG')
       }
     }
   })
 
-  it('Mulligan-Trainer: Antwort entspricht der Faustregel und mischt Behalten/Mulligan', () => {
+  it('Mulligan Trainer: answer follows the rule of thumb and mixes Keep/Mulligan', () => {
     const answers: string[] = []
     for (let seed = 1; seed <= 20; seed++) {
       for (const q of buildLesson('mulligan', ctx, seed)) {
         const keep = evaluateHand(q.cards!.map((c) => lookup(c.name)!)).keep
-        expect(correctLabel(q)).toBe(keep ? 'Behalten' : 'Mulligan')
+        expect(correctLabel(q)).toBe(keep ? 'Keep' : 'Mulligan')
         answers.push(correctLabel(q))
       }
     }
-    expect(answers).toContain('Behalten')
+    expect(answers).toContain('Keep')
     expect(answers).toContain('Mulligan')
   })
 
-  it('Kampf: Trample-Schaden ist 12 minus tödlicher Schaden an Blockern', () => {
+  it('Combat: trample damage is 12 minus lethal damage to blockers', () => {
     for (let seed = 1; seed <= 40; seed++) {
       for (const q of buildLesson('combat', ctx, seed).filter((q) => q.id.startsWith('trample-'))) {
         const blockers = [...q.prompt.matchAll(/(\d)\/\1/g)].map((m) => Number(m[1]))
@@ -106,7 +107,7 @@ describe('Antworten stimmen', () => {
     }
   })
 
-  it('Regelfragen haben eindeutige IDs', () => {
+  it('rules questions have unique IDs', () => {
     expect(new Set(RULES_BANK.map((q) => q.id)).size).toBe(RULES_BANK.length)
   })
 })

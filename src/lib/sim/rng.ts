@@ -1,4 +1,4 @@
-/** Kleiner, reproduzierbarer Zufallsgenerator (Mulberry32): gleicher Seed → gleiches Spiel. */
+/** Small, reproducible random generator (Mulberry32): same seed → same game. */
 export type Rng = () => number
 
 export function mulberry32(seed: number): Rng {
@@ -14,7 +14,7 @@ export function mulberry32(seed: number): Rng {
 
 export const randomSeed = () => Math.floor(Math.random() * 2 ** 31)
 
-/** Fisher-Yates, ohne das Original zu verändern. */
+/** Fisher-Yates, without changing the original. */
 export function shuffle<T>(items: readonly T[], rng: Rng): T[] {
   const out = [...items]
   for (let i = out.length - 1; i > 0; i--) {

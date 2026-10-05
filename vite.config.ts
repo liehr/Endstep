@@ -9,7 +9,7 @@ const { version } = JSON.parse(readFileSync(new URL('./package.json', import.met
 }
 
 export default defineConfig({
-  // GitHub Pages liefert die App unter /<repo>/ aus; der Deploy-Workflow setzt BASE_PATH.
+  // GitHub Pages serves the app under /<repo>/; the deploy workflow sets BASE_PATH.
   base: process.env.BASE_PATH || '/',
   define: {
     __APP_VERSION__: JSON.stringify(version),
@@ -18,17 +18,17 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // Neue Versionen werden im Hintergrund geladen; die App fragt dann „Aktualisieren?“.
+      // New versions are loaded in the background; the app then asks "Update?".
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png'],
       manifest: {
-        name: 'Endstep – Commander-Tracker',
+        name: 'Endstep – Commander tracker',
         short_name: 'Endstep',
-        description: 'Commander-Runden tracken und mit jedem Spiel besser werden.',
-        lang: 'de',
+        description: 'Track your Commander games and get better with every game.',
+        lang: 'en',
         display: 'standalone',
         orientation: 'portrait',
-        // Startbildschirm passend zum schwarzen App-Icon
+        // Splash screen to match the black app icon
         background_color: '#000000',
         theme_color: '#0b1f14',
         icons: [
@@ -39,11 +39,11 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Schrift nur für lateinische Zeichen vorab laden (Deutsch/Englisch), Rest bei Bedarf.
+        // Precache the font only for Latin characters (English/German), the rest on demand.
         globPatterns: ['**/*.{js,css,html,ico,png,svg}', '**/nunito-latin-*.woff2'],
-        // Quellbild der Icons, wird in der App nicht gebraucht
+        // Source image for the icons, not needed in the app
         globIgnores: ['logo.png'],
-        // Kartenbilder von Scryfall nach dem ersten Laden offline verfügbar halten.
+        // Keep Scryfall card images available offline after the first load.
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.origin === 'https://cards.scryfall.io',

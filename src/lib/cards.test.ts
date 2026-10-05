@@ -5,7 +5,7 @@ import { FIXTURE_CARDS } from './scryfall.fixture'
 const card = (name: string) => fromScryfall(FIXTURE_CARDS.find((c) => c.name === name)!)
 
 describe('parseCost', () => {
-  it('trennt generisches und grünes Mana', () => {
+  it('separates generic and green mana', () => {
     expect(parseCost('{10}{G}{G}')).toEqual({ generic: 10, green: 2, otherColors: 0, hasX: false })
     expect(parseCost('{X}{G}')).toMatchObject({ green: 1, hasX: true })
     expect(parseCost('{2}{W}{G/U}')).toMatchObject({ generic: 2, green: 1, otherColors: 1 })
@@ -13,7 +13,7 @@ describe('parseCost', () => {
 })
 
 describe('manaAbility', () => {
-  it('erkennt Wälder, Elfen, Sol Ring und Llanowar Tribe', () => {
+  it('recognizes Forests, elves, Sol Ring and Llanowar Tribe', () => {
     expect(manaAbility(card('Forest'))).toEqual({ amount: 1, ferociousAmount: 1, green: true })
     expect(manaAbility(card('Llanowar Elves'))).toMatchObject({ amount: 1, green: true })
     expect(manaAbility(card('Sol Ring'))).toMatchObject({ amount: 2, green: false })
@@ -22,35 +22,35 @@ describe('manaAbility', () => {
     expect(manaAbility(card("Commander's Sphere"))).toMatchObject({ amount: 1, green: true })
   })
 
-  it('kennt den Ferocious-Bonus (Kreatur mit Stärke 4+)', () => {
+  it('knows the ferocious bonus (creature with power 4+)', () => {
     expect(manaAbility(card('Ilysian Caryatid'))).toEqual({ amount: 1, ferociousAmount: 2, green: true })
     expect(manaAbility(card('Whisperer of the Wilds'))).toEqual({ amount: 1, ferociousAmount: 2, green: true })
   })
 
-  it('liefert null für Karten ohne Mana-Fähigkeit', () => {
+  it('returns null for cards without a mana ability', () => {
     expect(manaAbility(card('Steel Leaf Champion'))).toBeNull()
     expect(manaAbility(card('Harmonize'))).toBeNull()
   })
 })
 
-describe('Karten lesen', () => {
-  it('übersetzt Stärke, Typ und Bilder', () => {
+describe('reading cards', () => {
+  it('converts power, type and images', () => {
     const ghalta = card('Ghalta, Primal Hunger')
     expect(ghalta).toMatchObject({ power: 12, cmc: 12, typeLine: 'Legendary Creature — Elder Dinosaur' })
     expect(ghalta.image).toContain('cards.scryfall.io/small')
   })
 
-  it('berechnet „*“-Stärke von Dungrove Elder aus den Wäldern', () => {
+  it("computes Dungrove Elder's * power from the Forests", () => {
     expect(boardPower(card('Dungrove Elder'), 5)).toBe(5)
     expect(boardPower(card('Steel Leaf Champion'), 5)).toBe(5)
   })
 
-  it('erkennt Länder, die getappt reinkommen', () => {
+  it('recognizes lands that enter tapped', () => {
     expect(entersTapped(card('Tranquil Thicket'))).toBe(true)
     expect(entersTapped(card('Forest'))).toBe(false)
   })
 
-  it('nimmt bei doppelseitigen Karten die Vorderseite', () => {
+  it('takes the front face of double-faced cards', () => {
     const c = fromScryfall({
       name: 'Front // Back',
       cmc: 3,

@@ -12,11 +12,11 @@ import type { DeckEntry } from '../types'
 import { evaluateHand, manaIsFine } from './mulligan'
 import { mulberry32, shuffle, type Rng } from './rng'
 
-// „Goldfishing“: Das Deck allein durchspielen, ohne Gegner. Ein einfacher Autopilot
-// spielt Länder, Mana-Beschleuniger und die stärksten bezahlbaren Kreaturen und castet
-// Ghalta, sobald es geht. Bewusst simpel – es geht um ein Gefühl für das Tempo des Decks.
+// "Goldfishing": play the deck alone, without opponents. A simple autopilot
+// plays lands, ramp and the biggest affordable creatures and casts
+// Ghalta as soon as possible. Deliberately simple – it's about a feel for the deck's speed.
 
-/** Eine Karte in der Simulation. info = null, wenn die Kartendaten (noch) fehlen. */
+/** A card in the simulation. info = null if the card data is (still) missing. */
 export interface SimCard {
   name: string
   info: CardInfo | null
@@ -24,9 +24,9 @@ export interface SimCard {
 
 interface Permanent {
   card: CardInfo
-  /** Kreaturen können erst im nächsten Zug tappen. */
+  /** Creatures can only tap from the next turn on. */
   sick: boolean
-  /** Getappt reingekommen (z. B. Tranquil Thicket). */
+  /** Entered tapped (e.g. Tranquil Thicket). */
   tapped: boolean
 }
 
@@ -35,13 +35,13 @@ export interface TurnLog {
   drew: string | null
   land: string | null
   cast: string[]
-  /** Gesamtstärke zu Beginn des Zugs (vor dem Ausspielen). */
+  /** Total power at the start of the turn (before casting). */
   powerAtStart: number
-  /** Kreaturen auf dem Feld zu Beginn des Zugs. */
+  /** Creatures on the battlefield at the start of the turn. */
   boardAtStart: string[]
-  /** Gesamtstärke am Ende des Zugs. */
+  /** Total power at the end of the turn. */
   power: number
-  /** Verfügbares Mana zu Beginn der Hauptphase. */
+  /** Available mana at the start of the main phase. */
   mana: number
   ghalta: boolean
 }
@@ -49,7 +49,7 @@ export interface TurnLog {
 export interface GameSim {
   hand: SimCard[]
   mulligans: number
-  /** Zug, in dem Ghalta gecastet wurde; null, wenn nicht bis zum Limit. */
+  /** Turn in which Ghalta was cast; null if not by the limit. */
   ghaltaTurn: number | null
   log: TurnLog[]
 }
@@ -60,7 +60,7 @@ export function buildLibrary(decklist: DeckEntry[], lookup: (name: string) => Ca
   return decklist.flatMap((e) => Array.from({ length: e.qty }, () => ({ name: e.name, info: lookup(e.name) ?? null })))
 }
 
-/** Ziehen nach Mulligan-Regel: erster Mulligan gratis, danach je eine Karte unter die Bibliothek. */
+/** Draw by the mulligan rule: first mulligan free, then one card to the bottom of the library each. */
 export function drawOpeningHand(library: SimCard[], rng: Rng): { hand: SimCard[]; library: SimCard[]; mulligans: number } {
   for (let mulligans = 0; ; mulligans++) {
     const shuffled = shuffle(library, rng)
@@ -68,7 +68,7 @@ export function drawOpeningHand(library: SimCard[], rng: Rng): { hand: SimCard[]
     const infos = hand.map((c) => c.info)
     const keep = mulligans === 0 ? evaluateHand(infos).keep : mulligans === 1 ? manaIsFine(infos) : true
     if (keep) {
-      // London-Mulligan: ab dem zweiten Mulligan je eine Karte unter die Bibliothek (die schlechteste: zuerst Überzähliges).
+      // London mulligan: from the second mulligan on, one card each to the bottom (the worst one: surplus first).
       const bottomCount = Math.max(0, mulligans - 1)
       const kept = [...hand]
       const bottomed: SimCard[] = []
@@ -83,7 +83,7 @@ export function drawOpeningHand(library: SimCard[], rng: Rng): { hand: SimCard[]
 
 function pickBottom(hand: SimCard[]): number {
   const lands = hand.filter((c) => c.info && isLand(c.info)).length
-  // Bei vielen Ländern ein Land, sonst die teuerste Karte.
+  // With many lands a land, otherwise the most expensive card.
   if (lands > 4) return hand.findIndex((c) => c.info && isLand(c.info))
   let worst = 0
   hand.forEach((c, i) => {
@@ -96,7 +96,7 @@ const isForest = (c: CardInfo) => /\bForest\b/.test(c.typeLine)
 
 interface Pool {
   total: number
-  /** Davon grünfähig (für {G}-Symbole). */
+  /** How much of it can pay green (for {G} symbols). */
   green: number
 }
 
@@ -116,10 +116,10 @@ export interface GhaltaState {
   casts: number
 }
 
-/** Was kostet Ghalta jetzt (generischer Anteil, ohne GG)? */
+/** What does Ghalta cost now (generic part, without GG)? */
 export const ghaltaGeneric = ({ power, casts }: GhaltaState) => Math.max(0, 10 + 2 * casts - power)
 
-/** Ein Goldfish-Spiel mit gegebener Starthand und Bibliothek. */
+/** One goldfish game with a given opening hand and library. */
 export function playOut(hand: SimCard[], library: SimCard[], maxTurns = MAX_TURNS): Omit<GameSim, 'hand' | 'mulligans'> {
   const inHand = [...hand]
   const deck = [...library]
@@ -139,7 +139,7 @@ export function playOut(hand: SimCard[], library: SimCard[], maxTurns = MAX_TURN
     const drawn = deck.shift() ?? null
     if (drawn) inHand.push(drawn)
 
-    // Land spielen: am liebsten ungetappter Wald, dann andere ungetappte, zuletzt getappte.
+    // Play a land: preferably an untapped Forest, then other untapped ones, tapped ones last.
     const lands = inHand.filter((c): c is SimCard & { info: CardInfo } => c.info !== null && isLand(c.info))
     const rank = (c: CardInfo) => (entersTapped(c) ? 2 : manaAbility(c)?.green ? 0 : 1)
     const land = lands.sort((a, b) => rank(a.info) - rank(b.info))[0]
@@ -148,7 +148,7 @@ export function playOut(hand: SimCard[], library: SimCard[], maxTurns = MAX_TURN
       board.push({ card: land.info, sick: false, tapped: entersTapped(land.info) })
     }
 
-    // Verfügbares Mana.
+    // Available mana.
     const pool: Pool = { total: 0, green: 0 }
     for (const p of board) {
       if (p.tapped || (p.sick && isCreature(p.card))) continue
@@ -188,7 +188,7 @@ export function playOut(hand: SimCard[], library: SimCard[], maxTurns = MAX_TURN
       inHand.splice(inHand.indexOf(c), 1)
       board.push({ card: c.info, sick: isCreature(c.info), tapped: false })
       cast.push(c.name)
-      // Mana-Artefakte (Sol Ring) liefern sofort Mana.
+      // Mana artifacts (Sol Ring) produce mana right away.
       const ability = manaAbility(c.info)
       if (ability && !isCreature(c.info)) {
         pool.total += ability.amount
@@ -204,7 +204,7 @@ export function playOut(hand: SimCard[], library: SimCard[], maxTurns = MAX_TURN
       const options = castable()
       if (options.length === 0) break
 
-      // 1) Gibt es eine Kreatur, die Ghalta noch in diesem Zug möglich macht?
+      // 1) Is there a creature that still enables Ghalta this turn?
       const enabler = options
         .filter((c) => isCreature(c.info))
         .find((c) => {
@@ -220,7 +220,7 @@ export function playOut(hand: SimCard[], library: SimCard[], maxTurns = MAX_TURN
         continue
       }
 
-      // 2) Mana-Beschleuniger zuerst (billigste), 3) dann die stärkste Kreatur.
+      // 2) Ramp first (cheapest), 3) then the biggest creature.
       const ramp = options.filter((c) => manaAbility(c.info) !== null).sort((a, b) => a.info.cmc - b.info.cmc)
       if (ramp.length > 0) {
         play(ramp[0])
@@ -248,7 +248,7 @@ export function playOut(hand: SimCard[], library: SimCard[], maxTurns = MAX_TURN
   return { ghaltaTurn: null, log }
 }
 
-/** Komplettes Spiel: mischen, Starthand nach Faustregel, durchspielen. */
+/** Full game: shuffle, opening hand by rule of thumb, play it out. */
 export function simulateGame(library: SimCard[], seed: number, maxTurns = MAX_TURNS): GameSim {
   const rng = mulberry32(seed)
   const { hand, library: rest, mulligans } = drawOpeningHand(library, rng)
@@ -257,16 +257,16 @@ export function simulateGame(library: SimCard[], seed: number, maxTurns = MAX_TU
 
 export interface Distribution {
   games: number
-  /** Anteil der Spiele je Ghalta-Zug (Index = Zug); letzter Eintrag: nicht bis MAX_TURNS. */
+  /** Share of games per Ghalta turn (index = turn); last entry: not by MAX_TURNS. */
   byTurn: { turn: number; share: number }[]
   never: number
   average: number | null
-  /** Anteil der Spiele mit Ghalta bis einschließlich Zug 5. */
+  /** Share of games with Ghalta by turn 5 inclusive. */
   byTurnFive: number
   avgMulligans: number
 }
 
-/** Ergebnisse vieler Spiele zusammenfassen (Ghalta-Zug je Spiel, null = nicht geschafft). */
+/** Summarize the results of many games (Ghalta turn per game, null = didn't make it). */
 export function summarize(turns: (number | null)[], mulligans: number[], maxTurns = MAX_TURNS): Distribution {
   const games = turns.length
   const cast = turns.filter((t): t is number => t !== null)
@@ -281,10 +281,10 @@ export function summarize(turns: (number | null)[], mulligans: number[], maxTurn
   }
 }
 
-/** Seed für Spiel Nummer i einer Serie (damit Serien reproduzierbar sind). */
+/** Seed for game number i of a series (so series are reproducible). */
 export const seedFor = (seed: number, i: number) => seed + i * 7919
 
-/** Viele Goldfish-Spiele: Wie schnell kommt Ghalta mit diesem Deck? */
+/** Many goldfish games: how fast does Ghalta land with this deck? */
 export function simulateMany(library: SimCard[], games: number, seed: number, maxTurns = MAX_TURNS): Distribution {
   const turns: (number | null)[] = []
   const mulligans: number[] = []

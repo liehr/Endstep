@@ -10,38 +10,38 @@ const sim = (...names: string[]): SimCard[] => names.map((name) => ({ name, info
 const times = (n: number, name: string) => Array.from({ length: n }, () => name)
 
 describe('rng', () => {
-  it('ist mit gleichem Seed reproduzierbar', () => {
+  it('is reproducible with the same seed', () => {
     expect(shuffle([1, 2, 3, 4, 5, 6], mulberry32(42))).toEqual(shuffle([1, 2, 3, 4, 5, 6], mulberry32(42)))
     expect(shuffle([1, 2, 3, 4, 5, 6], mulberry32(1))).not.toEqual(shuffle([1, 2, 3, 4, 5, 6], mulberry32(2)))
   })
 })
 
-describe('evaluateHand (Faustregel aus dem Lernplan)', () => {
+describe('evaluateHand (rule of thumb from the study plan)', () => {
   const hand = (...names: string[]) => names.map(info)
 
-  it('behält 3 Länder + Manakreatur + frühe dicke Kreatur', () => {
+  it('keeps 3 lands + mana creature + early big creature', () => {
     const r = evaluateHand(hand('Forest', 'Forest', 'Forest', 'Llanowar Elves', 'Steel Leaf Champion', 'Harmonize', 'Gigantosaurus'))
     expect(r).toMatchObject({ lands: 3, ramp: 1, keep: true })
     expect(r.earlyBig).toEqual(['Steel Leaf Champion'])
   })
 
-  it('schickt Hände mit nur einem Land zurück', () => {
+  it('mulligans hands with only one land', () => {
     expect(evaluateHand(hand('Forest', 'Llanowar Elves', 'Elvish Mystic', 'Steel Leaf Champion', 'Harmonize', 'Gigantosaurus', 'Carnage Tyrant')).keep).toBe(false)
   })
 
-  it('schickt Hände mit zu viel Mana zurück', () => {
+  it('mulligans hands with too much mana', () => {
     expect(evaluateHand(hand(...times(6, 'Forest'), 'Steel Leaf Champion')).keep).toBe(false)
   })
 
-  it('schickt Hände ohne frühe dicke Kreatur zurück', () => {
+  it('mulligans hands without an early big creature', () => {
     const r = evaluateHand(hand('Forest', 'Forest', 'Forest', 'Llanowar Elves', 'Harmonize', 'Gigantosaurus', 'Carnage Tyrant'))
     expect(r.keep).toBe(false)
-    expect(r.reasons.join(' ')).toContain('Keine frühe dicke Kreatur')
+    expect(r.reasons.join(' ')).toContain('No early big creature')
   })
 })
 
 describe('playOut (Goldfish-Autopilot)', () => {
-  it('castet Ghalta in Zug 4 mit Elfen, Hammerskull und Steel Leaf Champion', () => {
+  it('casts Ghalta on turn 4 with elves, Hammerskull and Steel Leaf Champion', () => {
     const hand = sim('Forest', 'Forest', 'Forest', 'Llanowar Elves', 'Steel Leaf Champion', 'Pugnacious Hammerskull', 'Gigantosaurus')
     const result = playOut(hand, sim(...times(10, 'Forest')))
     expect(result.ghaltaTurn).toBe(4)
@@ -51,16 +51,16 @@ describe('playOut (Goldfish-Autopilot)', () => {
     expect(result.log[3].cast).toContain('Ghalta, Primal Hunger')
   })
 
-  it('nutzt Sol Ring sofort und Manakreaturen erst einen Zug später', () => {
+  it('uses Sol Ring right away and mana creatures only a turn later', () => {
     const hand = sim('Forest', 'Sol Ring', 'Llanowar Elves', 'Harmonize', 'Harmonize', 'Harmonize', 'Harmonize')
     const result = playOut(hand, sim(...times(5, 'Forest')), 2)
-    // Zug 1: Wald → Sol Ring (1) → 2 farblos übrig, Elfen brauchen {G}: geht nicht mehr.
+    // Turn 1: Forest → Sol Ring (1) → 2 colorless left, elves need {G}: no longer possible.
     expect(result.log[0].cast).toEqual(['Sol Ring'])
-    // Zug 2: 2 Wälder + Sol Ring = 4 Mana.
+    // Turn 2: 2 Forests + Sol Ring = 4 mana.
     expect(result.log[1].mana).toBe(4)
   })
 
-  it('spielt getappte Länder nur, wenn kein anderes da ist', () => {
+  it('plays tapped lands only when no other is available', () => {
     const hand = sim('Tranquil Thicket', 'Forest', 'Llanowar Elves', 'Harmonize', 'Harmonize', 'Harmonize', 'Harmonize')
     const result = playOut(hand, sim(...times(5, 'Harmonize')), 2)
     expect(result.log[0].land).toBe('Forest')
@@ -69,7 +69,7 @@ describe('playOut (Goldfish-Autopilot)', () => {
   })
 })
 
-describe('Simulation über viele Spiele', () => {
+describe('simulation over many games', () => {
   const deck = sim(
     ...times(36, 'Forest'),
     ...times(4, 'Llanowar Elves'),
@@ -85,7 +85,7 @@ describe('Simulation über viele Spiele', () => {
     ...times(12, 'Harmonize'),
   )
 
-  it('ist reproduzierbar und liefert eine plausible Verteilung', () => {
+  it('is reproducible and yields a plausible distribution', () => {
     expect(deck).toHaveLength(99)
     expect(simulateGame(deck, 7)).toEqual(simulateGame(deck, 7))
     const d = simulateMany(deck, 300, 123)
@@ -96,7 +96,7 @@ describe('Simulation über viele Spiele', () => {
     expect(d.byTurnFive).toBeGreaterThan(0.2)
   })
 
-  it('hält beim Mulligan die Kartenzahl ein', () => {
+  it('keeps the card count during mulligans', () => {
     for (let seed = 0; seed < 50; seed++) {
       const { hand, library, mulligans } = drawOpeningHand(deck, mulberry32(seed))
       expect(hand.length + library.length).toBe(99)
@@ -104,8 +104,8 @@ describe('Simulation über viele Spiele', () => {
     }
   })
 
-  it('kommt mit fehlenden Kartendaten zurecht', () => {
-    const library = buildLibrary([{ name: 'Unbekannt', qty: 60 }, { name: 'Forest', qty: 39 }], (n) => (n === 'Forest' ? info('Forest') : undefined))
+  it('copes with missing card data', () => {
+    const library = buildLibrary([{ name: 'Unknown', qty: 60 }, { name: 'Forest', qty: 39 }], (n) => (n === 'Forest' ? info('Forest') : undefined))
     expect(() => simulateGame(library, 1)).not.toThrow()
   })
 })

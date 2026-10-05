@@ -13,7 +13,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: Icon
 }
 
-/** Taktiler 3D-Button: dunklere „Lippe“ unten, sinkt beim Drücken ein. */
+/** Tactile 3D button: darker "lip" at the bottom, sinks in when pressed. */
 export function Button({
   variant = 'primary',
   size = 'md',
@@ -48,7 +48,7 @@ export function IconButton({ icon: IconCmp, label, onClick }: { icon: Icon; labe
   )
 }
 
-// --- Flächen ---------------------------------------------------------------
+// --- Surfaces --------------------------------------------------------------
 
 export function Card({
   children,
@@ -75,9 +75,9 @@ export function ProgressBar({ value, label }: { value: number; label?: string })
   )
 }
 
-// --- Eingaben --------------------------------------------------------------
+// --- Inputs ----------------------------------------------------------------
 
-/** Beschriftetes Eingabefeld (input, textarea). */
+/** Labelled input field (input, textarea). */
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="field">
@@ -88,7 +88,7 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
   )
 }
 
-/** Beschriftete Gruppe für Button-Eingaben (Choice, Stepper, ChipInput). */
+/** Labelled group for button inputs (Choice, Stepper, ChipInput). */
 export function Group({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   const id = useId()
   return (
@@ -106,12 +106,12 @@ export interface ChoiceOption<T> {
   id: T
   label: string
   icon?: Icon
-  /** Optionaler Untertitel unter dem Label. */
+  /** Optional subtitle below the label. */
   hint?: string
   style?: CSSProperties
 }
 
-/** Auswahl als große Karten (wie bei Duolingo): schnell mit dem Daumen zu treffen. */
+/** Selection as large cards (like Duolingo): quick to hit with your thumb. */
 export function Choice<T extends string | number>({
   options,
   value,
@@ -123,7 +123,7 @@ export function Choice<T extends string | number>({
   options: ChoiceOption<T>[]
   value: T | null
   onChange: (value: T | null) => void
-  /** Erneutes Tippen hebt die Auswahl auf. */
+  /** Tapping again clears the selection. */
   allowNone?: boolean
   layout?: 'grid' | 'list'
   columns?: number
@@ -179,7 +179,7 @@ export function Stepper({
     <div className="stepper" aria-label={label}>
       <button
         type="button"
-        aria-label={`${label} verringern`}
+        aria-label={`Decrease ${label}`}
         onClick={() => {
           haptic()
           onChange(value === null || value <= min ? null : value - 1)
@@ -190,7 +190,7 @@ export function Stepper({
       <output>{value ?? '–'}</output>
       <button
         type="button"
-        aria-label={`${label} erhöhen`}
+        aria-label={`Increase ${label}`}
         onClick={() => {
           haptic()
           onChange(value === null ? min : Math.min(max, value + 1))
@@ -202,7 +202,7 @@ export function Stepper({
   )
 }
 
-/** Kartennamen eingeben; frühere Einträge erscheinen als antippbare Vorschläge. */
+/** Enter card names; earlier entries appear as tappable suggestions. */
 export function ChipInput({
   values,
   onChange,
@@ -212,9 +212,9 @@ export function ChipInput({
 }: {
   values: string[]
   onChange: (values: string[]) => void
-  /** Häufige Einträge: ohne Eingabe als Vorschläge sichtbar. */
+  /** Frequent entries: shown as suggestions when nothing is typed. */
   suggestions: string[]
-  /** Weitere Namen (z. B. alle Karten im Deck), werden beim Tippen durchsucht. */
+  /** More names (e.g. all cards in the deck), searched while typing. */
   catalog?: string[]
   placeholder: string
 }) {
@@ -241,7 +241,7 @@ export function ChipInput({
           {values.map((v) => (
             <li key={v} className="chip selected">
               {v}
-              <button type="button" aria-label={`${v} entfernen`} onClick={() => onChange(values.filter((x) => x !== v))}>
+              <button type="button" aria-label={`Remove ${v}`} onClick={() => onChange(values.filter((x) => x !== v))}>
                 <XIcon weight="bold" />
               </button>
             </li>
@@ -262,11 +262,11 @@ export function ChipInput({
           }}
         />
         <Button variant="secondary" size="sm" disabled={!text.trim()} onClick={() => add(text)}>
-          Hinzufügen
+          Add
         </Button>
       </div>
       {visibleSuggestions.length > 0 && (
-        <ul className="chip-list suggestions" aria-label="Vorschläge">
+        <ul className="chip-list suggestions" aria-label="Suggestions">
           {visibleSuggestions.map((s) => (
             <li key={s}>
               <button type="button" className="chip" onClick={() => add(s)}>
@@ -282,7 +282,7 @@ export function ChipInput({
 
 // --- Bottom Sheet ----------------------------------------------------------
 
-/** Panel, das von unten hereinfährt: bleibt im Daumenbereich. */
+/** Panel that slides in from the bottom: stays within thumb reach. */
 export function BottomSheet({
   open,
   onClose,
@@ -312,7 +312,7 @@ export function BottomSheet({
         <div className="sheet-handle" aria-hidden="true" />
         <div className="sheet-header">
           {title && <h2>{title}</h2>}
-          <IconButton icon={XIcon} label="Schließen" onClick={onClose} />
+          <IconButton icon={XIcon} label="Close" onClick={onClose} />
         </div>
         <div className="sheet-body">{children}</div>
       </div>
@@ -343,7 +343,7 @@ export function ConfirmSheet({
           {confirmLabel}
         </Button>
         <Button variant="ghost" block onClick={onClose}>
-          Abbrechen
+          Cancel
         </Button>
       </div>
     </BottomSheet>
@@ -361,13 +361,13 @@ export function EmptyState({ title, text, children }: { title: string; text: str
   )
 }
 
-/** Ergebnis als Pill: Farbe plus Icon plus Text, nie nur Farbe. */
+/** Result as a pill: colour plus icon plus text, never colour alone. */
 export function ResultPill({ result }: { result: 'win' | 'loss' }) {
   const IconCmp = result === 'win' ? TrophyIcon : HeartBreakIcon
   return (
     <span className={`result-pill ${result}`}>
       <IconCmp weight="fill" aria-hidden="true" />
-      {result === 'win' ? 'Sieg' : 'Niederlage'}
+      {result === 'win' ? 'Win' : 'Loss'}
     </span>
   )
 }

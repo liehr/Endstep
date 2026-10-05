@@ -8,8 +8,8 @@ import { computeStats, type Tally } from '../lib/stats'
 import { weekStreak } from '../lib/streak'
 import { useData } from '../lib/store'
 
-const percent = (v: number | null) => (v === null ? '–' : `${Math.round(v * 100)} %`)
-const oneDecimal = (v: number | null) => (v === null ? '–' : v.toLocaleString('de-DE', { maximumFractionDigits: 1 }))
+const percent = (v: number | null) => (v === null ? '–' : `${Math.round(v * 100)}%`)
+const oneDecimal = (v: number | null) => (v === null ? '–' : v.toLocaleString('en-GB', { maximumFractionDigits: 1 }))
 
 function StatTile({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
@@ -21,7 +21,7 @@ function StatTile({ label, value, sub }: { label: string; value: string | number
   )
 }
 
-/** Horizontaler Balken mit Beschriftung und Wert: eine Reihe, eine Farbe. */
+/** Horizontal bar with label and value: one row, one colour. */
 function BarRow({ label, value, max, lead }: { label: string; value: number; max: number; lead?: ReactNode }) {
   return (
     <li className="bar-row">
@@ -47,7 +47,7 @@ function TallyList({ items, empty }: { items: Tally[]; empty: string }) {
         <li key={t.name}>
           <span>{t.name}</span>
           <span className="tally-count">
-            {t.count >= PATTERN_THRESHOLD && <WarningIcon weight="fill" aria-label="3× oder öfter" />}
+            {t.count >= PATTERN_THRESHOLD && <WarningIcon weight="fill" aria-label="3× or more" />}
             {t.count}×
           </span>
         </li>
@@ -65,9 +65,9 @@ export function Stats() {
     return (
       <div className="screen">
         <header className="screen-header">
-          <h1>Statistik</h1>
+          <h1>Stats</h1>
         </header>
-        <EmptyState title="Noch nichts zu zählen" text="Nach deiner ersten Runde siehst du hier, wo du besser wirst." />
+        <EmptyState title="Nothing to count yet" text="After your first game you'll see here where you're improving." />
       </div>
     )
   }
@@ -79,38 +79,38 @@ export function Stats() {
   return (
     <div className="screen">
       <header className="screen-header">
-        <h1>Statistik</h1>
+        <h1>Stats</h1>
       </header>
 
       <div className="stat-grid">
-        <StatTile label="Runden" value={s.total} />
-        <StatTile label="Siegquote" value={percent(s.winRate)} sub={`${s.wins} ${s.wins === 1 ? 'Sieg' : 'Siege'}`} />
-        <StatTile label="Serie" value={`${streak.current} Wo.`} sub={`Rekord: ${streak.best}`} />
+        <StatTile label="Games" value={s.total} />
+        <StatTile label="Win rate" value={percent(s.winRate)} sub={`${s.wins} ${s.wins === 1 ? 'win' : 'wins'}`} />
+        <StatTile label="Streak" value={`${streak.current} ${streak.current === 1 ? 'wk' : 'wks'}`} sub={`Best: ${streak.best}`} />
         <StatTile
-          label="Ø Ghalta-Zug"
+          label="Avg. Ghalta turn"
           value={oneDecimal(s.avgGhaltaTurn)}
-          sub={s.avgMulligans === null ? undefined : `Ø ${oneDecimal(s.avgMulligans)} Mulligans`}
+          sub={s.avgMulligans === null ? undefined : `Avg. ${oneDecimal(s.avgMulligans)} mulligans`}
         />
-        {s.avgTurns !== null && <StatTile label="Ø Züge pro Partie" value={oneDecimal(s.avgTurns)} />}
+        {s.avgTurns !== null && <StatTile label="Avg. turns per game" value={oneDecimal(s.avgTurns)} />}
       </div>
 
       <section className="panel">
-        <h2>Letzte Runden</h2>
-        <ol className="recent" aria-label="Letzte Runden, neueste zuerst">
+        <h2>Recent games</h2>
+        <ol className="recent" aria-label="Recent games, newest first">
           {recent.map((g) => (
-            <li key={g.id} className={`recent-dot ${g.result}`} title={g.result === 'win' ? 'Sieg' : 'Niederlage'}>
-              {g.result === 'win' ? <CheckIcon weight="bold" aria-label="Sieg" /> : <XIcon weight="bold" aria-label="Niederlage" />}
+            <li key={g.id} className={`recent-dot ${g.result}`} title={g.result === 'win' ? 'Win' : 'Loss'}>
+              {g.result === 'win' ? <CheckIcon weight="bold" aria-label="Win" /> : <XIcon weight="bold" aria-label="Loss" />}
             </li>
           ))}
         </ol>
-        <p className="muted small">Eine einzelne Runde beweist nichts. Erst ab 3× ist es ein Muster.</p>
+        <p className="muted small">A single game proves nothing. Only from 3× on is it a pattern.</p>
       </section>
 
       <section className="panel">
-        <h2>Woran du arbeiten kannst</h2>
-        <p className="muted small">So oft wurde ein Skill als „eine Entscheidung anders“ notiert.</p>
+        <h2>What you can work on</h2>
+        <p className="muted small">How often a skill was noted as "one decision I'd make differently".</p>
         {maxMistakes === 0 ? (
-          <p className="muted small">Noch keine Entscheidungen einem Skill zugeordnet.</p>
+          <p className="muted small">No decisions assigned to a skill yet.</p>
         ) : (
           <ul className="bars">
             {[...s.skills]
@@ -119,7 +119,7 @@ export function Stats() {
               .map((k) => (
                 <BarRow
                   key={k.id}
-                  label={`${SKILL_BY_ID[k.id].name}${k.mistakes >= PATTERN_THRESHOLD ? ' · Muster' : ''}`}
+                  label={`${SKILL_BY_ID[k.id].name}${k.mistakes >= PATTERN_THRESHOLD ? ' · Pattern' : ''}`}
                   value={k.mistakes}
                   max={maxMistakes}
                   lead={<SkillBadge id={k.id} size={36} />}
@@ -130,14 +130,14 @@ export function Stats() {
       </section>
 
       <section className="panel">
-        <h2>Fokus geübt</h2>
+        <h2>Focus practised</h2>
         <table className="table">
           <thead>
             <tr>
               <th scope="col">Skill</th>
-              <th scope="col">Runden</th>
-              <th scope="col" title="Selbsteinschätzung 1–3">
-                Ø Gefühl
+              <th scope="col">Games</th>
+              <th scope="col" title="Self-assessment 1–3">
+                Avg. feel
               </th>
             </tr>
           </thead>
@@ -160,7 +160,7 @@ export function Stats() {
 
       {maxWhy > 0 && (
         <section className="panel">
-          <h2>Warum verloren?</h2>
+          <h2>Why did you lose?</h2>
           <ul className="bars">
             {s.whyCounts.map((w) => (
               <BarRow key={w.id} label={WHY_LABEL[w.id]} value={w.count} max={maxWhy} />
@@ -170,24 +170,24 @@ export function Stats() {
       )}
 
       <section className="panel">
-        <h2>Karten</h2>
+        <h2>Cards</h2>
         <p className="muted small">{settings.defaultDeck}</p>
-        <h3>Tot auf der Hand</h3>
-        <TallyList items={s.deadCards} empty="Noch keine toten Karten notiert." />
-        <h3>Überperformer</h3>
-        <TallyList items={s.starCards} empty="Noch keine Überperformer notiert." />
+        <h3>Dead in hand</h3>
+        <TallyList items={s.deadCards} empty="No dead cards noted yet." />
+        <h3>Overperformers</h3>
+        <TallyList items={s.starCards} empty="No overperformers noted yet." />
       </section>
 
       {s.upgrade.phases.length > 1 && (
         <section className="panel">
-          <h2>Deckversionen</h2>
-          <p className="muted small">Siegquote vor und nach deinen Swap-Runden.</p>
+          <h2>Deck versions</h2>
+          <p className="muted small">Win rate before and after your swap rounds.</p>
           <table className="table">
             <thead>
               <tr>
                 <th scope="col">Version</th>
-                <th scope="col">Spiele</th>
-                <th scope="col">Siegquote</th>
+                <th scope="col">Games</th>
+                <th scope="col">Win rate</th>
               </tr>
             </thead>
             <tbody>
@@ -200,15 +200,15 @@ export function Stats() {
               ))}
             </tbody>
           </table>
-          <p className="muted small">Wenige Spiele sind noch kein Beweis: Erst nach etwa 8 Spielen pro Version lohnt der Vergleich.</p>
+          <p className="muted small">A few games are no proof yet: the comparison is only worth it after about 8 games per version.</p>
         </section>
       )}
 
       <section className="panel">
         <h2>Board Wipes</h2>
         <div className="stat-grid">
-          <StatTile label="Nachschub behalten" value={s.wipes.kept} />
-          <StatTile label="Alles verloren" value={s.wipes.overextended} />
+          <StatTile label="Kept reloads" value={s.wipes.kept} />
+          <StatTile label="Lost everything" value={s.wipes.overextended} />
         </div>
       </section>
     </div>

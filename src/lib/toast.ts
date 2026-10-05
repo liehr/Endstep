@@ -8,7 +8,7 @@ function emit() {
   listeners.forEach((l) => l())
 }
 
-/** Kurze Bestätigung am unteren Rand anzeigen. */
+/** Show a short confirmation at the bottom edge. */
 export function toast(text: string) {
   message = text
   clearTimeout(timer)

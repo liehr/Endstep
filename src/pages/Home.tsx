@@ -11,7 +11,7 @@ import { bracketCheck, computeStats } from '../lib/stats'
 import { actions, useData } from '../lib/store'
 import type { Bracket, SkillId } from '../lib/types'
 
-/** Seitlicher Versatz der Pfad-Knoten (Zickzack wie beim Duolingo-Lernpfad). */
+/** Sideways offset of the path nodes (zigzag like the Duolingo learning path). */
 const OFFSETS = [0, 52, 76, 52, 0, -52, -76, -52]
 
 export function Home() {
@@ -22,7 +22,7 @@ export function Home() {
   const stats = computeStats(games, settings.defaultDeck, { swaps, decklist })
   const chest = stats.upgrade
   const bracket = bracketCheck(stats.deckGames, settings.bracketCheckDone)
-  const cardsLabel = `${chest.cards} Karte${chest.cards > 1 ? 'n' : ''}`
+  const cardsLabel = `${chest.cards} card${chest.cards === 1 ? '' : 's'}`
 
   return (
     <div className="screen">
@@ -32,21 +32,21 @@ export function Home() {
         <Card className="draft-banner" style={skillStyle(draft.form.focus)}>
           <SkillBadge id={draft.form.focus} size={44} />
           <div>
-            <strong>Runde läuft</strong>
-            <span className="muted">Fokus: {SKILL_BY_ID[draft.form.focus].name}</span>
+            <strong>Game in progress</strong>
+            <span className="muted">Focus: {SKILL_BY_ID[draft.form.focus].name}</span>
           </div>
           <Button size="sm" onClick={() => navigate('/runde')}>
-            Weiter
+            Continue
           </Button>
         </Card>
       )}
 
-      <section className="unit" aria-label="Fokus-Rotation">
+      <section className="unit" aria-label="Focus rotation">
         <div>
-          <span className="unit-eyebrow">Fokus-Rotation</span>
-          <h1>Ein Skill pro Runde</h1>
+          <span className="unit-eyebrow">Focus rotation</span>
+          <h1>One skill per game</h1>
         </div>
-        <button type="button" className="unit-btn" aria-label="Alle Skills ansehen" onClick={() => navigate('/mehr/spickzettel')}>
+        <button type="button" className="unit-btn" aria-label="View all skills" onClick={() => navigate('/mehr/spickzettel')}>
           <BookOpenIcon weight="fill" />
         </button>
       </section>
@@ -66,7 +66,7 @@ export function Home() {
               <button
                 type="button"
                 className="path-node"
-                aria-label={`${skill.name}${state === 'done' ? ' (erledigt)' : state === 'current' ? ' (als Nächstes)' : ''}`}
+                aria-label={`${skill.name}${state === 'done' ? ' (done)' : state === 'current' ? ' (up next)' : ''}`}
                 onClick={() => (state === 'current' && !draft ? navigate(`/runde/neu/${skill.id}`) : setSheet(skill.id))}
               >
                 <IconCmp weight="fill" />
@@ -81,13 +81,13 @@ export function Home() {
           )
         })}
         <li className={`path-step chest ${stats.upgradeReady ? 'ready' : ''}`} style={{ '--offset': '0px' } as CSSProperties}>
-          <button type="button" className="path-node" aria-label="Upgrade-Truhe" onClick={() => setSheet('chest')}>
+          <button type="button" className="path-node" aria-label="Upgrade chest" onClick={() => setSheet('chest')}>
             <TreasureChestIcon weight="fill" />
           </button>
           <span className="path-label right">
-            Upgrade-Truhe
+            Upgrade chest
             <small>
-              {Math.min(chest.gamesSince, chest.target)}/{chest.target} Spiele · {cardsLabel}
+              {Math.min(chest.gamesSince, chest.target)}/{chest.target} games · {cardsLabel}
             </small>
           </span>
         </li>
@@ -95,7 +95,7 @@ export function Home() {
           className={`path-step chest ${bracket.due ? 'ready' : ''} ${bracket.done ? 'done' : ''}`}
           style={{ '--offset': '52px' } as CSSProperties}
         >
-          <button type="button" className="path-node" aria-label={`Bracket-Check${bracket.done ? ' (erledigt)' : ''}`} onClick={() => setSheet('bracket')}>
+          <button type="button" className="path-node" aria-label={`Bracket check${bracket.done ? ' (done)' : ''}`} onClick={() => setSheet('bracket')}>
             <FlagCheckeredIcon weight="fill" />
             {bracket.done && (
               <span className="path-check" aria-hidden="true">
@@ -104,8 +104,8 @@ export function Home() {
             )}
           </button>
           <span className="path-label left">
-            Bracket-Check
-            <small>{bracket.done ? 'erledigt' : `${Math.min(bracket.games, bracket.target)}/${bracket.target} Spiele`}</small>
+            Bracket check
+            <small>{bracket.done ? 'done' : `${Math.min(bracket.games, bracket.target)}/${bracket.target} games`}</small>
           </span>
         </li>
       </ol>
@@ -116,49 +116,49 @@ export function Home() {
         {sheet && sheet !== 'chest' && sheet !== 'bracket' && <SkillSheet id={sheet} disabled={!!draft} />}
       </BottomSheet>
 
-      <BottomSheet open={sheet === 'chest'} onClose={() => setSheet(null)} title="Upgrade-Truhe">
-        <ProgressBar value={chest.gamesSince / chest.target} label="Fortschritt bis zum Upgrade" />
+      <BottomSheet open={sheet === 'chest'} onClose={() => setSheet(null)} title="Upgrade chest">
+        <ProgressBar value={chest.gamesSince / chest.target} label="Progress to the upgrade" />
         {stats.upgradeReady ? (
           <>
             <p>
-              <strong>{chest.gamesSince} Spiele</strong> {swaps.length ? 'seit dem letzten Swap' : `mit ${settings.defaultDeck}`}. Zeit für
-              Swap-Runde {chest.round} mit höchstens {cardsLabel}. Zuerst Interaktion und Schutz gegen Wipes, nicht noch ein Dino.
+              <strong>{chest.gamesSince} games</strong> {swaps.length ? 'since the last swap' : `with ${settings.defaultDeck}`}. Time for
+              swap round {chest.round} with at most {cardsLabel}. Interaction and protection against wipes first, not another dino.
             </p>
             {stats.upgradeCandidates.length > 0 ? (
               <p>
-                Kandidaten (mind. 3× tot): <strong>{stats.upgradeCandidates.map((c) => c.name).join(', ')}</strong>
+                Candidates (dead 3× or more): <strong>{stats.upgradeCandidates.map((c) => c.name).join(', ')}</strong>
               </p>
             ) : (
-              <p className="muted">Noch keine Karte war 3× tot. Notiere tote Karten nach jeder Runde.</p>
+              <p className="muted">No card has been dead 3× yet. Note dead cards after every game.</p>
             )}
           </>
         ) : (
           <p>
-            Spiel {chest.gamesSince} von {chest.target}
-            {swaps.length ? ' seit dem letzten Swap' : ''}. Dann darfst du {cardsLabel} tauschen. Lass das Deck bis dahin
-            unverändert und sammle Notizen, dann weißt du, welche Karten wirklich raus sollten.
+            Game {chest.gamesSince} of {chest.target}
+            {swaps.length ? ' since the last swap' : ''}. Then you can swap {cardsLabel}. Leave the deck unchanged until
+            then and collect notes, so you’ll know which cards really should go out.
           </p>
         )}
         <Button block variant={stats.upgradeReady ? 'primary' : 'secondary'} icon={ArrowsLeftRightIcon} onClick={() => navigate('/mehr/deck/swap')}>
-          Swap-Runde eintragen
+          Log swap round
         </Button>
       </BottomSheet>
 
-      <BottomSheet open={sheet === 'bracket'} onClose={() => setSheet(null)} title="Bracket-Check">
-        <ProgressBar value={Math.min(bracket.games / bracket.target, 1)} label="Spiele bis zum Bracket-Check" />
+      <BottomSheet open={sheet === 'bracket'} onClose={() => setSheet(null)} title="Bracket check">
+        <ProgressBar value={Math.min(bracket.games / bracket.target, 1)} label="Games until the Bracket check" />
         {bracket.done ? (
           <p>
-            Erledigt. Ihr spielt Bracket {settings.defaultBracket}. Ändern kannst du das jederzeit unter Mehr → Tisch.
+            Done. Your group plays Bracket {settings.defaultBracket}. You can change this any time under More → Table.
           </p>
         ) : bracket.due ? (
           <>
             <p>
-              <strong>{bracket.games} Spiele</strong> mit {settings.defaultDeck}. Zeit, mit deiner Runde zu reden: Wollt ihr bei Bracket{' '}
-              {settings.defaultBracket} bleiben oder höher spielen?
+              <strong>{bracket.games} games</strong> with {settings.defaultDeck}. Time to talk with your group: do you want to stay at Bracket{' '}
+              {settings.defaultBracket} or play higher?
             </p>
             <p className="muted">
-              Ein höheres Bracket ist keine Belohnung, sondern eine Absprache am Tisch. Ab Bracket 3 sind Game Changers erlaubt; das lohnt sich
-              nur, wenn alle mitziehen.
+              A higher bracket isn’t a reward, it’s an agreement at the table. From Bracket 3, Game Changers are allowed; that’s only worth it
+              if everyone is on board.
             </p>
             {settings.defaultBracket < 5 && (
               <Button
@@ -168,7 +168,7 @@ export function Home() {
                   setSheet(null)
                 }}
               >
-                Wir spielen Bracket {settings.defaultBracket + 1}
+                We play Bracket {settings.defaultBracket + 1}
               </Button>
             )}
             <Button
@@ -179,13 +179,13 @@ export function Home() {
                 setSheet(null)
               }}
             >
-              Wir bleiben bei Bracket {settings.defaultBracket}
+              We stay at Bracket {settings.defaultBracket}
             </Button>
           </>
         ) : (
           <p>
-            Spiel {bracket.games} von {bracket.target} mit {settings.defaultDeck}. Dann fragt die App, ob deine Runde ein höheres Bracket spielen
-            will. Bis dahin: Deck kennenlernen und in kleinen Schritten verbessern.
+            Game {bracket.games} of {bracket.target} with {settings.defaultDeck}. Then the app asks whether your group wants to play a higher
+            bracket. Until then: get to know the deck and improve it in small steps.
           </p>
         )}
       </BottomSheet>
@@ -201,12 +201,12 @@ function SkillSheet({ id, disabled }: { id: SkillId; disabled: boolean }) {
       <h2>{skill.name}</h2>
       <p>{skill.tip}</p>
       <p className="muted">
-        <strong>Aufgabe:</strong> {skill.task}
+        <strong>Task:</strong> {skill.task}
       </p>
       <Button block icon={PlayIcon} disabled={disabled} onClick={() => navigate(`/runde/neu/${id}`)}>
-        Mit diesem Fokus spielen
+        Play with this focus
       </Button>
-      {disabled && <p className="muted small center">Beende zuerst die laufende Runde.</p>}
+      {disabled && <p className="muted small center">Finish the game in progress first.</p>}
     </div>
   )
 }

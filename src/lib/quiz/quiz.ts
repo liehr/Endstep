@@ -7,8 +7,8 @@ import type { DeckEntry, LessonId } from '../types'
 import { classify, costVariants, faceOf, findGap, hideSelfName, ptVariants, ROLES, typeLabel, type CardFace, type FieldId, type Role } from './cardQuiz'
 import { RULES_BANK } from './rulesBank'
 
-// Quiz im Duolingo-Stil: Jede Lektion erzeugt 5 Fragen. Viele Fragen werden aus echten
-// Karten deines Decks (Scryfall-Daten) und aus simulierten Zügen gebaut.
+// Duolingo-style quiz: each lesson generates 5 questions. Many questions are built from real
+// cards in your deck (Scryfall data) and from simulated turns.
 
 export interface QuizOption {
   id: string
@@ -17,7 +17,7 @@ export interface QuizOption {
 
 export interface QuizCard {
   name: string
-  /** Kleine Beschriftung unter dem Bild, z. B. „5/4“. */
+  /** Small caption under the image, e.g. “5/4”. */
   caption?: string
 }
 
@@ -28,23 +28,23 @@ export interface Blank {
 
 export interface Question {
   id: string
-  /** „choice“: eine Antwort wählen; „build“: Lücken aus der Kachelbank füllen. */
+  /** “choice”: pick one answer; “build”: fill the blanks from the tile bank. */
   kind?: 'choice' | 'build'
   prompt: string
-  /** Selbst gezeichnete Karte mit versteckten Feldern (Karten-Quiz). */
+  /** Self-drawn card with hidden fields (card quiz). */
   face?: CardFace
   hidden?: FieldId[]
-  /** Für „build“: Lücken in Reihenfolge und die Kacheln zur Auswahl. */
+  /** For “build”: blanks in order and the tiles to choose from. */
   blanks?: Blank[]
   bank?: string[]
   cardsLabel?: string
   cards?: QuizCard[]
-  /** Kurzer Text über den Karten, z. B. Spielsituation. */
+  /** Short text above the cards, e.g. the game situation. */
   context?: string
   options: QuizOption[]
   correct: string
   explanation: string
-  /** Optionaler Zusatz nach der Antwort (z. B. Zugprotokoll). */
+  /** Optional extra after the answer (e.g. turn log). */
   details?: { title: string; lines: string[] }
 }
 
@@ -57,12 +57,12 @@ export interface QuizContext {
 
 export const QUESTIONS_PER_LESSON = 5
 
-// --- Hilfen -----------------------------------------------------------------
+// --- Helpers ----------------------------------------------------------------
 
 const pick = <T>(items: readonly T[], rng: Rng): T => items[Math.floor(rng() * items.length)]
 const int = (min: number, max: number, rng: Rng) => min + Math.floor(rng() * (max - min + 1))
 
-/** Antwortoptionen mischen; richtige Antwort per ID merken. */
+/** Shuffle answer options; remember the correct answer by ID. */
 function choice(rng: Rng, correctLabel: string, wrongLabels: string[]): { options: QuizOption[]; correct: string } {
   const unique = [...new Set(wrongLabels.filter((l) => l !== correctLabel))].slice(0, 3)
   const options = shuffle(
@@ -72,13 +72,14 @@ function choice(rng: Rng, correctLabel: string, wrongLabels: string[]): { option
   return { options, correct: 'a' }
 }
 
-/** Optionen in fester Reihenfolge (z. B. Zug 3, 4, 5 …). */
+/** Options in a fixed order (e.g. turn 3, 4, 5 …). */
 function ordered(labels: string[], correctIndex: number): { options: QuizOption[]; correct: string } {
   return { options: labels.map((label, i) => ({ id: `o${i}`, label })), correct: `o${correctIndex}` }
 }
 
 const costLabel = (generic: number) => (generic > 0 ? `${generic}GG` : 'GG')
-const timesText = (n: number) => (n === 0 ? 'noch nie' : n === 1 ? 'schon 1×' : `schon ${n}×`)
+const castText = (n: number) =>
+  n === 0 ? 'Ghalta hasn’t been cast yet' : n === 1 ? 'Ghalta has been cast once before' : `Ghalta has been cast ${n} times before`
 const ptOf = (c: CardInfo) => `${c.powerText ?? '?'}/${c.toughness ?? '?'}`
 
 function deckCreatures(ctx: QuizContext): CardInfo[] {
@@ -98,13 +99,13 @@ export function deckLibrary(ctx: Pick<QuizContext, 'decklist' | 'lookup'>): SimC
   return buildLibrary(ctx.decklist, ctx.lookup)
 }
 
-/** Anteil der Deckkarten mit geladenen Daten (für Lektionen mit echten Karten). */
+/** Share of deck cards with loaded data (for lessons with real cards). */
 export function cardCoverage(ctx: Pick<QuizContext, 'decklist' | 'lookup'>): number {
   const lib = deckLibrary(ctx)
   return lib.length ? lib.filter((c) => c.info).length / lib.length : 0
 }
 
-// --- Lektion 1: Ghalta-Mathe ------------------------------------------------------
+// --- Lesson 1: Ghalta Math --------------------------------------------------------
 
 function ghaltaCostQuestion(ctx: QuizContext, n: number): Question {
   const { rng } = ctx
@@ -118,7 +119,7 @@ function ghaltaCostQuestion(ctx: QuizContext, n: number): Question {
   } else {
     board = Array.from({ length: int(1, 3, rng) }, () => {
       const p = pick([1, 2, 3, 4, 5, 6], rng)
-      return { name: `Eine ${p}/${p}-Kreatur`, power: p, caption: `${p}/${p}`, real: false }
+      return { name: `a ${p}/${p} creature`, power: p, caption: `${p}/${p}`, real: false }
     })
   }
   const power = board.reduce((s, c) => s + c.power, 0)
@@ -129,13 +130,13 @@ function ghaltaCostQuestion(ctx: QuizContext, n: number): Question {
   const real = board.every((c) => c.real)
   return {
     id: `ghalta-${n}`,
-    prompt: 'Was kostet Ghalta jetzt?',
+    prompt: 'What does Ghalta cost right now?',
     context: real
-      ? `Ghalta wurde ${timesText(casts)} aus der Command Zone gecastet.`
-      : `Auf dem Feld: ${board.map((c) => c.name).join(', ')}. Ghalta wurde ${timesText(casts)} gecastet.`,
-    ...(real ? { cardsLabel: 'Deine Kreaturen auf dem Feld', cards: board.map((c) => ({ name: c.name, caption: c.caption })) } : {}),
+      ? `${castText(casts)} from the command zone.`
+      : `On the battlefield: ${board.map((c) => c.name).join(', ')}. ${castText(casts)}.`,
+    ...(real ? { cardsLabel: 'Your creatures on the battlefield', cards: board.map((c) => ({ name: c.name, caption: c.caption })) } : {}),
     ...choice(rng, cost.label, wrong),
-    explanation: `10 generisch${casts ? ` + ${2 * casts} Steuer` : ''} = ${10 + 2 * casts}, minus ${power} Stärke → ${cost.generic} generisch. Dazu immer GG: ${cost.label}.`,
+    explanation: `10 generic${casts ? ` + ${2 * casts} tax` : ''} = ${10 + 2 * casts}, minus ${power} power → ${cost.generic} generic. Plus GG as always: ${cost.label}.`,
   }
 }
 
@@ -144,9 +145,9 @@ function ghaltaThresholdQuestion(ctx: QuizContext, n: number): Question {
   const needed = 10 + 2 * casts
   return {
     id: `ghalta-threshold-${n}`,
-    prompt: `Ghalta wurde ${timesText(casts)} gecastet. Wie viel Stärke brauchst du, damit sie nur GG kostet?`,
+    prompt: `${castText(casts)}. How much power do you need for Ghalta to cost only GG?`,
     ...choice(ctx.rng, String(needed), [String(needed - 2), String(needed + 2), String(needed + 4), '12'].filter((x) => x !== String(needed))),
-    explanation: `Die Reduktion wirkt nur auf den generischen Teil: 10${casts ? ` + ${2 * casts} Steuer` : ''} = ${needed}. Mit ${needed} Stärke bleibt nur GG.`,
+    explanation: `The reduction only applies to the generic part: 10${casts ? ` + ${2 * casts} tax` : ''} = ${needed}. With ${needed} power, only GG is left.`,
   }
 }
 
@@ -156,7 +157,7 @@ function ghaltaLesson(ctx: QuizContext): Question[] {
   return qs
 }
 
-// --- Lektion 2: Kampf & Trample ---------------------------------------------------
+// --- Lesson 2: Combat & Trample ---------------------------------------------------
 
 const BLOCKERS = [1, 2, 2, 3, 3, 4, 5, 6]
 
@@ -165,16 +166,16 @@ function trampleQuestion(ctx: QuizContext, n: number, deathtouch = false): Quest
   const blockers = Array.from({ length: int(1, 2, rng) }, () => pick(BLOCKERS, rng))
   const lethal = blockers.reduce((s, t) => s + (deathtouch ? 1 : t), 0)
   const toPlayer = Math.max(0, 12 - lethal)
-  const blockerText = blockers.map((t) => `${t}/${t}`).join(' und eine ')
+  const blockerText = blockers.map((t) => `${t}/${t}`).join(' and a ')
   const wrong = [12, Math.max(0, 12 - Math.max(...blockers)), 0, toPlayer + 1, Math.max(0, toPlayer - 1)].map(String)
   return {
     id: `trample-${n}`,
-    prompt: `Ghalta (12/12, Trample${deathtouch ? ', Deathtouch' : ''}) wird von einer ${blockerText} geblockt. Wie viel Schaden geht maximal an den Spieler?`,
+    prompt: `Ghalta (12/12, Trample${deathtouch ? ', Deathtouch' : ''}) is blocked by a ${blockerText}. What’s the most damage that can go to the player?`,
     ...(ctx.lookup(ctx.commander) ? { cards: [{ name: ctx.commander, caption: '12/12' }] } : {}),
     ...choice(rng, String(toPlayer), wrong),
     explanation: deathtouch
-      ? `Mit Deathtouch reicht 1 Schaden pro Blocker: 12 − ${blockers.length} = ${toPlayer}. Das zählt als Commander-Schaden.`
-      : `Jeder Blocker braucht tödlichen Schaden (${blockers.join(' + ')} = ${lethal}). Rest 12 − ${lethal} = ${toPlayer} geht durch und zählt als Commander-Schaden.`,
+      ? `With Deathtouch, 1 damage per blocker is enough: 12 − ${blockers.length} = ${toPlayer}. That counts as commander damage.`
+      : `Each blocker needs lethal damage (${blockers.join(' + ')} = ${lethal}). The remaining 12 − ${lethal} = ${toPlayer} goes through and counts as commander damage.`,
   }
 }
 
@@ -186,9 +187,9 @@ function commanderDamageQuestion(ctx: QuizContext, n: number): Question {
   const dies = already + dealt >= 21
   return {
     id: `cmd-damage-${n}`,
-    prompt: `Ein Gegner hat schon ${already} Commander-Schaden von Ghalta. Ghalta (12/12, Trample) greift ihn an${blocker ? ` und wird von einer ${blocker}/${blocker} geblockt` : ' und wird nicht geblockt'}. Verliert er?`,
-    ...ordered(['Ja, er verliert', 'Nein, noch nicht'], dies ? 0 : 1),
-    explanation: `${already} + ${dealt} = ${already + dealt} Commander-Schaden. ${dies ? 'Ab 21 verliert er, egal wie viele Lebenspunkte er hat.' : `Bis 21 fehlen noch ${21 - already - dealt}.`}`,
+    prompt: `An opponent already has ${already} commander damage from Ghalta. Ghalta (12/12, Trample) attacks them${blocker ? ` and is blocked by a ${blocker}/${blocker}` : ' and isn’t blocked'}. Do they lose?`,
+    ...ordered(['Yes, they lose', 'No, not yet'], dies ? 0 : 1),
+    explanation: `${already} + ${dealt} = ${already + dealt} commander damage. ${dies ? 'At 21 they lose, no matter how much life they have.' : `Still ${21 - already - dealt} short of 21.`}`,
   }
 }
 
@@ -196,20 +197,20 @@ function blockerGoneQuestion(ctx: QuizContext): Question {
   const trample = ctx.rng() < 0.5
   return {
     id: 'blocker-gone',
-    prompt: `${trample ? 'Ghalta (12/12, Trample)' : 'Steel Leaf Champion (5/4, ohne Trample)'} wird geblockt. Vor dem Schaden wird der Blocker entfernt. Wie viel Schaden macht sie beim Spieler?`,
+    prompt: `${trample ? 'Ghalta (12/12, Trample)' : 'Steel Leaf Champion (5/4, no Trample)'} is blocked. The blocker is removed before damage. How much damage does it deal to the player?`,
     ...choice(ctx.rng, trample ? '12' : '0', trample ? ['0', '6', '11'] : ['5', '4', '1']),
     explanation: trample
-      ? 'Geblockt bleibt geblockt, aber mit Trample und ohne Blocker geht der volle Schaden zum Spieler.'
-      : 'Geblockt bleibt geblockt: Ohne Trample macht die Kreatur gar keinen Schaden, wenn der Blocker verschwindet.',
+      ? 'Blocked stays blocked, but with Trample and no blocker left, the full damage goes to the player.'
+      : 'Blocked stays blocked: without Trample, the creature deals no damage at all if the blocker disappears.',
   }
 }
 
 function fightQuestion(): Question {
   return {
     id: 'fight',
-    prompt: 'Ram Through: Ghalta kämpft gegen eine 4/4, der Überschuss (8) trifft den Spieler. Zählt das als Commander-Schaden?',
-    ...ordered(['Ja', 'Nein'], 1),
-    explanation: 'Nein. Commander-Schaden ist nur Kampfschaden. Fight-Schaden (Ram Through, Bite Down) zählt nicht, auch nicht der Überschuss.',
+    prompt: 'Ram Through: Ghalta fights a 4/4, and the excess (8) hits the player. Does that count as commander damage?',
+    ...ordered(['Yes', 'No'], 1),
+    explanation: 'No. Commander damage is only combat damage. Fight damage (Ram Through, Bite Down) doesn’t count, not even the excess.',
   }
 }
 
@@ -226,7 +227,7 @@ function combatLesson(ctx: QuizContext): Question[] {
   )
 }
 
-// --- Lektion 3: Commander-Regeln ---------------------------------------------------
+// --- Lesson 3: Commander Rules ----------------------------------------------------
 
 function rulesLesson(ctx: QuizContext): Question[] {
   return shuffle(RULES_BANK, ctx.rng)
@@ -239,7 +240,7 @@ function rulesLesson(ctx: QuizContext): Question[] {
     }))
 }
 
-// --- Lektion 4: Mulligan-Trainer ---------------------------------------------------
+// --- Lesson 4: Mulligan Trainer ---------------------------------------------------
 
 function mulliganLesson(ctx: QuizContext): Question[] {
   const library = deckLibrary(ctx).filter((c) => c.info)
@@ -248,36 +249,36 @@ function mulliganLesson(ctx: QuizContext): Question[] {
   for (let attempt = 0; questions.length < QUESTIONS_PER_LESSON && attempt < 200; attempt++) {
     const hand = shuffle(library, ctx.rng).slice(0, 7)
     const report = evaluateHand(hand.map((c) => c.info))
-    // Ausgewogen mischen: 2–3 Hände zum Behalten, der Rest Mulligans.
+    // Keep it balanced: 2–3 hands to keep, the rest mulligans.
     const wantKeep = keeps < 3 && (questions.length - keeps >= 2 || ctx.rng() < 0.5)
     if (report.keep !== wantKeep && attempt < 150) continue
     if (report.keep) keeps++
     questions.push({
       id: `mulligan-${questions.length}`,
-      prompt: 'Behalten oder Mulligan?',
-      context: 'Dein erster Mulligan ist gratis.',
-      cardsLabel: 'Deine Starthand',
+      prompt: 'Keep or mulligan?',
+      context: 'Your first mulligan is free.',
+      cardsLabel: 'Your opening hand',
       cards: hand.map((c) => ({ name: c.name })),
-      ...ordered(['Behalten', 'Mulligan'], report.keep ? 0 : 1),
-      explanation: `${report.keep ? 'Behalten' : 'Mulligan'} laut Faustregel (3–4 Länder oder Manakreaturen plus eine frühe dicke Kreatur). ${report.reasons.join(' ')}`,
+      ...ordered(['Keep', 'Mulligan'], report.keep ? 0 : 1),
+      explanation: `${report.keep ? 'Keep' : 'Mulligan'} by the rule of thumb (3–4 lands or mana creatures plus an early big creature). ${report.reasons.join(' ')}`,
     })
   }
   return questions
 }
 
-// --- Lektion 5: Wann kommt Ghalta? (Simulation) -------------------------------------
+// --- Lesson 5: When Does Ghalta Land? (simulation) ---------------------------------
 
-const TURN_BUCKETS = ['Zug 3 oder früher', 'Zug 4', 'Zug 5', 'Zug 6', 'Zug 7 oder später']
+const TURN_BUCKETS = ['Turn 3 or earlier', 'Turn 4', 'Turn 5', 'Turn 6', 'Turn 7 or later']
 const bucketOf = (turn: number | null) => (turn === null ? 4 : Math.min(4, Math.max(0, turn - 3)))
 
 export function describeTurn(t: TurnLog): string {
-  const parts = [`Zug ${t.turn}:`]
-  if (t.drew) parts.push(`zieht ${t.drew}`)
-  if (t.land) parts.push(`· spielt ${t.land}`)
+  const parts = [`Turn ${t.turn}:`]
+  if (t.drew) parts.push(`draws ${t.drew}`)
+  if (t.land) parts.push(`· plays ${t.land}`)
   const spells = t.cast.filter((c) => !c.startsWith('Ghalta'))
-  if (spells.length) parts.push(`· castet ${spells.join(', ')}`)
-  if (t.ghalta) parts.push('· castet GHALTA!')
-  parts.push(`(Stärke ${t.power}, ${t.mana} Mana)`)
+  if (spells.length) parts.push(`· casts ${spells.join(', ')}`)
+  if (t.ghalta) parts.push('· casts GHALTA!')
+  parts.push(`(power ${t.power}, ${t.mana} mana)`)
   return parts.join(' ')
 }
 
@@ -287,16 +288,16 @@ function whenQuestion(ctx: QuizContext, library: SimCard[], n: number): Question
   const shown = game.log.slice(0, game.ghaltaTurn ?? MAX_TURNS)
   return {
     id: `when-${n}`,
-    prompt: 'Wann kann Ghalta mit dieser Starthand kommen?',
-    context: `Der Autopilot spielt jeden Zug ein Land, zuerst Manakreaturen, dann die stärksten Kreaturen. Ohne Gegner.${game.mulligans ? ` (Nach ${game.mulligans} Mulligan${game.mulligans > 1 ? 's' : ''}.)` : ''}`,
-    cardsLabel: 'Deine Starthand',
+    prompt: 'When can Ghalta land with this opening hand?',
+    context: `The autopilot plays a land every turn, mana creatures first, then the strongest creatures. No opponents.${game.mulligans ? ` (After ${game.mulligans} mulligan${game.mulligans > 1 ? 's' : ''}.)` : ''}`,
+    cardsLabel: 'Your opening hand',
     cards: game.hand.map((c) => ({ name: c.name })),
     ...ordered(TURN_BUCKETS, correct),
     explanation:
       game.ghaltaTurn === null
-        ? `Mit dieser Hand kam Ghalta bis Zug ${MAX_TURNS} nicht.`
-        : `In dieser Simulation kam Ghalta in Zug ${game.ghaltaTurn}.`,
-    details: { title: 'So lief die Simulation', lines: shown.map(describeTurn) },
+        ? `With this hand, Ghalta didn’t land by turn ${MAX_TURNS}.`
+        : `In this simulation, Ghalta landed on turn ${game.ghaltaTurn}.`,
+    details: { title: 'How the simulation went', lines: shown.map(describeTurn) },
   }
 }
 
@@ -309,11 +310,11 @@ function castNowQuestion(ctx: QuizContext, library: SimCard[], n: number): Quest
   const can = t.mana >= cost.total
   return {
     id: `cast-now-${n}`,
-    prompt: `Zug ${t.turn}: Du hast ${t.mana} Mana. Kannst du Ghalta jetzt casten, ohne vorher etwas zu spielen?`,
-    cardsLabel: 'Deine Kreaturen auf dem Feld',
+    prompt: `Turn ${t.turn}: You have ${t.mana} mana. Can you cast Ghalta now without playing anything first?`,
+    cardsLabel: 'Your creatures on the battlefield',
     cards: t.boardAtStart.map((name) => ({ name })),
-    ...ordered(['Ja', 'Nein'], can ? 0 : 1),
-    explanation: `Stärke ${t.powerAtStart} → Ghalta kostet ${cost.label} (${cost.total} Mana). ${can ? `${t.mana} Mana reichen.` : `${t.mana} Mana reichen nicht.`}`,
+    ...ordered(['Yes', 'No'], can ? 0 : 1),
+    explanation: `Power ${t.powerAtStart} → Ghalta costs ${cost.label} (${cost.total} mana). ${can ? `${t.mana} mana is enough.` : `${t.mana} mana isn’t enough.`}`,
   }
 }
 
@@ -327,7 +328,7 @@ function goldfishLesson(ctx: QuizContext): Question[] {
   return qs
 }
 
-// --- Lektion 6: Karten kennen ----------------------------------------------------------
+// --- Lesson 6: Know Your Cards ----------------------------------------------------------
 
 function deckCards(ctx: QuizContext): CardInfo[] {
   const seen = new Set<string>()
@@ -350,22 +351,22 @@ function nameQuestion(ctx: QuizContext, card: CardInfo, pool: CardInfo[], n: num
   const face = faceOf(card)
   return {
     id: `card-name-${n}`,
-    prompt: 'Welche Karte ist das?',
+    prompt: 'Which card is this?',
     face: { ...face, text: hideSelfName(face.text, card.name) },
     hidden: ['name'],
     ...choice(ctx.rng, card.name, shuffle(others, ctx.rng)),
-    explanation: `Das ist ${card.name}. ${ROLES[classify(card).role].hint}`,
+    explanation: `This is ${card.name}. ${ROLES[classify(card).role].hint}`,
   }
 }
 
 function costQuestion(ctx: QuizContext, card: CardInfo, n: number): Question {
   return {
     id: `card-cost-${n}`,
-    prompt: 'Was kostet diese Karte?',
+    prompt: 'What does this card cost?',
     face: faceOf(card),
     hidden: ['cost'],
     ...choice(ctx.rng, card.manaCost, shuffle(costVariants(card.manaCost), ctx.rng)),
-    explanation: `${card.name} kostet ${card.cmc} Mana.`,
+    explanation: `${card.name} costs ${card.cmc} mana.`,
   }
 }
 
@@ -374,11 +375,11 @@ function gapQuestion(ctx: QuizContext, card: CardInfo, n: number): Question | nu
   if (!gap) return null
   return {
     id: `card-gap-${n}`,
-    prompt: 'Was fehlt im Kartentext?',
+    prompt: 'What’s missing from the card text?',
     face: { ...faceOf(card), text: gap.text },
     hidden: ['gap'],
     ...choice(ctx.rng, gap.answer, gap.wrong),
-    explanation: `Bei ${card.name} steht dort „${gap.answer}“.`,
+    explanation: `On ${card.name}, it says “${gap.answer}”.`,
   }
 }
 
@@ -390,16 +391,16 @@ function roleQuestion(ctx: QuizContext, card: CardInfo, n: number): Question {
   ).map((r) => ROLES[r].label)
   return {
     id: `card-role-${n}`,
-    prompt: 'Welche Rolle hat diese Karte in deinem Gameplan?',
+    prompt: 'What role does this card play in your gameplan?',
     cards: [{ name: card.name }],
     ...choice(ctx.rng, ROLES[role].label, others),
     explanation: `${ROLES[role].label}: ${ROLES[role].hint}`,
   }
 }
 
-const TYPE_TILES = ['Kreatur', 'Spontanzauber', 'Hexerei', 'Verzauberung', 'Artefakt']
-const FEMININE = new Set(['Kreatur', 'Hexerei', 'Verzauberung'])
-const withArticle = (type: string) => `${FEMININE.has(type) ? 'eine' : 'ein'} ${type}`
+const TYPE_TILES = ['Creature', 'Instant', 'Sorcery', 'Enchantment', 'Artifact']
+const withArticle = (type: string) =>
+  type === 'Other' ? 'something else' : `${/^[AEIOU]/.test(type) ? 'an' : 'a'} ${type.toLowerCase()}`
 
 function buildQuestion(ctx: QuizContext, card: CardInfo, pool: CardInfo[], n: number): Question {
   const blanks: Blank[] = [{ field: 'cost', answer: card.manaCost }]
@@ -419,15 +420,15 @@ function buildQuestion(ctx: QuizContext, card: CardInfo, pool: CardInfo[], n: nu
   return {
     id: `card-build-${n}`,
     kind: 'build',
-    prompt: `Baue die Karte: ${card.name}`,
-    context: 'Tippe die passenden Kacheln in die Lücken.',
+    prompt: `Build the card: ${card.name}`,
+    context: 'Tap the right tiles to fill the blanks.',
     face,
     hidden: blanks.map((b) => b.field),
     blanks,
     bank: shuffle([...answers, ...wrong.filter((w) => !answers.includes(w))], ctx.rng),
     options: [],
     correct: '',
-    explanation: `${card.name}: ${blanks.map((b) => (b.field === 'cost' ? `kostet ${card.cmc} Mana` : b.field === 'pt' ? `ist eine ${b.answer}` : `ist ${withArticle(b.answer)}`)).join(' und ')}.`,
+    explanation: `${card.name}: ${blanks.map((b) => (b.field === 'cost' ? `costs ${card.cmc} mana` : b.field === 'pt' ? `is a ${b.answer}` : `is ${withArticle(b.answer)}`)).join(' and ')}.`,
   }
 }
 
@@ -454,7 +455,7 @@ function cardsLesson(ctx: QuizContext): Question[] {
   if (roleCard) qs.push(roleQuestion(ctx, roleCard, 0))
   const buildCard = next((c) => !isLand(c) && c.manaCost !== '' && costVariants(c.manaCost).length >= 2)
   if (buildCard) qs.push(buildQuestion(ctx, buildCard, all, 0))
-  // Auffüllen, falls eine Fragenart keine passende Karte fand.
+  // Fill up in case a question type found no matching card.
   for (let n = 1; qs.length < QUESTIONS_PER_LESSON && pool.length > 0; n++) {
     const c = next()!
     qs.push(nameQuestion(ctx, c, all, n))
@@ -463,24 +464,24 @@ function cardsLesson(ctx: QuizContext): Question[] {
   return [first, ...shuffle(rest, ctx.rng)].filter(Boolean).slice(0, QUESTIONS_PER_LESSON)
 }
 
-// --- Lektionen --------------------------------------------------------------------
+// --- Lessons ----------------------------------------------------------------------
 
 export interface Lesson {
   id: LessonId
   title: string
   description: string
-  /** Braucht Kartendaten von Scryfall. */
+  /** Needs card data from Scryfall. */
   needsCards: boolean
   build: (ctx: QuizContext) => Question[]
 }
 
 export const LESSONS: Lesson[] = [
-  { id: 'ghalta', title: 'Ghalta-Mathe', description: 'Was kostet Ghalta mit deinem Board?', needsCards: false, build: ghaltaLesson },
-  { id: 'combat', title: 'Kampf & Trample', description: 'Blocker, Trample und Commander-Schaden.', needsCards: false, build: combatLesson },
-  { id: 'rules', title: 'Commander-Regeln', description: 'Mulligan, Stack, Kampf, Brackets.', needsCards: false, build: rulesLesson },
-  { id: 'mulligan', title: 'Mulligan-Trainer', description: 'Echte Starthände aus deinem Deck.', needsCards: true, build: mulliganLesson },
-  { id: 'goldfish', title: 'Wann kommt Ghalta?', description: 'Simulierte Züge mit deinem Deck.', needsCards: true, build: goldfishLesson },
-  { id: 'cards', title: 'Karten kennen', description: 'Was kostet, kann und soll jede Karte?', needsCards: true, build: cardsLesson },
+  { id: 'ghalta', title: 'Ghalta Math', description: 'What does Ghalta cost with your board?', needsCards: false, build: ghaltaLesson },
+  { id: 'combat', title: 'Combat & Trample', description: 'Blockers, trample and commander damage.', needsCards: false, build: combatLesson },
+  { id: 'rules', title: 'Commander Rules', description: 'Mulligan, stack, combat, brackets.', needsCards: false, build: rulesLesson },
+  { id: 'mulligan', title: 'Mulligan Trainer', description: 'Real opening hands from your deck.', needsCards: true, build: mulliganLesson },
+  { id: 'goldfish', title: 'When Does Ghalta Land?', description: 'Simulated turns with your deck.', needsCards: true, build: goldfishLesson },
+  { id: 'cards', title: 'Know Your Cards', description: 'What each card costs, does and is for.', needsCards: true, build: cardsLesson },
 ]
 
 export const LESSON_BY_ID = Object.fromEntries(LESSONS.map((l) => [l.id, l])) as Record<LessonId, Lesson>

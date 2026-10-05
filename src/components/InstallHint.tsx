@@ -18,13 +18,13 @@ export function InstallSteps() {
     return (
       <ol className="steps">
         <li>
-          In Safari unten auf <strong>Teilen</strong> tippen (Quadrat mit Pfeil nach oben).
+          In Safari, tap <strong>Share</strong> at the bottom (square with an arrow pointing up).
         </li>
         <li>
-          <strong>„Zum Home-Bildschirm“</strong> wählen.
+          Choose <strong>"Add to Home Screen"</strong>.
         </li>
         <li>
-          Falls angezeigt, <strong>„Als Web-App öffnen“</strong> aktiviert lassen. Dann auf <strong>Hinzufügen</strong> tippen.
+          If shown, leave <strong>"Open as Web App"</strong> turned on. Then tap <strong>Add</strong>.
         </li>
       </ol>
     )
@@ -32,14 +32,14 @@ export function InstallSteps() {
   return (
     <ol className="steps">
       <li>
-        Im Browser-Menü (⋮) auf <strong>„App installieren“</strong> oder <strong>„Zum Startbildschirm hinzufügen“</strong> tippen.
+        In the browser menu (⋮), tap <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.
       </li>
-      <li>Bestätigen. Endstep erscheint dann wie jede andere App.</li>
+      <li>Confirm. Endstep then shows up like any other app.</li>
     </ol>
   )
 }
 
-/** Hinweis „Als App installieren“. Verschwindet, sobald die App installiert läuft oder weggeklickt wurde. */
+/** "Install as app" hint. Disappears once the app runs installed or the hint was dismissed. */
 export function InstallHint({ compact = false }: { compact?: boolean }) {
   const canPrompt = useCanPromptInstall()
   const [dismissed, setDismissed] = useState(readDismissed)
@@ -53,7 +53,7 @@ export function InstallHint({ compact = false }: { compact?: boolean }) {
     try {
       localStorage.setItem(DISMISS_KEY, '1')
     } catch {
-      // ignorieren
+      // ignore
     }
   }
 
@@ -64,15 +64,15 @@ export function InstallHint({ compact = false }: { compact?: boolean }) {
           <DeviceMobileIcon weight="fill" />
         </span>
         <div>
-          <strong>Als App installieren</strong>
-          <span className="muted small">Eigenes Icon, Vollbild, offline nutzbar.</span>
+          <strong>Install as app</strong>
+          <span className="muted small">Own icon, full screen, works offline.</span>
         </div>
         <Button size="sm" variant="secondary" onClick={install}>
-          {canPrompt ? 'Installieren' : 'So geht’s'}
+          {canPrompt ? 'Install' : 'How to'}
         </Button>
-        {compact && <IconButton icon={XIcon} label="Hinweis ausblenden" onClick={dismiss} />}
+        {compact && <IconButton icon={XIcon} label="Hide hint" onClick={dismiss} />}
       </div>
-      <BottomSheet open={showSteps} onClose={() => setShowSteps(false)} title="Als App installieren">
+      <BottomSheet open={showSteps} onClose={() => setShowSteps(false)} title="Install as app">
         <InstallSteps />
       </BottomSheet>
     </>

@@ -11,7 +11,7 @@ import { actions, useData } from '../lib/store'
 import { toast } from '../lib/toast'
 import type { Game, GameInput } from '../lib/types'
 
-const monthFormat = new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' })
+const monthFormat = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' })
 
 function groupByMonth(games: Game[]): [string, Game[]][] {
   const groups = new Map<string, Game[]>()
@@ -35,18 +35,18 @@ export function History() {
   return (
     <div className="screen">
       <header className="screen-header">
-        <h1>Verlauf</h1>
+        <h1>History</h1>
         {games.length > 0 && (
           <Button size="sm" variant="secondary" icon={PlusIcon} onClick={() => (draft ? setConfirmReplace(true) : addPast())}>
-            Nachtragen
+            Add past game
           </Button>
         )}
       </header>
 
       {games.length === 0 ? (
-        <EmptyState title="Noch keine Runden" text="Starte deine erste Runde auf der Startseite oder trag eine vergangene nach.">
+        <EmptyState title="No games yet" text="Start your first game on the home screen or add a past one.">
           <Button variant="secondary" icon={PlusIcon} onClick={addPast}>
-            Runde nachtragen
+            Add past game
           </Button>
         </EmptyState>
       ) : (
@@ -76,9 +76,9 @@ export function History() {
 
       <ConfirmSheet
         open={confirmReplace}
-        title="Laufende Runde ersetzen?"
-        text="Es läuft gerade eine Runde. Wenn du jetzt eine vergangene nachträgst, wird die laufende verworfen."
-        confirmLabel="Ersetzen"
+        title="Replace game in progress?"
+        text="A game is in progress. If you add a past game now, the one in progress will be discarded."
+        confirmLabel="Replace"
         onConfirm={addPast}
         onClose={() => setConfirmReplace(false)}
       />
@@ -103,19 +103,19 @@ export function GameDetail({ id }: { id: string }) {
 
   const rating = FOCUS_RATINGS.find((r) => r.id === game.focusRating)?.label
   const facts = [
-    game.ghaltaTurn !== null && `Ghalta in Zug ${game.ghaltaTurn}`,
-    game.turns !== null && `${game.turns} Züge`,
+    game.ghaltaTurn !== null && `Ghalta on turn ${game.ghaltaTurn}`,
+    game.turns !== null && `${game.turns} turn${game.turns === 1 ? '' : 's'}`,
     game.mulligans !== null && `${game.mulligans} Mulligan${game.mulligans === 1 ? '' : 's'}`,
     game.wipe && WIPE_LABEL[game.wipe],
-    `${game.players} Spieler`,
+    `${game.players} players`,
     `Bracket ${game.bracket}`,
   ].filter(Boolean)
 
   return (
     <div className="screen">
       <header className="screen-header">
-        <IconButton icon={CaretLeftIcon} label="Zurück zum Verlauf" onClick={() => navigate('/verlauf')} />
-        <IconButton icon={PencilSimpleIcon} label="Bearbeiten" onClick={() => navigate(`/spiel/${game.id}/bearbeiten`)} />
+        <IconButton icon={CaretLeftIcon} label="Back to History" onClick={() => navigate('/verlauf')} />
+        <IconButton icon={PencilSimpleIcon} label="Edit" onClick={() => navigate(`/spiel/${game.id}/bearbeiten`)} />
       </header>
 
       <div className={`detail-hero ${game.result}`}>
@@ -123,14 +123,14 @@ export function GameDetail({ id }: { id: string }) {
         <h1>{formatDate(game.playedAt)}</h1>
         <p className="muted">
           {game.deck}
-          {game.result === 'loss' && game.winner && ` · Gewinner: ${game.winner}`}
+          {game.result === 'loss' && game.winner && ` · Winner: ${game.winner}`}
         </p>
       </div>
 
       <div className="focus-card" style={skillStyle(game.focus)}>
         <SkillBadge id={game.focus} size={44} />
         <div>
-          <span className="eyebrow">Fokus</span>
+          <span className="eyebrow">Focus</span>
           <p>
             <strong>{SKILL_BY_ID[game.focus].name}</strong>
             {rating && <span className="muted"> · {rating}</span>}
@@ -139,16 +139,16 @@ export function GameDetail({ id }: { id: string }) {
       </div>
 
       <dl className="answers">
-        <Answer label="Warum hat der Gewinner gewonnen?">
+        <Answer label="Why did the winner win?">
           {game.whyWinner || <span className="muted">–</span>}
           {game.whyCategory && <span className="tag">{WHY_LABEL[game.whyCategory]}</span>}
         </Answer>
-        <Answer label="Eine Entscheidung anders">
+        <Answer label="One decision to change">
           {game.decision || <span className="muted">–</span>}
           {game.decisionSkill && <span className="tag">{SKILL_BY_ID[game.decisionSkill].name}</span>}
         </Answer>
         {(game.deadCards.length > 0 || game.starCards.length > 0) && (
-          <Answer label="Karten">
+          <Answer label="Cards">
             <div className="chip-list">
               {game.deadCards.map((c) => (
                 <span key={`d-${c}`} className="chip dead">
@@ -163,24 +163,24 @@ export function GameDetail({ id }: { id: string }) {
             </div>
           </Answer>
         )}
-        {game.feedback && <Answer label="Feedback vom Tisch">{game.feedback}</Answer>}
-        {game.notes && <Answer label="Notizen">{game.notes}</Answer>}
+        {game.feedback && <Answer label="Feedback from the table">{game.feedback}</Answer>}
+        {game.notes && <Answer label="Notes">{game.notes}</Answer>}
       </dl>
 
       <p className="facts muted small">{facts.join(' · ')}</p>
 
       <Button variant="ghost" icon={TrashIcon} className="danger-text" onClick={() => setConfirmDelete(true)}>
-        Runde löschen
+        Delete game
       </Button>
 
       <ConfirmSheet
         open={confirmDelete}
-        title="Runde löschen?"
-        text="Das lässt sich nicht rückgängig machen."
-        confirmLabel="Löschen"
+        title="Delete game?"
+        text="This can’t be undone."
+        confirmLabel="Delete"
         onConfirm={() => {
           actions.deleteGame(game.id)
-          toast('Runde gelöscht')
+          toast('Game deleted')
           navigate('/verlauf', { replace: true })
         }}
         onClose={() => setConfirmDelete(false)}
@@ -202,20 +202,20 @@ export function GameEdit({ id }: { id: string }) {
 
   const save = () => {
     actions.updateGame(game.id, form)
-    toast('Gespeichert')
+    toast('Saved')
     navigate(`/spiel/${game.id}`, { replace: true })
   }
 
   return (
     <div className="screen flow">
       <header className="flow-header">
-        <IconButton icon={CaretLeftIcon} label="Abbrechen" onClick={() => history.back()} />
-        <span className="flow-title">Runde bearbeiten</span>
+        <IconButton icon={CaretLeftIcon} label="Cancel" onClick={() => history.back()} />
+        <span className="flow-title">Edit game</span>
       </header>
       <GameForm value={form} onChange={setForm} />
       <footer className="flow-footer">
         <Button block onClick={save}>
-          Speichern
+          Save
         </Button>
       </footer>
     </div>
@@ -225,9 +225,9 @@ export function GameEdit({ id }: { id: string }) {
 function NotFound() {
   return (
     <div className="screen">
-      <EmptyState title="Nicht gefunden" text="Diese Runde gibt es nicht (mehr).">
+      <EmptyState title="Not found" text="This game doesn’t exist (anymore).">
         <Button variant="secondary" icon={CaretRightIcon} onClick={() => navigate('/verlauf', { replace: true })}>
-          Zum Verlauf
+          Go to History
         </Button>
       </EmptyState>
     </div>

@@ -12,11 +12,11 @@ function Counter({ label, value, onChange, max }: { label: string; value: number
     <div className="counter">
       <span className="counter-label">{label}</span>
       <div className="counter-row">
-        <button type="button" aria-label={`${label} verringern`} onClick={() => change(-1)}>
+        <button type="button" aria-label={`Decrease ${label}`} onClick={() => change(-1)}>
           <MinusIcon weight="bold" />
         </button>
         <output>{value}</output>
-        <button type="button" aria-label={`${label} erhöhen`} onClick={() => change(1)}>
+        <button type="button" aria-label={`Increase ${label}`} onClick={() => change(1)}>
           <PlusIcon weight="bold" />
         </button>
       </div>
@@ -29,7 +29,7 @@ export interface GhaltaValue {
   casts: number
 }
 
-/** Ghalta-Rechner. Ohne value/onChange merkt er sich die Werte selbst. */
+/** Ghalta calculator. Without value/onChange it keeps track of the values itself. */
 export function GhaltaCalculator({ value, onChange }: { value?: GhaltaValue; onChange?: (v: GhaltaValue) => void }) {
   const [local, setLocal] = useState<GhaltaValue>({ power: 0, casts: 0 })
   const current = value ?? local
@@ -38,17 +38,17 @@ export function GhaltaCalculator({ value, onChange }: { value?: GhaltaValue; onC
   const ready = cost.generic === 0
 
   return (
-    <section className={`ghalta ${ready ? 'ready' : ''}`} aria-label="Ghalta-Rechner">
+    <section className={`ghalta ${ready ? 'ready' : ''}`} aria-label="Ghalta calculator">
       <div className="ghalta-head">
-        <span className="ghalta-eyebrow">Ghalta kostet</span>
+        <span className="ghalta-eyebrow">Ghalta costs</span>
         <strong className="ghalta-cost" aria-live="polite">
           {cost.label}
         </strong>
-        <span className="ghalta-sub">{ready ? 'Nur noch GG. Los!' : `Noch ${cost.missingPowerForGG} Stärke bis GG`}</span>
+        <span className="ghalta-sub">{ready ? 'Just GG. Go!' : `${cost.missingPowerForGG} more power to GG`}</span>
       </div>
       <div className="ghalta-counters">
-        <Counter label="Stärke auf dem Feld" value={current.power} onChange={(power) => update({ ...current, power })} max={99} />
-        <Counter label="Schon gecastet" value={current.casts} onChange={(casts) => update({ ...current, casts })} max={10} />
+        <Counter label="Power on the battlefield" value={current.power} onChange={(power) => update({ ...current, power })} max={99} />
+        <Counter label="Already cast" value={current.casts} onChange={(casts) => update({ ...current, casts })} max={10} />
       </div>
     </section>
   )

@@ -1,11 +1,10 @@
 /**
- * Wartende neue Version aktivieren und die App neu laden.
+ * Activate the waiting new version and reload the app.
  *
- * Verlässt sich nicht allein auf das Event „controllerchange“: In installierten
- * iOS-Web-Apps kommt es nicht zuverlässig an. Dann wurde die neue Version zwar
- * aktiviert, die App lud aber nicht neu (erst nach einem kompletten Neustart).
- * Deshalb wird auch auf den Statuswechsel der neuen Version gehört und nach einer
- * kurzen Wartezeit in jedem Fall neu geladen.
+ * Doesn't rely on the "controllerchange" event alone: in installed iOS web apps
+ * it doesn't arrive reliably. The new version was then activated, but the app
+ * didn't reload (only after a full restart). So we also listen for the new
+ * version's state change and reload after a short timeout in any case.
  */
 export async function activateUpdate(
   container: ServiceWorkerContainer | undefined = navigator.serviceWorker,

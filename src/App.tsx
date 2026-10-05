@@ -13,18 +13,18 @@ import { Round, RoundDone, RoundStart } from './pages/Round'
 import { RoundEnd } from './pages/RoundEnd'
 import { Stats } from './pages/Stats'
 
-// Training und Deck erst bei Bedarf laden (kleinerer Start); offline liegen sie im Service-Worker-Cache.
+// Load Training and Deck only when needed (faster startup); offline they live in the service worker cache.
 const Training = lazy(() => import('./pages/Training').then((m) => ({ default: m.Training })))
 const Lesson = lazy(() => import('./pages/Lesson').then((m) => ({ default: m.Lesson })))
 const DeckPage = lazy(() => import('./pages/Deck').then((m) => ({ default: m.DeckPage })))
 const SwapFlow = lazy(() => import('./pages/Deck').then((m) => ({ default: m.SwapFlow })))
 
 const TABS: { path: string; label: string; icon: Icon }[] = [
-  { path: '/', label: 'Start', icon: HouseIcon },
+  { path: '/', label: 'Home', icon: HouseIcon },
   { path: '/training', label: 'Training', icon: BarbellIcon },
-  { path: '/verlauf', label: 'Verlauf', icon: ClockCounterClockwiseIcon },
-  { path: '/statistik', label: 'Statistik', icon: ChartBarIcon },
-  { path: '/mehr', label: 'Mehr', icon: GearSixIcon },
+  { path: '/verlauf', label: 'History', icon: ClockCounterClockwiseIcon },
+  { path: '/statistik', label: 'Stats', icon: ChartBarIcon },
+  { path: '/mehr', label: 'More', icon: GearSixIcon },
 ]
 
 const SKILL_IDS = new Set<string>(SKILLS.map((s) => s.id))
@@ -63,7 +63,7 @@ function Page({ route }: { route: string }) {
   }
 }
 
-/** Während einer Runde gibt es keine Tab-Leiste: volle Konzentration auf eine Sache. */
+/** No tab bar during a game: full focus on one thing. */
 const isFlow = (route: string) =>
   route.startsWith('/runde') || route.endsWith('/bearbeiten') || route.startsWith('/training/') || route === '/mehr/deck/swap'
 
@@ -99,7 +99,7 @@ export function App() {
         </div>
       )}
       {!flow && (
-        <nav className="tabbar" aria-label="Hauptnavigation">
+        <nav className="tabbar" aria-label="Main navigation">
           {TABS.map(({ path, label, icon: IconCmp }) => {
             const active = tab === path
             return (

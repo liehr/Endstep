@@ -36,23 +36,23 @@ import type { DeckEntry } from '../lib/types'
 import { useDeckCards } from '../lib/useDeckCards'
 
 const GROUPS: { label: string; test: (c: CardInfo) => boolean }[] = [
-  { label: 'Kreaturen', test: isCreature },
-  { label: 'Spontanzauber', test: (c) => /\bInstant\b/.test(c.typeLine) },
-  { label: 'Hexereien', test: (c) => /\bSorcery\b/.test(c.typeLine) },
-  { label: 'Verzauberungen', test: (c) => /\bEnchantment\b/.test(c.typeLine) },
-  { label: 'Artefakte', test: isArtifact },
-  { label: 'Planeswalker', test: (c) => /\bPlaneswalker\b/.test(c.typeLine) },
-  { label: 'Länder', test: isLand },
+  { label: 'Creatures', test: isCreature },
+  { label: 'Instants', test: (c) => /\bInstant\b/.test(c.typeLine) },
+  { label: 'Sorceries', test: (c) => /\bSorcery\b/.test(c.typeLine) },
+  { label: 'Enchantments', test: (c) => /\bEnchantment\b/.test(c.typeLine) },
+  { label: 'Artifacts', test: isArtifact },
+  { label: 'Planeswalkers', test: (c) => /\bPlaneswalker\b/.test(c.typeLine) },
+  { label: 'Lands', test: isLand },
 ]
 
 function groupDeck(entries: DeckEntry[], lookup: (n: string) => CardInfo | undefined) {
   const groups = new Map<string, DeckEntry[]>()
   for (const e of entries) {
     const card = lookup(e.name)
-    const label = card ? (GROUPS.find((g) => g.test(card))?.label ?? 'Sonstiges') : 'Noch ohne Kartendaten'
+    const label = card ? (GROUPS.find((g) => g.test(card))?.label ?? 'Other') : 'No card data yet'
     groups.set(label, [...(groups.get(label) ?? []), e])
   }
-  const order = [...GROUPS.map((g) => g.label), 'Sonstiges', 'Noch ohne Kartendaten']
+  const order = [...GROUPS.map((g) => g.label), 'Other', 'No card data yet']
   return order
     .filter((l) => groups.has(l))
     .map((label) => ({ label, entries: groups.get(label)!.sort((a, b) => a.name.localeCompare(b.name, 'en')) }))
@@ -71,16 +71,16 @@ export function DeckPage() {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(serializeDecklist(deck.commander, deck.decklist, deck.commanderSet))
-      toast('Deckliste kopiert')
+      toast('Decklist copied')
     } catch {
-      toast('Kopieren nicht möglich')
+      toast("Couldn't copy")
     }
   }
 
   return (
     <div className="screen">
       <header className="screen-header">
-        <IconButton icon={CaretLeftIcon} label="Zurück" onClick={() => navigate('/mehr')} />
+        <IconButton icon={CaretLeftIcon} label="Back" onClick={() => navigate('/mehr')} />
       </header>
 
       <div className="deck-hero">
@@ -88,23 +88,23 @@ export function DeckPage() {
           <CardImage name={deck.commander} />
         </div>
         <div>
-          <span className="eyebrow">Dein Deck</span>
+          <span className="eyebrow">Your deck</span>
           <h1>{deck.commander}</h1>
           <p className={size === 99 ? 'muted' : 'error-text'}>
-            {size === 99 ? '99 Karten + Commander' : `${size} Karten + Commander (sollten 99 sein)`}
+            {size === 99 ? '99 cards + commander' : `${size} cards + commander (should be 99)`}
           </p>
           <p className="muted small">
-            Kartendaten: {loaded} von {uniqueNames.length} geladen
+            Card data: {loaded} of {uniqueNames.length} loaded
           </p>
         </div>
       </div>
 
       <div className="actions">
         <Button icon={ArrowsLeftRightIcon} onClick={() => navigate('/mehr/deck/swap')}>
-          Swap-Runde
+          Swap round
         </Button>
         <Button variant="secondary" icon={ClipboardTextIcon} onClick={() => setSheet('import')}>
-          Liste einfügen
+          Paste list
         </Button>
       </div>
 
@@ -113,8 +113,8 @@ export function DeckPage() {
           {deck.error && <p className="error-text">{deck.error}</p>}
           {deck.notFound.length > 0 && (
             <p>
-              <WarningIcon weight="fill" aria-hidden="true" /> Bei Scryfall nicht gefunden:{' '}
-              <strong>{deck.notFound.join(', ')}</strong>. Bitte den Namen in der Liste prüfen.
+              <WarningIcon weight="fill" aria-hidden="true" /> Not found on Scryfall:{' '}
+              <strong>{deck.notFound.join(', ')}</strong>. Please check the name in the list.
             </p>
           )}
           <Button
@@ -124,7 +124,7 @@ export function DeckPage() {
             disabled={deck.status === 'loading'}
             onClick={() => void deck.load(true)}
           >
-            {deck.status === 'loading' ? 'Lädt…' : 'Kartendaten laden'}
+            {deck.status === 'loading' ? 'Loading…' : 'Load card data'}
           </Button>
         </section>
       )}
@@ -132,16 +132,16 @@ export function DeckPage() {
       {otherPrinting.length > 0 && (
         <section className="panel notice">
           <p className="small">
-            <WarningIcon weight="fill" aria-hidden="true" /> Für {otherPrinting.length} Karte{otherPrinting.length > 1 ? 'n' : ''} gibt es die
-            gewünschte Druckversion bei Scryfall nicht, es wird eine andere Version gezeigt ({otherPrinting.slice(0, 3).join(', ')}
-            {otherPrinting.length > 3 ? ' …' : ''}). Tipp: Liste mit Set und Nummer aus Moxfield einfügen.
+            <WarningIcon weight="fill" aria-hidden="true" /> For {otherPrinting.length} card{otherPrinting.length > 1 ? 's' : ''}, Scryfall doesn't have
+            the requested printing, so a different version is shown ({otherPrinting.slice(0, 3).join(', ')}
+            {otherPrinting.length > 3 ? ' …' : ''}). Tip: paste the list from Moxfield with set and number.
           </p>
         </section>
       )}
 
       {swaps.length > 0 && (
         <section className="list-group">
-          <h2 className="list-title">Swap-Runden</h2>
+          <h2 className="list-title">Swap rounds</h2>
           <ul className="list">
             {[...swaps].reverse().map((s, i) => (
               <li key={s.id} className="swap-row">
@@ -151,13 +151,13 @@ export function DeckPage() {
                   </strong>
                   <span className="swap-out">− {s.out.join(', ')}</span>
                   <span className="swap-in">+ {s.in.join(', ')}</span>
-                  {s.note && <span className="muted small">„{s.note}“</span>}
+                  {s.note && <span className="muted small">"{s.note}"</span>}
                 </div>
               </li>
             ))}
           </ul>
           <Button variant="ghost" size="sm" icon={ArrowCounterClockwiseIcon} onClick={() => setSheet('undo')}>
-            Letzten Swap rückgängig
+            Undo last swap
           </Button>
         </section>
       )}
@@ -180,7 +180,7 @@ export function DeckPage() {
                         <small className={info.requestedSet ? 'printing other' : 'printing'}>
                           {info.set.toUpperCase()}
                           {info.collectorNumber ? ` #${info.collectorNumber}` : ''}
-                          {info.requestedSet ? ` statt ${info.requestedSet.toUpperCase()}` : ''}
+                          {info.requestedSet ? ` instead of ${info.requestedSet.toUpperCase()}` : ''}
                         </small>
                       )}
                     </span>
@@ -196,36 +196,36 @@ export function DeckPage() {
 
       <div className="stack">
         <Button variant="ghost" size="sm" icon={CopyIcon} onClick={() => void copy()}>
-          Deckliste kopieren
+          Copy decklist
         </Button>
         <Button variant="ghost" size="sm" icon={ArrowCounterClockwiseIcon} onClick={() => setSheet('reset')}>
-          Auf Precon zurücksetzen
+          Reset to precon
         </Button>
       </div>
-      <p className="muted small center">Kartendaten und -bilder: Scryfall. Magic: The Gathering © Wizards of the Coast.</p>
+      <p className="muted small center">Card data and images: Scryfall. Magic: The Gathering © Wizards of the Coast.</p>
 
       <ImportSheet open={sheet === 'import'} onClose={() => setSheet(null)} commander={deck.commander} commanderSet={deck.commanderSet} />
       <ConfirmSheet
         open={sheet === 'reset'}
-        title="Auf Precon zurücksetzen?"
-        text="Die Deckliste wird wieder Tramplesaurus Rex im Auslieferungszustand. Der Swap-Verlauf bleibt erhalten."
-        confirmLabel="Zurücksetzen"
+        title="Reset to precon?"
+        text="The decklist goes back to Tramplesaurus Rex as it ships. Your swap history is kept."
+        confirmLabel="Reset"
         onConfirm={() => {
           actions.setDecklist(DEFAULT_COMMANDER, DEFAULT_DECKLIST.map((e) => ({ ...e })), DEFAULT_SET)
           setSheet(null)
-          toast('Deckliste zurückgesetzt')
+          toast('Decklist reset')
         }}
         onClose={() => setSheet(null)}
       />
       <ConfirmSheet
         open={sheet === 'undo'}
-        title="Letzten Swap rückgängig machen?"
-        text="Die getauschten Karten kommen zurück ins Deck, der Swap wird aus dem Verlauf entfernt."
-        confirmLabel="Rückgängig"
+        title="Undo last swap?"
+        text="The swapped cards go back into the deck, and the swap is removed from the history."
+        confirmLabel="Undo"
         onConfirm={() => {
           actions.undoLastSwap()
           setSheet(null)
-          toast('Swap rückgängig gemacht')
+          toast('Swap undone')
         }}
         onClose={() => setSheet(null)}
       />
@@ -239,7 +239,7 @@ export function DeckPage() {
 function CardDetail({ name }: { name: string }) {
   const deck = useDeckCards({ autoLoad: false })
   const info = deck.lookup(name)
-  if (!info) return <p className="muted">Für diese Karte gibt es noch keine Daten von Scryfall.</p>
+  if (!info) return <p className="muted">No Scryfall data for this card yet.</p>
   return (
     <div className="card-detail">
       {info.imageLarge && <img className="mtg-card-large" src={info.imageLarge} alt={info.name} />}
@@ -250,7 +250,7 @@ function CardDetail({ name }: { name: string }) {
       {info.oracleText && <p className="pre">{info.oracleText}</p>}
       {info.scryfallUri && (
         <a href={info.scryfallUri} target="_blank" rel="noreferrer" className="link">
-          Auf Scryfall ansehen
+          View on Scryfall
         </a>
       )}
     </div>
@@ -280,31 +280,31 @@ function ImportSheet({
     void ensureCards([{ name: newCommander, set: newCommanderSet }, ...entries])
     setText('')
     onClose()
-    toast(`Deckliste übernommen (${size} Karten)`)
+    toast(`Decklist applied (${size} cards)`)
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Deckliste einfügen">
+    <BottomSheet open={open} onClose={onClose} title="Paste decklist">
       <p className="muted small">
-        Liste aus Moxfield, Archidekt oder MTG Arena exportieren und hier einfügen. Eine Karte pro Zeile, z. B. „1 Sol
-        Ring“.
+        Export the list from Moxfield, Archidekt or MTG Arena and paste it here. One card per line, e.g. "1 Sol
+        Ring".
       </p>
       <textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} placeholder={'Commander\n1 Ghalta, Primal Hunger\n\nDeck\n1 Llanowar Elves\n32 Forest\n…'} />
       {text.trim() && (
         <p className={size === 99 ? 'muted small' : 'error-text small'}>
-          {size} Karten erkannt{parsed.commander ? `, Commander: ${parsed.commander}` : ''}.
-          {size !== 99 && ' Ein Commander-Deck hat 99 Karten plus Commander.'}
-          {parsed.errors.length > 0 && ` Nicht verstanden: ${parsed.errors.slice(0, 3).join(' | ')}`}
+          {size} cards recognized{parsed.commander ? `, Commander: ${parsed.commander}` : ''}.
+          {size !== 99 && ' A Commander deck has 99 cards plus the commander.'}
+          {parsed.errors.length > 0 && ` Not understood: ${parsed.errors.slice(0, 3).join(' | ')}`}
         </p>
       )}
       <Button block disabled={size === 0} onClick={apply}>
-        Übernehmen
+        Apply
       </Button>
     </BottomSheet>
   )
 }
 
-// --- Swap-Runde -------------------------------------------------------------------
+// --- Swap round -------------------------------------------------------------------
 
 export function SwapFlow() {
   const { games, settings, swaps, decklist } = useData()
@@ -325,7 +325,7 @@ export function SwapFlow() {
 
   const toggleOut = (name: string) => {
     if (!out.includes(name) && out.length >= maxCards) {
-      toast(`In dieser Runde höchstens ${maxCards} Karte${maxCards > 1 ? 'n' : ''}.`)
+      toast(`At most ${maxCards} card${maxCards > 1 ? 's' : ''} this round.`)
       return
     }
     haptic()
@@ -335,7 +335,7 @@ export function SwapFlow() {
   const save = () => {
     actions.addSwap(out, into, note.trim())
     void ensureCards(into)
-    toast(`Swap gespeichert. Jetzt ${UPGRADE_EVERY_GAMES} Spiele testen.`)
+    toast(`Swap saved. Now test it for ${UPGRADE_EVERY_GAMES} games.`)
     navigate('/mehr/deck', { replace: true })
   }
 
@@ -343,23 +343,23 @@ export function SwapFlow() {
     return (
       <div className="screen flow">
         <header className="flow-header">
-          <IconButton icon={XIcon} label="Abbrechen" onClick={() => navigate('/mehr/deck')} />
-          <span className="flow-title">Swap-Runde {swaps.length + 1}</span>
+          <IconButton icon={XIcon} label="Cancel" onClick={() => navigate('/mehr/deck')} />
+          <span className="flow-title">Swap round {swaps.length + 1}</span>
         </header>
         <div className="question">
-          <h1>Was kommt raus?</h1>
+          <h1>What goes out?</h1>
           <p className="muted">
-            Höchstens {maxCards} Karte{maxCards > 1 ? 'n' : ''} in dieser Runde, damit du die Wirkung siehst. Nie Länder, Ramp oder direkte
-            Ghalta-Unterstützung streichen.
+            At most {maxCards} card{maxCards > 1 ? 's' : ''} this round, so you can see the effect. Never cut lands, ramp or direct
+            Ghalta support.
           </p>
         </div>
 
         {candidates.length > 0 && (
           <section className="list-group">
-            <h2 className="list-title">Oft tot auf der Hand</h2>
+            <h2 className="list-title">Often dead in hand</h2>
             <ul className="list">
               {candidates.map((n) => (
-                <SelectRow key={n} name={n} selected={out.includes(n)} badge={`${deadCount.get(cardKey(n))}× tot`} onToggle={() => toggleOut(n)} />
+                <SelectRow key={n} name={n} selected={out.includes(n)} badge={`${deadCount.get(cardKey(n))}× dead`} onToggle={() => toggleOut(n)} />
               ))}
             </ul>
           </section>
@@ -367,7 +367,7 @@ export function SwapFlow() {
 
         <label className="search">
           <MagnifyingGlassIcon weight="bold" aria-hidden="true" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Karte im Deck suchen" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search cards in deck" />
         </label>
         <ul className="list">
           {filtered.map((n) => (
@@ -377,7 +377,7 @@ export function SwapFlow() {
 
         <footer className="flow-footer">
           <Button block disabled={out.length === 0} onClick={() => setStep('in')}>
-            Weiter{out.length ? ` (${out.length}/${maxCards} raus)` : ''}
+            Continue{out.length ? ` (${out.length}/${maxCards} out)` : ''}
           </Button>
         </footer>
       </div>
@@ -387,12 +387,12 @@ export function SwapFlow() {
   return (
     <div className="screen flow">
       <header className="flow-header">
-        <IconButton icon={CaretLeftIcon} label="Zurück" onClick={() => setStep('out')} />
-        <span className="flow-title">Swap-Runde {swaps.length + 1}</span>
+        <IconButton icon={CaretLeftIcon} label="Back" onClick={() => setStep('out')} />
+        <span className="flow-title">Swap round {swaps.length + 1}</span>
       </header>
       <div className="question">
-        <h1>Was kommt rein?</h1>
-        <p className="muted">Zuerst die echte Lücke schließen: Interaktion gegen Artefakte und Verzauberungen, Schutz gegen Wipes.</p>
+        <h1>What goes in?</h1>
+        <p className="muted">Close the real gap first: interaction against artifacts and enchantments, protection against wipes.</p>
       </div>
 
       <p className="swap-out">− {out.join(', ')}</p>
@@ -402,20 +402,20 @@ export function SwapFlow() {
           {into.map((n) => (
             <li key={n} className="chip selected">
               {n}
-              <button type="button" aria-label={`${n} entfernen`} onClick={() => setInto((i) => i.filter((x) => x !== n))}>
+              <button type="button" aria-label={`Remove ${n}`} onClick={() => setInto((i) => i.filter((x) => x !== n))}>
                 <XIcon weight="bold" />
               </button>
             </li>
           ))}
         </ul>
       )}
-      <Field label="Warum? (optional)">
-        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="z. B. mehr Schutz gegen Wipes" />
+      <Field label="Why? (optional)">
+        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. more protection against wipes" />
       </Field>
 
       <footer className="flow-footer">
         <Button block disabled={into.length !== out.length} onClick={save}>
-          {into.length === out.length ? 'Swap speichern' : `${into.length} von ${out.length} gewählt`}
+          {into.length === out.length ? 'Save swap' : `${into.length} of ${out.length} chosen`}
         </Button>
       </footer>
     </div>
@@ -436,7 +436,7 @@ function SelectRow({ name, selected, badge, onToggle }: { name: string; selected
   )
 }
 
-/** Kartensuche mit Scryfall-Vorschlägen (online); offline geht der eingetippte Name. */
+/** Card search with Scryfall suggestions (online); offline the typed name works. */
 function CardSearch({ selected, max, onAdd }: { selected: string[]; max: number; onAdd: (name: string) => void }) {
   const [text, setText] = useState('')
   const [results, setResults] = useState<string[]>([])
@@ -477,7 +477,7 @@ function CardSearch({ selected, max, onAdd }: { selected: string[]; max: number;
           disabled={full}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && add(text)}
-          placeholder={full ? 'Alle Plätze belegt' : 'Neue Karte suchen (Scryfall)'}
+          placeholder={full ? 'All slots filled' : 'Search new card (Scryfall)'}
           enterKeyHint="done"
         />
       </label>
@@ -494,7 +494,7 @@ function CardSearch({ selected, max, onAdd }: { selected: string[]; max: number;
       )}
       {text.trim().length >= 2 && results.length === 0 && (
         <Button variant="secondary" size="sm" onClick={() => add(text)}>
-          „{text.trim()}“ übernehmen
+          Use "{text.trim()}"
         </Button>
       )}
     </div>

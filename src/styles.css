@@ -1,9 +1,9 @@
 /* ==========================================================================
-   Endstep – Design-Tokens
-   Verspielt-taktiler Stil (angelehnt an Duolingo): runde Schrift, kräftige
-   Farben, Buttons mit 3D-„Lippe“, große Antwortkarten. Skill-Farben sind mit
-   dem Dataviz-Validator auf Farbfehlsichtigkeit geprüft und erscheinen immer
-   zusammen mit Icon und Namen.
+   Endstep – Design tokens
+   Playful, tactile style (inspired by Duolingo): rounded font, bold colours,
+   buttons with a 3D "lip", large answer cards. Skill colours were checked for
+   colour vision deficiency with the dataviz validator and always appear
+   together with an icon and name.
    ========================================================================== */
 
 :root {
@@ -117,7 +117,7 @@
 }
 
 /* ==========================================================================
-   Grundlagen
+   Basics
    ========================================================================== */
 
 * {
@@ -140,11 +140,11 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* iOS-Fehler: Als installierte App mit durchsichtiger Statusleiste meldet iOS bei Seiten,
-   die kürzer als der Bildschirm sind, eine um die Statusleiste (~62 pt) zu kleine Höhe.
-   Unten fixierte Leisten (Tabs, Weiter-Button) rutschen dann nach oben. Mit mindestens
-   voller Bildschirmhöhe bleibt alles am unteren Rand. Nur im App-Modus, damit im
-   Browser-Tab nichts unnötig scrollt. */
+/* iOS bug: as an installed app with a translucent status bar, iOS reports a height that is
+   too small by the status bar (~62 pt) for pages shorter than the screen.
+   Bars fixed to the bottom (tabs, Continue button) then slide up. With at least
+   full screen height everything stays at the bottom edge. Only in app mode, so
+   nothing scrolls unnecessarily in a browser tab. */
 @media (display-mode: standalone) {
   body {
     min-height: 100lvh;
@@ -371,7 +371,7 @@ button {
 }
 
 /* ==========================================================================
-   Eingaben
+   Inputs
    ========================================================================== */
 
 .form {
@@ -413,7 +413,7 @@ textarea {
   background: var(--surface-2);
   color: var(--text);
   font: inherit;
-  /* 16px+ verhindert das automatische Hineinzoomen auf iOS. */
+  /* 16px+ prevents automatic zoom-in on iOS. */
   font-size: 17px;
   font-weight: 600;
 }
@@ -442,7 +442,7 @@ textarea:focus {
   gap: 12px;
 }
 
-/* Antwortkarten */
+/* Answer cards */
 .choice {
   display: grid;
   gap: 10px;
@@ -502,7 +502,7 @@ textarea:focus {
   color: var(--muted);
 }
 
-/* Ergebnis wählen */
+/* Choose result */
 .result-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -551,7 +551,7 @@ textarea:focus {
   color: var(--loss-text);
 }
 
-/* Zähler */
+/* Counters */
 .stepper,
 .counter-row {
   display: flex;
@@ -583,7 +583,7 @@ textarea:focus {
   font-weight: 900;
 }
 
-/* Karten-Chips */
+/* Card chips */
 .chips {
   display: flex;
   flex-direction: column;
@@ -639,7 +639,7 @@ textarea:focus {
   border-color: var(--warn-border);
 }
 
-/* Fortschrittsbalken */
+/* Progress bar */
 .progress {
   position: relative;
   height: 16px;
@@ -666,7 +666,7 @@ textarea:focus {
 }
 
 /* ==========================================================================
-   Flächen & Bausteine
+   Surfaces & building blocks
    ========================================================================== */
 
 .card,
@@ -799,7 +799,7 @@ textarea:focus {
 }
 
 /* ==========================================================================
-   Startseite
+   Home page
    ========================================================================== */
 
 .topstats {
@@ -888,7 +888,7 @@ textarea:focus {
   font-size: 26px;
 }
 
-/* Lernpfad */
+/* Learning path */
 .path {
   display: flex;
   flex-direction: column;
@@ -1016,7 +1016,7 @@ textarea:focus {
 .path-step.current .path-label.right {
   left: calc(100% + 24px);
 }
-/* Platz für die „Start“-Sprechblase über dem aktuellen Knoten */
+/* Room for the "Start" speech bubble above the current node */
 .path-step.current:has(.path-bubble):not(:first-child) {
   margin-top: 30px;
 }
@@ -1069,7 +1069,7 @@ textarea:focus {
 }
 
 /* ==========================================================================
-   Runde
+   Game in progress
    ========================================================================== */
 
 .intro {
@@ -1274,7 +1274,7 @@ textarea:focus {
 }
 
 /* ==========================================================================
-   Listen, Verlauf, Details
+   Lists, history, details
    ========================================================================== */
 
 .list-group {
@@ -1407,7 +1407,7 @@ textarea:focus {
 }
 
 /* ==========================================================================
-   Statistik
+   Stats
    ========================================================================== */
 
 .stat-grid {
@@ -1555,7 +1555,7 @@ textarea:focus {
   color: var(--warn-text);
 }
 
-/* Spickzettel */
+/* Cheat sheet */
 .skill-list,
 .numbered {
   display: flex;
@@ -1601,7 +1601,7 @@ textarea:focus {
 }
 
 /* ==========================================================================
-   Bottom Sheet, Tab-Leiste, Hinweise
+   Bottom sheet, tab bar, hints
    ========================================================================== */
 
 .sheet-backdrop {
@@ -1744,7 +1744,7 @@ textarea:focus {
 }
 
 /* ==========================================================================
-   Bewegung
+   Motion
    ========================================================================== */
 
 @keyframes enter {
@@ -1824,7 +1824,7 @@ textarea:focus {
   vertical-align: -2px;
 }
 
-/* Lektionen */
+/* Lessons */
 .lessons {
   display: flex;
   flex-direction: column;
@@ -2009,7 +2009,7 @@ textarea:focus {
   margin-top: 4px;
 }
 
-/* Kartenbilder */
+/* Card images */
 .card-grid-wrap {
   display: flex;
   flex-direction: column;
@@ -2070,7 +2070,7 @@ textarea:focus {
   border-radius: 4.75% / 3.4%;
 }
 
-/* Goldfish-Labor */
+/* Goldfish Lab */
 .lab {
   gap: 14px;
 }
@@ -2142,7 +2142,7 @@ textarea:focus {
   color: var(--select);
 }
 
-/* Zug-Zähler */
+/* Turn counter */
 .turn-card {
   display: flex;
   align-items: center;
@@ -2308,7 +2308,7 @@ textarea:focus {
   gap: 10px;
 }
 
-/* Karten-Quiz: selbst gezeichnete Karte */
+/* Card quiz: self-drawn card */
 .mana {
   display: inline-flex;
   gap: 2px;
@@ -2451,7 +2451,7 @@ textarea:focus {
   color: #8c8c8c;
 }
 
-/* Lücken und Kacheln */
+/* Blanks and tiles */
 .slot {
   display: inline-flex;
   align-items: center;
