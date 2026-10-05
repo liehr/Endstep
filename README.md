@@ -8,8 +8,8 @@ It started with the Tramplesaurus Rex (Ghalta) precon and now works with any Com
 - **Pick your deck:** on first launch, search all Commander precons (by name, commander, set or year)
   or paste your own list from Moxfield, Archidekt, MTGGoldfish or any text list. Links to deck sites
   can't be read from the browser, so the app explains how to copy the list as text instead.
-  Switch decks any time under **More → Play a different deck**; games stay, and stats, swaps and the
-  upgrade chest follow the active deck.
+  Keep several decks and switch any time under **More → Switch deck**: each deck keeps its list,
+  swaps, bracket and table talk, and stats and the upgrade chest follow the deck you play.
 
 - **Before the game:** the next focus skill in the rotation (Mulligan → Sequencing → Threat
   Assessment → Combat Math → Board Wipe Discipline → Removal Timing → Reading the Table / Politics),

@@ -12,6 +12,7 @@ import type {
   GameInput,
   QuizMemory,
   Result,
+  SavedDeck,
   Settings,
   SkillId,
   Swap,
@@ -46,6 +47,7 @@ export function emptyData(): AppData {
     commanderSet: DEFAULT_SET,
     decklist: DEFAULT_DECKLIST.map((e) => ({ ...e })),
     swaps: [],
+    decks: [],
     training: [],
     quiz: {},
   }
@@ -110,6 +112,7 @@ const RATINGS: FocusRating[] = [1, 2, 3]
 const RESULTS: Result[] = ['win', 'loss']
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const SET_RE = /^[a-z0-9]{2,6}$/
+const PRECON_RE = /^[A-Za-z0-9_]{1,80}$/
 
 export function sanitizeInput(raw: Obj, settings: Settings): GameInput {
   return {
@@ -211,6 +214,28 @@ function sanitizeSwap(raw: unknown, settings: Settings): Swap | null {
   }
 }
 
+function sanitizeSavedDeck(raw: unknown, settings: Settings): SavedDeck | null {
+  if (!isObj(raw)) return null
+  const name = str(raw.name).trim()
+  const commander = str(raw.commander).trim()
+  const decklist = sanitizeDecklist(raw.decklist)
+  if (!name || !commander || !decklist) return null
+  return {
+    name,
+    commander,
+    commanderSet: typeof raw.commanderSet === 'string' && SET_RE.test(raw.commanderSet) ? raw.commanderSet : null,
+    decklist,
+    precon: typeof raw.precon === 'string' && PRECON_RE.test(raw.precon) ? raw.precon : null,
+    bracket: oneOf(raw.bracket, BRACKETS, settings.defaultBracket),
+    bracketCheckDone: raw.bracketCheckDone === true,
+    tableIntro: str(raw.tableIntro, tableIntroFor(name, commander, false, settings.defaultBracket)),
+  }
+}
+
+/** Saved decks: each name once, never the active deck. */
+const otherDecks = (decks: SavedDeck[], active: string) =>
+  decks.filter((d, i) => cardKey(d.name) !== cardKey(active) && decks.findIndex((x) => cardKey(x.name) === cardKey(d.name)) === i)
+
 const LESSON_IDS = ['ghalta', 'combat', 'rules', 'mulligan', 'goldfish', 'cards', 'rulings'] as const
 
 function sanitizeTraining(raw: unknown): TrainingResult | null {
@@ -254,8 +279,6 @@ export function mergeQuiz(current: QuizMemory, incoming: QuizMemory): QuizMemory
   return out
 }
 
-const PRECON_RE = /^[A-Za-z0-9_]{1,80}$/
-
 const listOf = <T>(raw: unknown, fn: (x: unknown) => T | null): T[] =>
   Array.isArray(raw) ? raw.map(fn).filter((x): x is T => x !== null) : []
 
@@ -289,6 +312,7 @@ export function sanitizeData(raw: unknown): AppData {
           : null,
     decklist: sanitizeDecklist(raw.decklist) ?? defaults.decklist,
     swaps: listOf(raw.swaps, (s) => sanitizeSwap(s, settings)),
+    decks: otherDecks(listOf(raw.decks, (d) => sanitizeSavedDeck(d, settings)), settings.defaultDeck),
     training: listOf(raw.training, sanitizeTraining),
     quiz: sanitizeQuiz(raw.quiz),
   }
@@ -341,11 +365,15 @@ export function mergeImport(current: AppData, imported: AppData): { data: AppDat
   const changedGames = games.filter((g) => before.get(g.id) !== g.updatedAt).length
   const fresh = !current.deckChosen && imported.deckChosen
   const takeDeck = fresh || (isDefaultDeck(current) && !isDefaultDeck(imported))
+  const settings = fresh ? imported.settings : current.settings
+  // The backup's active deck joins your other decks unless it's the one you play now.
+  const backupActive = imported.deckChosen && !fresh ? [activeDeck(imported)] : []
   return {
     changedGames,
     data: {
       ...current,
-      settings: fresh ? imported.settings : current.settings,
+      settings,
+      decks: otherDecks([...current.decks, ...imported.decks, ...backupActive], settings.defaultDeck),
       deckChosen: current.deckChosen || imported.deckChosen,
       precon: takeDeck ? imported.precon : current.precon,
       games,
@@ -369,17 +397,49 @@ export interface ChosenDeck {
   precon: string | null
 }
 
-/**
- * Switch to another deck. Games and swaps stay: they carry the deck name, so stats and the
- * upgrade chest follow the active deck. The table talk is rewritten unless you changed it.
- */
-export function switchDeck(data: AppData, deck: ChosenDeck): AppData {
+/** The active deck as it would be saved when you switch away from it. */
+export function activeDeck(data: AppData): SavedDeck {
   const { settings } = data
+  return {
+    name: settings.defaultDeck,
+    commander: data.commander,
+    commanderSet: data.commanderSet,
+    decklist: data.decklist,
+    precon: data.precon,
+    bracket: settings.defaultBracket,
+    bracketCheckDone: settings.bracketCheckDone,
+    tableIntro: settings.tableIntro,
+  }
+}
+
+const isSaved = (deck: ChosenDeck | SavedDeck): deck is SavedDeck => 'bracket' in deck
+
+/**
+ * Switch to another deck. The deck you leave is kept under "Your decks" with its list, bracket
+ * and table talk. Games and swaps stay too: they carry the deck name, so stats and the upgrade
+ * chest follow the active deck. For a new deck the table talk is rewritten unless you changed it.
+ */
+export function switchDeck(data: AppData, deck: ChosenDeck | SavedDeck): AppData {
+  const { settings } = data
+  const sameDeck = cardKey(deck.name) === cardKey(settings.defaultDeck)
+  const decks = otherDecks(data.deckChosen && !sameDeck ? [...data.decks, activeDeck(data)] : data.decks, deck.name)
+  if (isSaved(deck)) {
+    return {
+      ...data,
+      deckChosen: true,
+      precon: deck.precon,
+      commander: deck.commander,
+      commanderSet: deck.commanderSet,
+      decklist: deck.decklist,
+      decks,
+      settings: { ...settings, defaultDeck: deck.name, defaultBracket: deck.bracket, bracketCheckDone: deck.bracketCheckDone, tableIntro: deck.tableIntro },
+    }
+  }
   const previousIntro = tableIntroFor(settings.defaultDeck, data.commander, data.precon !== null, settings.defaultBracket)
   const keepIntro = data.deckChosen && settings.tableIntro !== DEFAULT_TABLE_INTRO && settings.tableIntro !== previousIntro
-  const sameDeck = cardKey(deck.name) === cardKey(settings.defaultDeck)
   return {
     ...data,
+    decks,
     deckChosen: true,
     precon: deck.precon,
     commander: deck.commander,
@@ -393,6 +453,12 @@ export function switchDeck(data: AppData, deck: ChosenDeck): AppData {
     },
   }
 }
+
+/** Forget a saved deck. Its games and swaps stay in the history. */
+export const removeDeck = (data: AppData, name: string): AppData => ({ ...data, decks: data.decks.filter((d) => cardKey(d.name) !== cardKey(name)) })
+
+/** Is this name taken by one of your other decks? */
+export const deckNameTaken = (data: AppData, name: string) => data.decks.some((d) => cardKey(d.name) === cardKey(name))
 
 /** Save settings; renaming the deck takes its swap history along. */
 export function applySettings(data: AppData, settings: Settings): AppData {

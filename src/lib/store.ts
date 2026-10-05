@@ -1,10 +1,10 @@
 import { useSyncExternalStore } from 'react'
-import { applySettings, emptyInput, emptyTracker, loadData, mergeImport, saveData, swapsOf, switchDeck, type ChosenDeck } from './data'
+import { applySettings, emptyInput, emptyTracker, loadData, mergeImport, removeDeck, saveData, swapsOf, switchDeck, type ChosenDeck } from './data'
 import { applySwap } from './decklist'
 import { today } from './dates'
 import { nextFocus } from './focus'
 import { recordAnswer } from './quiz/memory'
-import type { AppData, DeckEntry, Game, GameInput, LessonId, Settings, SkillId, Swap, Tracker } from './types'
+import type { AppData, DeckEntry, Game, GameInput, LessonId, SavedDeck, Settings, SkillId, Swap, Tracker } from './types'
 
 // A small global store: data lives only on the device (localStorage).
 
@@ -88,8 +88,13 @@ export const actions = {
   },
 
   /** Pick a deck (welcome screen) or switch to another one. */
-  chooseDeck(deck: ChosenDeck) {
+  chooseDeck(deck: ChosenDeck | SavedDeck) {
     commit(switchDeck(data, deck))
+  },
+
+  /** Forget one of your other decks (its games and swaps stay). */
+  removeDeck(name: string) {
+    commit(removeDeck(data, name))
   },
 
   /** Restore a backup: nothing gets lost. Returns the number of new/updated games. */

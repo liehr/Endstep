@@ -130,6 +130,19 @@ export interface QuestionStat {
 /** Question key → review state. */
 export type QuizMemory = Record<string, QuestionStat>
 
+/** A deck you played before and can switch back to, as you left it. */
+export interface SavedDeck {
+  name: string
+  commander: string
+  commanderSet: string | null
+  decklist: DeckEntry[]
+  /** MTGJSON file of the precon; null for a pasted list. */
+  precon: string | null
+  bracket: Bracket
+  bracketCheckDone: boolean
+  tableIntro: string
+}
+
 export interface AppData {
   schemaVersion: 1
   games: Game[]
@@ -146,6 +159,8 @@ export interface AppData {
   /** The other 99 cards. */
   decklist: DeckEntry[]
   swaps: Swap[]
+  /** Your other decks, each as you left it. The active deck lives in the fields above. */
+  decks: SavedDeck[]
   training: TrainingResult[]
   /** Which quiz questions you've seen and when they're due again. */
   quiz: QuizMemory

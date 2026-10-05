@@ -2,12 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { createBackup, parseBackup } from './backup'
 import { DEFAULT_DECK, DEFAULT_TABLE_INTRO } from './content'
 import {
+  activeDeck,
   applySettings,
+  deckNameTaken,
   defaultSettings,
   emptyData,
   loadData,
   mergeGames,
   mergeImport,
+  removeDeck,
   sanitizeData,
   STORAGE_KEY,
   swapsOf,
@@ -191,5 +194,49 @@ describe('picking a deck', () => {
     const { data } = mergeImport(emptyData(), backup)
     expect(data).toMatchObject({ deckChosen: true, commander: 'The First Sliver', precon: 'SliverSwarm_CMM' })
     expect(data.settings.defaultPlayers).toBe(5)
+  })
+
+  it('keeps the deck you leave and brings it back as you left it', () => {
+    const swapped = [{ name: 'Forest', qty: 98 }, { name: 'Sol Ring', qty: 1 }]
+    const ghalta = { ...emptyData(), deckChosen: true, decklist: swapped, settings: { ...defaultSettings(), defaultBracket: 3 as const, bracketCheckDone: true, tableIntro: 'Stomp!' } }
+    const onSliver = switchDeck(ghalta, sliver)
+    expect(onSliver.decks).toEqual([activeDeck(ghalta)])
+    expect(onSliver.decks[0]).toMatchObject({ name: DEFAULT_DECK, bracket: 3, bracketCheckDone: true, tableIntro: 'Stomp!' })
+
+    const back = switchDeck({ ...onSliver, settings: { ...onSliver.settings, defaultBracket: 1 } }, onSliver.decks[0])
+    expect(back).toMatchObject({ commander: 'Ghalta, Primal Hunger', decklist: swapped })
+    expect(back.settings).toMatchObject({ defaultDeck: DEFAULT_DECK, defaultBracket: 3, bracketCheckDone: true, tableIntro: 'Stomp!' })
+    expect(back.decks.map((d) => [d.name, d.bracket])).toEqual([[sliver.name, 1]])
+  })
+
+  it('lists each deck once and never the active one', () => {
+    const start = switchDeck({ ...emptyData(), deckChosen: true }, sliver)
+    const again = switchDeck(start, { ...sliver, decklist: [{ name: 'Island', qty: 99 }] })
+    expect(again.decks.map((d) => d.name)).toEqual([DEFAULT_DECK])
+    // Before a deck is picked, the stand-in Ghalta deck isn't kept.
+    expect(switchDeck(emptyData(), sliver).decks).toEqual([])
+    expect(deckNameTaken(again, DEFAULT_DECK.toUpperCase())).toBe(true)
+    expect(deckNameTaken(again, sliver.name)).toBe(false)
+    expect(removeDeck(again, DEFAULT_DECK).decks).toEqual([])
+  })
+
+  it('loads saved decks safely: older data has none, broken entries and duplicates are dropped', () => {
+    expect(sanitizeData({ games: [] }).decks).toEqual([])
+    const saved = { name: 'Slivers', commander: 'The First Sliver', decklist: [{ name: 'Sol Ring', qty: 1 }], bracket: 9, precon: 'bad name!' }
+    const data = sanitizeData({
+      settings: { defaultDeck: 'Active' },
+      decks: [saved, { ...saved, name: 'slivers' }, { name: 'No list', commander: 'X' }, { ...saved, name: 'Active' }, 'junk'],
+    })
+    expect(data.decks).toHaveLength(1)
+    expect(data.decks[0]).toMatchObject({ name: 'Slivers', bracket: 2, precon: null, commanderSet: null, bracketCheckDone: false })
+    expect(sanitizeData(JSON.parse(JSON.stringify(data))).decks).toEqual(data.decks)
+  })
+
+  it('restoring a backup adds its decks to yours', () => {
+    const phone = switchDeck(switchDeck({ ...emptyData(), deckChosen: true }, sliver), { ...sliver, name: 'Elves', commander: 'Lathril, Blade of the Elves', precon: null })
+    const mine = switchDeck({ ...emptyData(), deckChosen: true }, { ...sliver, name: 'Dragons', commander: 'Lathliss, Dragon Queen', precon: null })
+    const { data } = mergeImport(mine, phone)
+    expect(data.settings.defaultDeck).toBe('Dragons')
+    expect(data.decks.map((d) => d.name).sort()).toEqual([DEFAULT_DECK, 'Elves', sliver.name].sort())
   })
 })

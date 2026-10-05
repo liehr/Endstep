@@ -113,7 +113,7 @@ export function DeckPage() {
         </Button>
       </div>
       <Button variant="ghost" size="sm" icon={SwapIcon} onClick={() => navigate('/mehr/deck/wechseln')}>
-        Play a different deck
+        Switch deck
       </Button>
 
       {(deck.missing.length > 0 || deck.error) && (

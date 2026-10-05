@@ -20,6 +20,7 @@ import { AttackList, RulesList } from '../components/Reference'
 import { SkillBadge } from '../components/skills'
 import { BottomSheet, Button, Choice, Field, Group, IconButton, Stepper } from '../components/ui'
 import { createBackup, parseBackup, shareOrDownload } from '../lib/backup'
+import { deckNameTaken } from '../lib/data'
 import { SKILLS } from '../lib/content'
 import { isGhalta } from '../lib/commander'
 import { deckSize } from '../lib/decklist'
@@ -72,6 +73,10 @@ export function More() {
     setSheet(id)
   }
   const save = () => {
+    if (deckNameTaken(data, draft.defaultDeck.trim())) {
+      toast('Another of your decks has that name.')
+      return
+    }
     actions.updateSettings({ ...draft, defaultDeck: draft.defaultDeck.trim() || settings.defaultDeck })
     setSheet(null)
     toast('Saved')
@@ -97,7 +102,7 @@ export function More() {
         <ul className="list settings">
           <Row icon={CardsIcon} color="var(--skill-mulligan)" label="Decklist & swaps" value={`${deckSize(data.decklist)} + 1`} onClick={() => navigate('/mehr/deck')} />
           <Row icon={StackIcon} color="var(--skill-combat)" label="Deck name" value={settings.defaultDeck} onClick={() => open('deck')} />
-          <Row icon={SwapIcon} color="var(--skill-threat)" label="Play a different deck" onClick={() => navigate('/mehr/deck/wechseln')} />
+          <Row icon={SwapIcon} color="var(--skill-threat)" label="Switch deck" value={data.decks.length ? `${data.decks.length + 1} decks` : undefined} onClick={() => navigate('/mehr/deck/wechseln')} />
           <Row
             icon={UsersThreeIcon}
             color="var(--skill-sequencing)"
