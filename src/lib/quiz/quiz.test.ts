@@ -5,7 +5,7 @@ import { FIXTURE_CARDS, FIXTURE_RULINGS } from '../scryfall.fixture'
 import { evaluateHand } from '../sim/mulligan'
 import { buildLesson, cardCoverage, LESSON_BY_ID, LESSONS, rulingsReady, selectIsCorrect, selectSolution, type Question } from './quiz'
 import { mulberry32 } from '../sim/rng'
-import { recordAnswer, topicOf } from './memory'
+import { mistakeKeys, recordAnswer, topicOf } from './memory'
 import { RULES_BANK } from './rulesBank'
 
 const cards = new Map(FIXTURE_CARDS.map((c) => [cardKey(c.name), fromScryfall(c)]))
@@ -57,7 +57,7 @@ const checkShape = (q: Question) => {
 }
 
 describe('Lessons', () => {
-  for (const lesson of LESSONS.filter((l) => !l.page)) {
+  for (const lesson of LESSONS.filter((l) => !l.page && !l.reviewOnly)) {
     it(`${lesson.title}: 5 valid questions across many seeds`, () => {
       for (let seed = 1; seed <= 40; seed++) {
         const qs = buildLesson(lesson.id, ctx, seed)
@@ -86,7 +86,7 @@ describe('Lessons', () => {
     expect(izzet.reduce((n, e) => n + e.qty, 0)).toBe(99)
     const lessons = LESSONS.filter((l) => !l.forCommander || l.forCommander(izzetCtx.commander))
     expect(lessons.map((l) => l.id)).not.toContain('ghalta')
-    for (const lesson of lessons.filter((l) => l.id !== 'rulings' && !l.page)) {
+    for (const lesson of lessons.filter((l) => l.id !== 'rulings' && !l.page && !l.reviewOnly)) {
       for (let seed = 1; seed <= 20; seed++) {
         const qs = buildLesson(lesson.id, izzetCtx, seed)
         expect(qs.length).toBeGreaterThanOrEqual(lesson.id === 'cards' ? 3 : 5)
@@ -109,7 +109,7 @@ describe('Lessons', () => {
   it('works without card data for the lessons that don’t need it', () => {
     const empty = { ...ctx, lookup: () => undefined }
     expect(cardCoverage(empty)).toBe(0)
-    for (const lesson of LESSONS.filter((l) => !l.needsCards && !l.page)) {
+    for (const lesson of LESSONS.filter((l) => !l.needsCards && !l.page && !l.reviewOnly)) {
       buildLesson(lesson.id, empty, 3).forEach(checkShape)
     }
   })
@@ -289,6 +289,44 @@ describe('Know Your Cards: new question types', () => {
       const type = q.prompt.match(/is an? (\w+)\?/)![1]
       const hasType = (name: string) => new RegExp(`\\b${type}\\b`, 'i').test(card(name).typeLine)
       expect(q.options.filter((o) => hasType(o.label)).map((o) => o.id)).toEqual([q.correct])
+    }
+  })
+})
+
+describe('Mistakes lesson', () => {
+  const today = '2026-10-05'
+
+  it('lists recent wrong answers until you get them right', () => {
+    let memory = recordAnswer({}, 'a:1', false, '2026-09-20', { at: 1 })
+    memory = recordAnswer(memory, 'b:1', false, '2026-10-01', { at: 2 })
+    memory = recordAnswer(memory, 'c:1', false, '2026-10-02', { at: 3 })
+    memory = recordAnswer(memory, 'c:1', true, '2026-10-03', { at: 4 })
+    memory = recordAnswer(memory, 'd:1', true, '2026-10-03', { at: 5 })
+    memory = recordAnswer(memory, 'e:1', false, '2026-10-04', { at: 6 })
+    expect(mistakeKeys(memory, today)).toEqual(['e:1', 'b:1'])
+  })
+
+  it('is empty without mistakes', () => {
+    expect(buildLesson('mistakes', ctx, 1, {}, today)).toEqual([])
+  })
+
+  it('brings back the missed questions, or one of the same kind', () => {
+    for (let seed = 1; seed <= 15; seed++) {
+      let memory = {}
+      const missed = [...buildLesson('cards', ctx, seed, {}, today).slice(0, 2), ...buildLesson('ghalta', ctx, seed, {}, today).slice(0, 2), ...buildLesson('combat', ctx, seed, {}, today).slice(0, 1)]
+      missed.forEach((q, i) => (memory = recordAnswer(memory, q.key, false, today, { at: i + 1, group: q.group })))
+      const qs = buildLesson('mistakes', ctx, seed * 31, memory, today)
+      expect(qs.length).toBeGreaterThanOrEqual(4)
+      qs.forEach(checkShape)
+      const keys = new Set(missed.map((q) => q.key))
+      for (const q of qs) {
+        const target = q.reviewOf ?? q.key
+        expect(keys.has(target)).toBe(true)
+        expect(topicOf(q.key)).toBe(topicOf(target))
+      }
+      expect(new Set(qs.map((q) => q.reviewOf ?? q.key)).size).toBe(qs.length)
+      // Card questions have fixed keys (except tap questions with random cards): they come back exactly.
+      for (const q of missed.slice(0, 2).filter((x) => !x.key.startsWith('tap-'))) expect(qs.some((x) => x.key === q.key)).toBe(true)
     }
   })
 })

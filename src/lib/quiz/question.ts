@@ -29,6 +29,11 @@ export interface Question {
    * the first ":" is the topic; a lesson spreads its questions across topics.
    */
   key: string
+  /**
+   * In the mistakes lesson: the key of the missed question this one stands in for (same
+   * kind of question, other numbers). The answer counts for both.
+   */
+  reviewOf?: string
   /** Questions of the same group (e.g. about the same card) don't appear together. */
   group?: string
   /** “choice”: pick one answer; “build”: fill the blanks from the tile bank. */

@@ -1,5 +1,6 @@
 import {
   ArrowClockwiseIcon,
+  ArrowCounterClockwiseIcon,
   CardsIcon,
   CardsThreeIcon,
   CloudArrowDownIcon,
@@ -17,7 +18,7 @@ import {
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Button, EmptyState } from '../components/ui'
 import { shortName } from '../lib/commander'
-import { LESSONS } from '../lib/quiz/quiz'
+import { LESSONS, mistakeCount } from '../lib/quiz/quiz'
 import { navigate } from '../lib/route'
 import { buildLibrary, seedFor, simCommander, simulateGame, summarize, type Distribution } from '../lib/sim/goldfish'
 import { randomSeed } from '../lib/sim/rng'
@@ -37,6 +38,7 @@ export const LESSON_ICON: Record<LessonId, Icon> = {
   cards: CardsThreeIcon,
   rulings: ScalesIcon,
   scenario: FootprintsIcon,
+  mistakes: ArrowCounterClockwiseIcon,
 }
 
 /** Colors (with matching icon color) from the validated skill palette, so everything fits together. */
@@ -49,6 +51,7 @@ const LESSON_SKILL: Record<LessonId, SkillId> = {
   cards: 'removal',
   rulings: 'wipe',
   scenario: 'sequencing',
+  mistakes: 'threat',
 }
 
 export const lessonStyle = (id: LessonId): CSSProperties => skillStyle(LESSON_SKILL[id])
@@ -57,7 +60,8 @@ export const lessonStyle = (id: LessonId): CSSProperties => skillStyle(LESSON_SK
 const MIN_COVERAGE = 0.9
 
 export function Training() {
-  const { training } = useData()
+  const { training, quiz } = useData()
+  const mistakes = mistakeCount(quiz)
   const deck = useDeckCards()
   const ready = deck.coverage >= MIN_COVERAGE
 
@@ -91,8 +95,23 @@ export function Training() {
 
       {!ready && <CardDataNotice deck={deck} />}
 
+      {mistakes > 0 && (
+        <button type="button" className="lesson-card mistakes-card" style={lessonStyle('mistakes')} onClick={() => navigate('/training/mistakes')}>
+          <span className="lesson-icon" aria-hidden="true">
+            <ArrowCounterClockwiseIcon weight="bold" />
+          </span>
+          <span className="lesson-text">
+            <strong>Your Mistakes</strong>
+            <span className="muted small">
+              {mistakes} question{mistakes > 1 ? 's' : ''} you got wrong lately. Get {mistakes > 1 ? 'them' : 'it'} right this time.
+            </span>
+          </span>
+          <PlayIcon weight="fill" className="lesson-play" aria-hidden="true" />
+        </button>
+      )}
+
       <ul className="lessons">
-        {LESSONS.filter((l) => !l.forCommander || l.forCommander(deck.commander)).map((lesson) => {
+        {LESSONS.filter((l) => !l.reviewOnly && (!l.forCommander || l.forCommander(deck.commander))).map((lesson) => {
           const IconCmp = LESSON_ICON[lesson.id]
           const results = training.filter((t) => t.lessonId === lesson.id)
           const best = results.reduce((m, t) => Math.max(m, t.correct), 0)

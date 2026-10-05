@@ -3152,3 +3152,11 @@ main.with-dice .screen.flow {
 .done .panel {
   margin-top: 12px;
 }
+
+/* Mistakes lesson: stands out above the list while there's something to review */
+.lesson-card.mistakes-card {
+  height: auto;
+  margin-bottom: 12px;
+  border-color: color-mix(in oklab, var(--c) 45%, var(--border));
+  background: color-mix(in oklab, var(--c) 8%, var(--surface));
+}

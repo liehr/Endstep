@@ -92,7 +92,10 @@ export function Lesson({ id }: { id: LessonId }) {
 
   const check = () => {
     setChecked(true)
-    if (!item.retry && lesson.remember) actions.recordQuizAnswer(q.key, correct, q.group)
+    if (!item.retry && lesson.remember) {
+      actions.recordQuizAnswer(q.key, correct, q.group)
+      if (q.reviewOf) actions.recordQuizAnswer(q.reviewOf, correct)
+    }
     if (correct) {
       haptic(12)
       if (!item.retry) setScore((s) => s + 1)

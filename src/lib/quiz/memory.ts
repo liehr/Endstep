@@ -39,6 +39,18 @@ export function recordAnswer(
   return { ...memory, [key]: stat }
 }
 
+/** Mistakes count for the review lesson this many days. */
+export const MISTAKE_DAYS = 7
+
+/** Questions answered wrong in the last few days and not answered right since; newest first. */
+export function mistakeKeys(memory: QuizMemory, today: string, days = MISTAKE_DAYS): string[] {
+  const since = addDays(today, -days)
+  return Object.entries(memory)
+    .filter(([, s]) => s.box === 0 && s.wrong > 0 && s.last >= since)
+    .sort((a, b) => (b[1].at ?? 0) - (a[1].at ?? 0) || (a[0] < b[0] ? -1 : 1))
+    .map(([key]) => key)
+}
+
 /** 0 = due for review, 1 = new, 2 = seen and not due yet. */
 function rank(stat: QuestionStat | undefined, today: string): number {
   if (!stat) return 1

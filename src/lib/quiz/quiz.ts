@@ -22,7 +22,7 @@ import { classify, costVariants, faceOf, findGap, hideSelfName, KEYWORDS, ptVari
 import { combatQuestions } from './combatQuiz'
 import { ghaltaMathQuestions } from './ghaltaMath'
 import { orderQuestions, tapCardQuestions, tapCombatQuestions, tapGhaltaQuestion } from './interactive'
-import { selectQuestions } from './memory'
+import { mistakeKeys, selectQuestions, topicOf } from './memory'
 import { RULES_BANK } from './rulesBank'
 
 // Duolingo-style quiz: each lesson generates a pool of candidate questions, and the question
@@ -760,11 +760,22 @@ export interface Lesson {
   remember: boolean
   /** Has its own page instead of questions (the turn scenarios). */
   page?: boolean
+  /** Only brings back your recent mistakes from the other lessons. */
+  reviewOnly?: boolean
   /** Candidate questions; buildLesson picks 5 of them. */
   build: (ctx: QuizContext) => Question[]
 }
 
 export const LESSONS: Lesson[] = [
+  {
+    id: 'mistakes',
+    title: 'Your Mistakes',
+    description: 'Questions you got wrong in the last few days.',
+    needsCards: false,
+    remember: true,
+    reviewOnly: true,
+    build: () => [],
+  },
   { id: 'ghalta', title: 'Ghalta Math', description: 'What does Ghalta cost with your board?', needsCards: false, forCommander: isGhalta, remember: true, build: ghaltaLesson },
   { id: 'combat', title: 'Combat & Trample', description: 'Blocks, first strike, trample and commander damage.', needsCards: false, remember: true, build: combatLesson },
   { id: 'rules', title: 'Commander Rules', description: 'Mulligan, stack, combat, brackets.', needsCards: false, remember: true, build: rulesLesson },
@@ -814,8 +825,63 @@ export function buildLesson(
   today: string = todayIso(),
 ): Question[] {
   const lesson = LESSON_BY_ID[id]
+  if (lesson.reviewOnly) return mistakesLesson(ctx, seed, memory, today)
   const candidates = lesson.build({ ...ctx, rng: mulberry32(seed) })
   if (!lesson.remember) return candidates.slice(0, QUESTIONS_PER_LESSON)
   return selectQuestions(candidates, memory, today, QUESTIONS_PER_LESSON)
 }
 
+
+/** Lessons whose questions can come back in the mistakes lesson. */
+const reviewable = (ctx: Omit<QuizContext, 'rng'>) =>
+  LESSONS.filter((l) => l.remember && !l.reviewOnly && !l.page && (!l.forCommander || l.forCommander(ctx.commander)) && (!l.ready || l.ready(ctx)))
+
+/** How many seeds to search for the exact missed question before taking one of the same kind. */
+const MISTAKE_SEEDS = 12
+
+/**
+ * The mistakes lesson: your latest wrong answers, rebuilt from the lessons. Questions with
+ * random numbers (Ghalta Math, combat) may not come up again exactly; then a question of the
+ * same kind stands in for them.
+ */
+function mistakesLesson(ctx: Omit<QuizContext, 'rng'>, seed: number, memory: QuizMemory, today: string): Question[] {
+  const wanted = mistakeKeys(memory, today)
+  if (wanted.length === 0) return []
+  const topics = new Set(wanted.map(topicOf))
+  const byKey = new Map<string, Question>()
+  const byTopic = new Map<string, Question[]>()
+  let lessons = reviewable(ctx)
+  for (let i = 0; i < MISTAKE_SEEDS && wanted.some((k) => !byKey.has(k)); i++) {
+    const relevant: Lesson[] = []
+    for (const lesson of lessons) {
+      const qs = lesson.build({ ...ctx, rng: mulberry32(seed + i * 7919) })
+      if (!qs.some((q) => topics.has(topicOf(q.key)))) continue
+      relevant.push(lesson)
+      for (const q of qs) {
+        if (!byKey.has(q.key)) byKey.set(q.key, q)
+        const topic = topicOf(q.key)
+        if (topics.has(topic)) byTopic.set(topic, [...(byTopic.get(topic) ?? []), q])
+      }
+    }
+    // After the first round, only build the lessons that have these topics at all.
+    lessons = relevant
+  }
+
+  const out: Question[] = []
+  const used = new Set<string>()
+  const groups = new Set<string>()
+  const free = (q: Question) => !used.has(q.key) && (q.group === undefined || !groups.has(q.group))
+  for (const key of wanted) {
+    if (out.length >= QUESTIONS_PER_LESSON) break
+    const exact = byKey.get(key)
+    const q = exact && free(exact) ? exact : (byTopic.get(topicOf(key)) ?? []).find((c) => free(c) && !wanted.includes(c.key))
+    if (!q) continue
+    used.add(q.key)
+    if (q.group !== undefined) groups.add(q.group)
+    out.push(q.key === key ? q : { ...q, reviewOf: key })
+  }
+  return out
+}
+
+/** How many mistakes the mistakes lesson has for you right now. */
+export const mistakeCount = (memory: QuizMemory, today: string = todayIso()) => mistakeKeys(memory, today).length
