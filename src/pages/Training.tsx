@@ -5,6 +5,7 @@ import {
   CloudArrowDownIcon,
   CrosshairIcon,
   FlaskIcon,
+  FootprintsIcon,
   GraduationCapIcon,
   HourglassIcon,
   LockIcon,
@@ -35,6 +36,7 @@ export const LESSON_ICON: Record<LessonId, Icon> = {
   goldfish: HourglassIcon,
   cards: CardsThreeIcon,
   rulings: ScalesIcon,
+  scenario: FootprintsIcon,
 }
 
 /** Colors (with matching icon color) from the validated skill palette, so everything fits together. */
@@ -46,6 +48,7 @@ const LESSON_SKILL: Record<LessonId, SkillId> = {
   goldfish: 'politics',
   cards: 'removal',
   rulings: 'wipe',
+  scenario: 'sequencing',
 }
 
 export const lessonStyle = (id: LessonId): CSSProperties => skillStyle(LESSON_SKILL[id])

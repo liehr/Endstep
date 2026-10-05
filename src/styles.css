@@ -3111,3 +3111,44 @@ main.with-dice .screen.flow {
   margin: 4px 0;
   padding-left: 22px;
 }
+
+/* Turn by Turn scenarios */
+.scenario {
+  padding-bottom: calc(var(--footer-h) + env(safe-area-inset-bottom) + 40px);
+}
+.scenario-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.scenario-stats .stat-value {
+  font-size: 22px;
+}
+.scenario-stats .stat-value .mana {
+  font-size: 16px;
+}
+.hand-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.mtg-card.pickable.dim .mtg-card-btn {
+  opacity: 0.45;
+}
+.scenario-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.footer-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+  text-align: center;
+}
+.scenario-tips {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+.done .panel {
+  margin-top: 12px;
+}

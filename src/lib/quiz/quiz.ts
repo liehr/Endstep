@@ -758,6 +758,8 @@ export interface Lesson {
    * hands and simulations that won't come back anyway.
    */
   remember: boolean
+  /** Has its own page instead of questions (the turn scenarios). */
+  page?: boolean
   /** Candidate questions; buildLesson picks 5 of them. */
   build: (ctx: QuizContext) => Question[]
 }
@@ -785,6 +787,16 @@ export const LESSONS: Lesson[] = [
     ready: rulingsReady,
     remember: true,
     build: rulingsLesson,
+  },
+  {
+    id: 'scenario',
+    title: 'Turn by Turn',
+    description: 'Play the turns yourself and race the autopilot to your commander.',
+    needsCards: true,
+    ready: (ctx) => ctx.lookup(ctx.commander) !== undefined,
+    remember: false,
+    page: true,
+    build: () => [],
   },
 ]
 

@@ -30,11 +30,11 @@ export function CardImage({ name, caption }: { name: string; caption?: string })
   )
 }
 
-export function CardGrid({ cards, label }: { cards: { name: string; caption?: string }[]; label?: string }) {
+export function CardGrid({ cards, label, compact = false }: { cards: { name: string; caption?: string }[]; label?: string; compact?: boolean }) {
   return (
     <section className="card-grid-wrap" aria-label={label}>
       {label && <span className="eyebrow">{label}</span>}
-      <div className={`card-grid ${cards.length === 1 ? 'single' : ''}`}>
+      <div className={`card-grid ${cards.length === 1 && !compact ? 'single' : ''}`}>
         {cards.map((c, i) => (
           <CardImage key={`${c.name}-${i}`} name={c.name} caption={c.caption} />
         ))}
@@ -43,7 +43,7 @@ export function CardGrid({ cards, label }: { cards: { name: string; caption?: st
   )
 }
 
-export type PickState = '' | 'selected' | 'right' | 'wrong' | 'missed'
+export type PickState = '' | 'selected' | 'right' | 'wrong' | 'missed' | 'dim'
 
 /** A card you can tap to select (tap-on-board questions); the magnifier enlarges it. */
 function PickableCard({ name, caption, state, disabled, onToggle }: { name: string; caption?: string; state: PickState; disabled: boolean; onToggle: () => void }) {
@@ -62,7 +62,7 @@ function PickableCard({ name, caption, state, disabled, onToggle }: { name: stri
           ) : (
             <span className="mtg-card-fallback">{name}</span>
           )}
-          {state && state !== 'missed' && (
+          {state && state !== 'missed' && state !== 'dim' && (
             <span className="pick-badge" aria-hidden="true">
               {state === 'wrong' ? <XIcon weight="bold" /> : <CheckIcon weight="bold" />}
             </span>
@@ -90,14 +90,16 @@ export function PickCardGrid({
   states,
   disabled,
   onToggle,
+  className = '',
 }: {
+  className?: string
   cards: { name: string; caption?: string }[]
   states: PickState[]
   disabled: boolean
   onToggle: (index: number) => void
 }) {
   return (
-    <div className="card-grid pick-grid" role="group" aria-label="Cards to tap">
+    <div className={`card-grid pick-grid ${className}`} role="group" aria-label="Cards to tap">
       {cards.map((c, i) => (
         <PickableCard key={`${c.name}-${i}`} name={c.name} caption={c.caption} state={states[i] ?? ''} disabled={disabled} onToggle={() => onToggle(i)} />
       ))}

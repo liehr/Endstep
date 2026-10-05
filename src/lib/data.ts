@@ -236,7 +236,7 @@ function sanitizeSavedDeck(raw: unknown, settings: Settings): SavedDeck | null {
 const otherDecks = (decks: SavedDeck[], active: string) =>
   decks.filter((d, i) => cardKey(d.name) !== cardKey(active) && decks.findIndex((x) => cardKey(x.name) === cardKey(d.name)) === i)
 
-const LESSON_IDS = ['ghalta', 'combat', 'rules', 'mulligan', 'goldfish', 'cards', 'rulings'] as const
+const LESSON_IDS = ['ghalta', 'combat', 'rules', 'mulligan', 'goldfish', 'cards', 'rulings', 'scenario'] as const
 
 function sanitizeTraining(raw: unknown): TrainingResult | null {
   if (!isObj(raw) || !LESSON_IDS.includes(raw.lessonId as never)) return null

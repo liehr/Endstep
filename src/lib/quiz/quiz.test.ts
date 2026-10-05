@@ -57,7 +57,7 @@ const checkShape = (q: Question) => {
 }
 
 describe('Lessons', () => {
-  for (const lesson of LESSONS) {
+  for (const lesson of LESSONS.filter((l) => !l.page)) {
     it(`${lesson.title}: 5 valid questions across many seeds`, () => {
       for (let seed = 1; seed <= 40; seed++) {
         const qs = buildLesson(lesson.id, ctx, seed)
@@ -86,7 +86,7 @@ describe('Lessons', () => {
     expect(izzet.reduce((n, e) => n + e.qty, 0)).toBe(99)
     const lessons = LESSONS.filter((l) => !l.forCommander || l.forCommander(izzetCtx.commander))
     expect(lessons.map((l) => l.id)).not.toContain('ghalta')
-    for (const lesson of lessons.filter((l) => l.id !== 'rulings')) {
+    for (const lesson of lessons.filter((l) => l.id !== 'rulings' && !l.page)) {
       for (let seed = 1; seed <= 20; seed++) {
         const qs = buildLesson(lesson.id, izzetCtx, seed)
         expect(qs.length).toBeGreaterThanOrEqual(lesson.id === 'cards' ? 3 : 5)
@@ -109,7 +109,7 @@ describe('Lessons', () => {
   it('works without card data for the lessons that don’t need it', () => {
     const empty = { ...ctx, lookup: () => undefined }
     expect(cardCoverage(empty)).toBe(0)
-    for (const lesson of LESSONS.filter((l) => !l.needsCards)) {
+    for (const lesson of LESSONS.filter((l) => !l.needsCards && !l.page)) {
       buildLesson(lesson.id, empty, 3).forEach(checkShape)
     }
   })
