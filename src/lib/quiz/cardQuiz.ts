@@ -1,4 +1,5 @@
-import { isArtifact, isCreature, isLand, manaAbility, parseCost, type CardInfo } from '../cards'
+import { costColors, isCreature, isLand, manaAbility, parseCost, type CardInfo } from '../cards'
+import { bits, COLOR_LETTERS, lettersOf } from '../mana'
 import { shuffle, type Rng } from '../sim/rng'
 
 // Card quiz: parts of a card are hidden (name, cost, power, type, a bit of text),
@@ -18,7 +19,7 @@ export const ROLES: Record<Role, { label: string; hint: string }> = {
 }
 
 const RE = {
-  ramp: /search your library for [^.]*land|onto the battlefield[^.]*land|land card[^.]*onto the battlefield|additional land|spells you cast[^.]*cost \{\d+\} less|\badd \{[GC]\}/i,
+  ramp: /search your library for [^.]*land|onto the battlefield[^.]*land|land card[^.]*onto the battlefield|additional land|spells you cast[^.]*cost \{\d+\} less|\badd \{[WUBRGC]\}/i,
   removal:
     /destroy target|destroy all|exile target|deals damage equal to its power to target|deals x damage|damage divided|fights? (up to one )?target|loses all abilities/i,
   protection: /hexproof|indestructible|protection from|phase out|prevent all combat damage/i,
@@ -49,6 +50,11 @@ export function classify(card: CardInfo): { role: Role; roles: Role[]; confident
 
 // --- Card display ----------------------------------------------------------------
 
+/** Frame color: one per color, gold for multicolor, gray for artifacts and colorless cards. */
+export type Frame = 'white' | 'blue' | 'black' | 'red' | 'green' | 'artifact' | 'land' | 'multi'
+
+const FRAME_BY_LETTER: Record<string, Frame> = { W: 'white', U: 'blue', B: 'black', R: 'red', G: 'green' }
+
 export type FieldId = 'name' | 'cost' | 'type' | 'pt' | 'gap'
 
 /** Placeholder for a blank in the rules text. */
@@ -62,7 +68,7 @@ export interface CardFace {
   pt: string | null
   art: string | null
   /** Frame color by card kind. */
-  frame: 'green' | 'artifact' | 'land' | 'multi'
+  frame: Frame
 }
 
 export const typeLabel = (c: CardInfo): string => {
@@ -77,12 +83,12 @@ export const typeLabel = (c: CardInfo): string => {
   return 'Other'
 }
 
-function frameOf(c: CardInfo): CardFace['frame'] {
+export function frameOf(c: CardInfo): Frame {
   if (isLand(c)) return 'land'
-  const cost = parseCost(c.manaCost)
-  if (cost.otherColors > 0) return 'multi'
-  if (cost.green === 0 && isArtifact(c)) return 'artifact'
-  return 'green'
+  const colors = costColors(parseCost(c.manaCost))
+  if (bits(colors) > 1) return 'multi'
+  if (colors === 0) return 'artifact'
+  return FRAME_BY_LETTER[lettersOf(colors)[0]]
 }
 
 /** Hide the card name in the text (including the short form “Rhonas” for “Rhonas the Indomitable”). */
@@ -105,23 +111,33 @@ export function faceOf(c: CardInfo): CardFace {
 
 // --- Variants for wrong answers ------------------------------------------------------
 
-export function formatCost(generic: number, green: number, colorless = 0): string {
-  return `${generic > 0 ? `{${generic}}` : ''}${'{C}'.repeat(colorless)}${'{G}'.repeat(green)}`
+/** Cost in card notation: {X}, then generic, then the colored symbols as given. */
+export function formatCost(generic: number, symbols: string[], x = false): string {
+  return `${x ? '{X}' : ''}${generic > 0 ? `{${generic}}` : ''}${symbols.map((s) => `{${s}}`).join('')}`
 }
 
+/** Plausible wrong costs: a bit more or less generic, one colored symbol more or less, another color. */
 export function costVariants(manaCost: string): string[] {
-  const c = parseCost(manaCost)
+  const all = [...manaCost.matchAll(/\{([^}]+)\}/g)].map((m) => m[1])
+  const x = all.includes('X')
+  const generic = all.filter((sym) => /^\d+$/.test(sym)).reduce((sum, sym) => sum + Number(sym), 0)
+  const colored = all.filter((sym) => !/^\d+$/.test(sym) && sym !== 'X')
   const out = new Set<string>()
-  const g = c.green
-  const add = (gen: number, grn: number) => {
-    if (gen >= 0 && grn >= 0 && gen + grn > 0) out.add(formatCost(gen, grn))
+  const add = (gen: number, symbols: string[]) => {
+    if (gen >= 0 && gen + symbols.length > 0) out.add(formatCost(gen, symbols, x))
   }
-  add(c.generic + 1, g)
-  add(c.generic - 1, g)
-  add(c.generic, g + 1)
-  if (g > 1) add(c.generic + 1, g - 1)
-  add(c.generic + 2, g)
-  add(c.generic - 1, g + 1)
+  const first = colored[0]
+  add(generic + 1, colored)
+  add(generic - 1, colored)
+  if (first) add(generic, [...colored, first])
+  if (colored.length > 1) add(generic + 1, colored.slice(1))
+  add(generic + 2, colored)
+  if (first) add(generic - 1, [...colored, first])
+  // Same amount, wrong color: the next color in WUBRG order.
+  if (first && /^[WUBRG]$/.test(first)) {
+    const other = COLOR_LETTERS[(COLOR_LETTERS.indexOf(first as never) + 1) % COLOR_LETTERS.length]
+    add(generic, colored.map((sym) => (sym === first ? other : sym)))
+  }
   out.delete(manaCost)
   return [...out]
 }
@@ -136,7 +152,6 @@ export function ptVariants(pt: string): string[] {
 
 const NUMBER_WORDS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
 const KEYWORDS = ['Flying', 'Trample', 'Hexproof', 'Reach', 'Vigilance', 'Haste', 'Deathtouch', 'Indestructible', 'Flash', 'Lifelink', 'Ward']
-const MANA_GROUPS = ['{G}', '{G}{G}', '{G}{G}{G}', '{C}', '{C}{C}']
 
 export interface Gap {
   /** Text with the GAP placeholder at the blank. */
@@ -176,10 +191,13 @@ export function findGap(text: string, rng: Rng): Gap | null {
       })
     }
   }
-  const add = text.match(/Add ((?:\{[GC]\})+)/)
+  const add = text.match(/Add ((?:\{[WUBRGC]\})+)/)
   if (add && add.index !== undefined) {
     const start = add.index + 4
-    candidates.push({ text: replaceAt(start, add[1].length), answer: add[1], wrong: MANA_GROUPS.filter((g) => g !== add[1]) })
+    // Wrong answers: the same color one more or less, and colorless.
+    const color = add[1][1] === 'C' ? 'G' : add[1][1]
+    const groups = [`{${color}}`, `{${color}}{${color}}`, `{${color}}{${color}}{${color}}`, '{C}', '{C}{C}']
+    candidates.push({ text: replaceAt(start, add[1].length), answer: add[1], wrong: groups.filter((g) => g !== add[1]) })
   }
 
   const usable = candidates.filter((c) => c.wrong.length >= 2)

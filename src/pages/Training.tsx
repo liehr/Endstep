@@ -15,10 +15,10 @@ import {
 } from '@phosphor-icons/react'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Button, EmptyState } from '../components/ui'
-import { isGhalta } from '../lib/commander'
+import { shortName } from '../lib/commander'
 import { LESSONS } from '../lib/quiz/quiz'
 import { navigate } from '../lib/route'
-import { buildLibrary, seedFor, simulateGame, summarize, type Distribution } from '../lib/sim/goldfish'
+import { buildLibrary, seedFor, simCommander, simulateGame, summarize, type Distribution } from '../lib/sim/goldfish'
 import { randomSeed } from '../lib/sim/rng'
 import { swapsOf } from '../lib/data'
 import { computeStats } from '../lib/stats'
@@ -109,7 +109,9 @@ export function Training() {
                 </span>
                 <span className="lesson-text">
                   <strong>{lesson.title}</strong>
-                  <span className="muted small">{needsRulings
+                  <span className="muted small">{needsRulings && lesson.id !== 'rulings'
+                      ? "Needs your commander's card data."
+                      : needsRulings
                       ? deck.rulingsStatus === 'loading'
                         ? 'Loading rulings…'
                         : 'Rulings load in the background when you’re online.'
@@ -134,7 +136,7 @@ export function Training() {
         })}
       </ul>
 
-      {ready && isGhalta(deck.commander) ? <GoldfishLab /> : null}
+      {ready && deck.lookup(deck.commander) ? <GoldfishLab /> : null}
     </div>
   )
 }
@@ -177,7 +179,12 @@ function GoldfishLab() {
 
   const realAvg = computeStats(games, settings.defaultDeck).avgCommanderTurn
 
+  const commanderCard = deck.lookup(deck.commander)
+  const name = shortName(deck.commander)
+
   const run = () => {
+    if (!commanderCard) return
+    const commander = simCommander(commanderCard)
     const library = buildLibrary(deck.decklist, deck.lookup)
     const seed = randomSeed()
     const turns: (number | null)[] = []
@@ -186,8 +193,8 @@ function GoldfishLab() {
     const step = () => {
       if (cancelled.current) return
       for (let i = turns.length; i < Math.min(LAB_GAMES, turns.length + CHUNK); i++) {
-        const g = simulateGame(library, seedFor(seed, i))
-        turns.push(g.ghaltaTurn)
+        const g = simulateGame(library, seedFor(seed, i), commander)
+        turns.push(g.commanderTurn)
         mulligans.push(g.mulligans)
       }
       if (turns.length < LAB_GAMES) {
@@ -211,7 +218,7 @@ function GoldfishLab() {
           <h2>Goldfish Lab</h2>
           <p className="muted small">
             {LAB_GAMES.toLocaleString('en-GB')} games with your current deck{swaps.length ? ` (after ${swaps.length} swap round${swaps.length > 1 ? 's' : ''})` : ''}: when does
-            Ghalta land?
+            {` ${name}`} land?
           </p>
         </div>
       </div>
@@ -229,7 +236,7 @@ function GoldfishLab() {
         </Button>
       )}
 
-      {result && <LabResult result={result} realAvg={realAvg} />}
+      {result && <LabResult result={result} realAvg={realAvg} name={name} />}
     </section>
   )
 }
@@ -237,7 +244,7 @@ function GoldfishLab() {
 const pct = (v: number) => `${Math.round(v * 100)}%`
 const dec = (v: number | null) => (v === null ? '–' : v.toLocaleString('en-GB', { maximumFractionDigits: 1 }))
 
-function LabResult({ result, realAvg }: { result: Distribution; realAvg: number | null }) {
+function LabResult({ result, realAvg, name }: { result: Distribution; realAvg: number | null; name: string }) {
   const bins = [...result.byTurn.filter((b) => b.turn >= 2 && b.turn <= 10), { turn: 0, share: result.never + result.byTurn.filter((b) => b.turn > 10).reduce((s, b) => s + b.share, 0) }]
   const max = Math.max(...bins.map((b) => b.share))
   const peak = bins.find((b) => b.share === max)
@@ -246,7 +253,7 @@ function LabResult({ result, realAvg }: { result: Distribution; realAvg: number 
     <div className="lab-result">
       <div className="stat-grid">
         <div className="stat-tile">
-          <span className="stat-label">Avg. Ghalta turn</span>
+          <span className="stat-label">Avg. commander turn</span>
           <strong className="stat-value">{dec(result.average)}</strong>
           <span className="stat-sub">In real games: {dec(realAvg)}</span>
         </div>
@@ -257,7 +264,7 @@ function LabResult({ result, realAvg }: { result: Distribution; realAvg: number 
         </div>
       </div>
 
-      <figure className="histogram" aria-label="Distribution: which turn Ghalta lands">
+      <figure className="histogram" aria-label={`Distribution: which turn ${name} lands`}>
         <div className="histogram-bars">
           {bins.map((b) => (
             <div key={b.turn} className="histogram-col" title={`${b.turn ? `Turn ${b.turn}` : 'later/never'}: ${pct(b.share)}`}>
@@ -271,7 +278,7 @@ function LabResult({ result, realAvg }: { result: Distribution; realAvg: number 
             <span key={b.turn}>{b.turn ? b.turn : '11+'}</span>
           ))}
         </div>
-        <figcaption className="muted small">Ghalta turn in {result.games.toLocaleString('en-GB')} simulated games (no opponents).</figcaption>
+        <figcaption className="muted small">{name}’s turn in {result.games.toLocaleString('en-GB')} simulated games (no opponents).</figcaption>
       </figure>
 
       <details className="lab-table">
@@ -294,8 +301,8 @@ function LabResult({ result, realAvg }: { result: Distribution; realAvg: number 
         </table>
       </details>
       <p className="muted small">
-        The autopilot plays a land every turn, mana creatures first, then the biggest creatures, and casts Ghalta as
-        soon as it can. Spells and opponents are left out. A guideline, not an oracle.
+        The autopilot plays a land every turn, ramp first, then the biggest creatures, and casts {name} as soon as it
+        can. Spells and opponents are left out. A guideline, not an oracle.
       </p>
     </div>
   )

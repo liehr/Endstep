@@ -2392,6 +2392,22 @@ select:focus {
   --frame: #b8902f;
   --frame-light: #f1e4b8;
 }
+.card-frame.frame-white {
+  --frame: #c9bf9e;
+  --frame-light: #f8f4e6;
+}
+.card-frame.frame-blue {
+  --frame: #2f6aa3;
+  --frame-light: #cfe0f1;
+}
+.card-frame.frame-black {
+  --frame: #4a4245;
+  --frame-light: #d9d3d4;
+}
+.card-frame.frame-red {
+  --frame: #b8452f;
+  --frame-light: #f3d2c8;
+}
 .cf-inner {
   display: flex;
   flex-direction: column;

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { fromScryfall, type ScryfallCard } from '../cards'
 import { FIXTURE_CARDS } from '../scryfall.fixture'
 import { mulberry32 } from '../sim/rng'
-import { classify, costVariants, findGap, GAP, hideSelfName, ptVariants } from './cardQuiz'
+import { classify, costVariants, findGap, frameOf, GAP, hideSelfName, ptVariants } from './cardQuiz'
 
 const card = (name: string) => fromScryfall(FIXTURE_CARDS.find((c) => c.name === name)!)
 const make = (raw: Partial<ScryfallCard> & { name: string }) => fromScryfall({ cmc: 0, mana_cost: '', type_line: 'Instant', oracle_text: '', ...raw })
@@ -63,6 +63,24 @@ describe('Variants', () => {
     expect(v).toContain('{3}{G}{G}')
     expect(v.length).toBeGreaterThanOrEqual(3)
     expect(costVariants('{G}')).not.toContain('')
+  })
+
+  it('works for other colors and offers the wrong color as a trap', () => {
+    const v = costVariants('{2}{U}{U}')
+    expect(v).toContain('{3}{U}{U}')
+    expect(v).toContain('{2}{U}{U}{U}')
+    expect(v).toContain('{2}{B}{B}')
+    expect(costVariants('{U}{R}')).toContain('{1}{R}')
+    expect(costVariants('{X}{R}')).toContain('{X}{1}{R}')
+  })
+
+  it('draws the frame in the card’s color', () => {
+    expect(frameOf(card('Counterspell'))).toBe('blue')
+    expect(frameOf(card('Lightning Bolt'))).toBe('red')
+    expect(frameOf(card('Izzet Charm'))).toBe('multi')
+    expect(frameOf(card('Sol Ring'))).toBe('artifact')
+    expect(frameOf(card('Island'))).toBe('land')
+    expect(frameOf(card('Harmonize'))).toBe('green')
   })
 
   it('creates different power/toughness values', () => {

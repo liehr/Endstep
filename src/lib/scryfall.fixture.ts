@@ -57,6 +57,22 @@ export const FIXTURE_CARDS: ScryfallCard[] = [
     cmc: 2,
     oracle_text: 'Enchant creature\nWhen this Aura enters, draw a card.\nEnchanted creature loses all abilities and is a green Elk creature with base power and toughness 3/3.',
   },
+  // A blue-red deck, so the simulation and quiz are tested with other colors too (no set, so
+  // lookups by printing in scryfall.test.ts stay unambiguous).
+  { name: 'Island', type_line: 'Basic Land — Island', mana_cost: '', cmc: 0, oracle_text: '({T}: Add {U}.)', produced_mana: ['U'] },
+  { name: 'Mountain', type_line: 'Basic Land — Mountain', mana_cost: '', cmc: 0, oracle_text: '({T}: Add {R}.)', produced_mana: ['R'] },
+  { name: 'Spirebluff Canal', type_line: 'Land', mana_cost: '', cmc: 0, oracle_text: 'This land enters tapped unless you control two or fewer other lands.\n{T}: Add {U} or {R}.', produced_mana: ['U', 'R'] },
+  { name: 'Command Tower', type_line: 'Land', mana_cost: '', cmc: 0, oracle_text: "{T}: Add one mana of any color in your commander's color identity.", produced_mana: ['U', 'R'] },
+  { name: 'Evolving Wilds', type_line: 'Land', mana_cost: '', cmc: 0, oracle_text: '{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.' },
+  { name: 'Arcane Signet', type_line: 'Artifact', mana_cost: '{2}', cmc: 2, oracle_text: "{T}: Add one mana of any color in your commander's color identity.", produced_mana: ['U', 'R'] },
+  { name: 'Cultivate', type_line: 'Sorcery', mana_cost: '{2}{G}', cmc: 3, oracle_text: 'Search your library for up to two basic land cards, reveal those cards, put one onto the battlefield tapped and the other into your hand, then shuffle.' },
+  { name: 'Niv-Mizzet, Parun', type_line: 'Legendary Creature — Dragon Wizard', mana_cost: '{U}{U}{U}{R}{R}{R}', cmc: 6, power: '5', toughness: '5', oracle_text: "This spell can't be countered.\nFlying\nWhenever you draw a card, Niv-Mizzet, Parun deals 1 damage to any target.\nWhenever a player casts an instant or sorcery spell, you draw a card." },
+  { name: 'Talrand, Sky Summoner', type_line: 'Legendary Creature — Merfolk Wizard', mana_cost: '{2}{U}{U}', cmc: 4, power: '2', toughness: '2', oracle_text: 'Whenever you cast an instant or sorcery spell, create a 2/2 blue Drake creature token with flying.' },
+  { name: 'Guttersnipe', type_line: 'Creature — Goblin Shaman', mana_cost: '{2}{R}', cmc: 3, power: '2', toughness: '2', oracle_text: 'Whenever you cast an instant or sorcery spell, Guttersnipe deals 2 damage to each opponent.' },
+  { name: 'Counterspell', type_line: 'Instant', mana_cost: '{U}{U}', cmc: 2, oracle_text: 'Counter target spell.' },
+  { name: 'Lightning Bolt', type_line: 'Instant', mana_cost: '{R}', cmc: 1, oracle_text: 'Lightning Bolt deals 3 damage to any target.' },
+  { name: 'Izzet Charm', type_line: 'Instant', mana_cost: '{U}{R}', cmc: 2, oracle_text: 'Choose one —\n• Counter target noncreature spell unless its controller pays {2}.\n• Izzet Charm deals 2 damage to target creature.\n• Draw two cards, then discard two cards.' },
+  { name: 'Brainstorm', type_line: 'Instant', mana_cost: '{U}', cmc: 1, oracle_text: 'Draw three cards, then put two cards from your hand on top of your library in any order.' },
 ]
 
 /** Real rulings (from Scryfall) for some fixture cards; key = card name in lower case. */
