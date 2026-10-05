@@ -1,0 +1,31 @@
+# Betriebssystem
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editoren / IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Umgebungsvariablen & Secrets
+.env
+.env.*
+!.env.example
+
+# Logs & temporäre Dateien
+*.log
+tmp/
+temp/
+
+# Build-Ausgaben & Abhängigkeiten
+dist/
+build/
+out/
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
