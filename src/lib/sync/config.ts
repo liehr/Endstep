@@ -6,8 +6,8 @@ import type { FirestoreConfig } from './firestore'
  * the data itself is encrypted on the device. Empty = cloud sync isn't set up yet.
  */
 export const FIRESTORE: FirestoreConfig = {
-  projectId: '',
-  apiKey: '',
+  projectId: 'endstep-d6bc3',
+  apiKey: 'AIzaSyC3wnIEPjS_V_TO7U6ww1hIRyuPO9M6FQA',
 }
 
 export const syncAvailable = () => FIRESTORE.projectId !== '' && FIRESTORE.apiKey !== ''
