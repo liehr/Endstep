@@ -1,4 +1,4 @@
-import { ArrowClockwiseIcon, ArrowRightIcon, CheckCircleIcon, XCircleIcon, XIcon } from '@phosphor-icons/react'
+import { ArrowClockwiseIcon, ArrowRightIcon, CheckCircleIcon, HeartIcon, XCircleIcon, XIcon } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { AnswerLabel, CardFrame, type Slot } from '../components/CardFrame'
 import { CardGrid, PickCardGrid, type PickState } from '../components/CardImage'
@@ -6,13 +6,18 @@ import { Confetti } from '../components/Confetti'
 import { Button, IconButton, ProgressBar } from '../components/ui'
 import { haptic } from '../lib/haptics'
 import type { FieldId } from '../lib/quiz/cardQuiz'
+import { buildExam } from '../lib/quiz/exam'
 import { buildLesson, LESSON_BY_ID, orderIsCorrect, selectIsCorrect, selectSolution, type Question } from '../lib/quiz/quiz'
+import { currentRank } from '../lib/ranks'
+import { EXAM_HEARTS } from '../lib/content'
+import { RankEmblem, rankStyle } from '../components/RankEmblem'
+import { ExamFailed, Promotion } from './Ranks'
 import { navigate } from '../lib/route'
 import { randomSeed } from '../lib/sim/rng'
 import { actions, useData } from '../lib/store'
 import type { LessonId } from '../lib/types'
 import { useDeckCards } from '../lib/useDeckCards'
-import { LESSON_ICON, lessonStyle } from './Training'
+import { LESSON_ICON, lessonStyle, openLessons } from './Training'
 
 /** Which blank does a tile belong to? */
 function fieldOfTile(tile: string): FieldId {
@@ -23,19 +28,27 @@ function fieldOfTile(tile: string): FieldId {
 
 interface Item {
   question: Question
+  /** Lesson the question comes from (differs per question in the rank exam). */
+  lessonId: LessonId
   /** Repeat of a wrongly answered question (doesn't count toward the score). */
   retry: boolean
 }
 
-/** A lesson: question by question, like Duolingo. Wrong answers come back at the end. */
-export function Lesson({ id }: { id: LessonId }) {
+/**
+ * A lesson: question by question, like Duolingo. Wrong answers come back at the end.
+ * With `exam`, it's the rank exam instead: questions from all lessons, no second tries,
+ * and the exam ends when the hearts run out.
+ */
+export function Lesson({ id = 'rules', exam = false }: { id?: LessonId; exam?: boolean }) {
   const deck = useDeckCards({ autoLoad: false })
-  const { quiz } = useData()
-  const build = (seed: number) =>
-    buildLesson(id, { decklist: deck.decklist, commander: deck.commander, lookup: deck.lookup, rulings: deck.rulings }, seed, quiz).map((question) => ({
-      question,
-      retry: false,
-    }))
+  const { quiz, promotions } = useData()
+  // The rank you take the lesson or exam in (stays put when the exam promotes you).
+  const [rank] = useState(() => currentRank(promotions))
+  const build = (seed: number): Item[] => {
+    const ctx = { decklist: deck.decklist, commander: deck.commander, lookup: deck.lookup, rulings: deck.rulings }
+    if (exam) return buildExam(openLessons(deck), ctx, seed, rank).map((e) => ({ ...e, retry: false }))
+    return buildLesson(id, ctx, seed, quiz, undefined, rank).map((question) => ({ question, lessonId: id, retry: false }))
+  }
   const [queue, setQueue] = useState<Item[]>(() => build(randomSeed()))
   const [index, setIndex] = useState(0)
   /** Selection for single-choice questions. */
@@ -49,10 +62,11 @@ export function Lesson({ id }: { id: LessonId }) {
   const [checked, setChecked] = useState(false)
   const [score, setScore] = useState(0)
   const [done, setDone] = useState(false)
+  const [hearts, setHearts] = useState(EXAM_HEARTS)
 
-  const lesson = LESSON_BY_ID[id]
   const firstTryTotal = queue.filter((i) => !i.retry).length
   const item = queue[index]
+  const lesson = LESSON_BY_ID[item?.lessonId ?? id]
 
   const reset = () => {
     setSelected(null)
@@ -68,8 +82,10 @@ export function Lesson({ id }: { id: LessonId }) {
     reset()
     setScore(0)
     setDone(false)
+    setHearts(EXAM_HEARTS)
   }
 
+  if (exam && done) return hearts > 0 ? <Promotion rank={rank + 1} /> : <ExamFailed rank={rank} correct={score} onAgain={restart} />
   if (done) return <LessonDone id={id} score={score} total={firstTryTotal} onAgain={restart} />
   if (!item) return null
 
@@ -98,11 +114,17 @@ export function Lesson({ id }: { id: LessonId }) {
       if (!item.retry) setScore((s) => s + 1)
     } else {
       haptic([30, 60, 30])
-      if (!item.retry) setQueue((qq) => [...qq, { question: q, retry: true }])
+      if (exam) setHearts((h) => h - 1)
+      else if (!item.retry) setQueue((qq) => [...qq, { ...item, retry: true }])
     }
   }
 
   const next = () => {
+    if (exam && (hearts <= 0 || index + 1 >= queue.length)) {
+      if (hearts > 0) actions.promote()
+      setDone(true)
+      return
+    }
     if (index + 1 >= queue.length) {
       actions.addTrainingResult(id, score, firstTryTotal)
       setDone(true)
@@ -168,16 +190,25 @@ export function Lesson({ id }: { id: LessonId }) {
   const usedTiles = new Set(filled.filter((s): s is number => s !== null))
 
   return (
-    <div className="screen flow lesson" style={lessonStyle(id)}>
+    <div className="screen flow lesson" style={exam ? rankStyle(rank) : lessonStyle(id)}>
       <header className="flow-header">
-        <IconButton icon={XIcon} label="End lesson" onClick={() => navigate('/training')} />
+        <IconButton icon={XIcon} label={exam ? 'End exam' : 'End lesson'} onClick={() => navigate(exam ? '/raenge' : '/training')} />
         <ProgressBar value={index / queue.length} label={`Question ${index + 1} of ${queue.length}`} />
+        {exam && (
+          <span className="hearts" aria-label={`${hearts} of ${EXAM_HEARTS} hearts left`}>
+            {Array.from({ length: EXAM_HEARTS }, (_, i) => (
+              <HeartIcon key={i} weight="fill" className={i < hearts ? '' : 'lost'} />
+            ))}
+          </span>
+        )}
       </header>
 
       <div className="question-wrap" key={`${index}-${q.id}`}>
         <div className="question">
           {item.retry && <span className="retry-tag">Again</span>}
-          <span className="eyebrow">{lesson.title}</span>
+          <span className="eyebrow">
+            {exam && <RankEmblem rank={rank} size={18} />} {exam ? `Exam · ${lesson.title}` : lesson.title}
+          </span>
           <h1>{q.prompt}</h1>
           {q.context && <p className="muted">{q.context}</p>}
           <div className="question-body">

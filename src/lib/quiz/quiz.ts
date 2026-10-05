@@ -23,6 +23,7 @@ import { combatQuestions } from './combatQuiz'
 import { ghaltaMathQuestions } from './ghaltaMath'
 import { orderQuestions, tapCardQuestions, tapCombatQuestions, tapGhaltaQuestion } from './interactive'
 import { selectQuestions } from './memory'
+import { filterByLevel } from '../ranks'
 import { RULES_BANK } from './rulesBank'
 
 // Duolingo-style quiz: each lesson generates a pool of candidate questions, and the question
@@ -800,9 +801,11 @@ export function buildLesson(
   seed: number,
   memory: QuizMemory = {},
   today: string = todayIso(),
+  /** Your rank: only questions up to this level (see ranks.ts). */
+  maxLevel: number = Infinity,
 ): Question[] {
   const lesson = LESSON_BY_ID[id]
-  const candidates = lesson.build({ ...ctx, rng: mulberry32(seed) })
+  const candidates = filterByLevel(lesson.build({ ...ctx, rng: mulberry32(seed) }), maxLevel, 2 * QUESTIONS_PER_LESSON)
   if (!lesson.remember) return candidates.slice(0, QUESTIONS_PER_LESSON)
   return selectQuestions(candidates, memory, today, QUESTIONS_PER_LESSON)
 }

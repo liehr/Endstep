@@ -338,7 +338,7 @@ function ImportSheet({
 // --- Swap round -------------------------------------------------------------------
 
 export function SwapFlow() {
-  const { games, settings, swaps: allSwaps, decklist, commander } = useData()
+  const { games, settings, swaps: allSwaps, decklist, commander, promotions } = useData()
   const swaps = swapsOf(allSwaps, settings.defaultDeck)
   const [step, setStep] = useState<'out' | 'in'>('out')
   const [out, setOut] = useState<string[]>([])
@@ -352,7 +352,7 @@ export function SwapFlow() {
     </BottomSheet>
   )
 
-  const stats = computeStats(games, settings.defaultDeck, { swaps: allSwaps, decklist })
+  const stats = computeStats(games, settings.defaultDeck, { swaps: allSwaps, decklist, promotions })
   const maxCards = stats.upgrade.cards
   const deadCount = new Map(stats.deadCards.map((t) => [cardKey(t.name), t.count]))
   const names = deckCardNames(decklist)
@@ -387,7 +387,7 @@ export function SwapFlow() {
         <div className="question">
           <h1>What goes out?</h1>
           <p className="muted">
-            At most {maxCards} card{maxCards > 1 ? 's' : ''} this round, so you can see the effect. Never cut lands, ramp or the
+            At most {maxCards} card{maxCards > 1 ? 's' : ''} this round{stats.upgrade.bonus ? ' (one is your rank bonus)' : ''}, so you can see the effect. Never cut lands, ramp or the
             cards that make {shortName(commander)} work.
           </p>
         </div>

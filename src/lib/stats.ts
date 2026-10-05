@@ -1,7 +1,8 @@
 import { BRACKET_CHECK_GAMES, PATTERN_THRESHOLD, SKILLS, UPGRADE_CARDS, UPGRADE_EVERY_GAMES, WHY_CATEGORIES } from './content'
 import { swapsOf } from './data'
 import { sortGames } from './focus'
-import type { DeckEntry, Game, Result, SkillId, Swap, WhyCategory } from './types'
+import { swapBonus } from './ranks'
+import type { DeckEntry, Game, Promotion, Result, SkillId, Swap, WhyCategory } from './types'
 
 export interface Tally {
   name: string
@@ -52,8 +53,10 @@ export interface UpgradeStatus {
   ready: boolean
   /** Number of the next swap round (1 = first). */
   round: number
-  /** Maximum number of cards the next swap round may swap. */
+  /** Maximum number of cards the next swap round may swap (bonus included). */
   cards: number
+  /** Extra card from a rank promotion since the last swap. */
+  bonus: number
   /** Record per deck version, oldest first. */
   phases: DeckPhase[]
 }
@@ -98,7 +101,7 @@ function average(values: (number | null)[]): number | null {
 
 const normalize = (s: string) => s.trim().toLowerCase()
 
-export function upgradeStatus(deckGames: Game[], swaps: Swap[]): UpgradeStatus {
+export function upgradeStatus(deckGames: Game[], swaps: Swap[], bonus = 0): UpgradeStatus {
   const sorted = [...swaps].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt))
   const bounds = [null, ...sorted.map((s) => s.date)]
   const phases = bounds.map((from, i) => {
@@ -113,7 +116,7 @@ export function upgradeStatus(deckGames: Game[], swaps: Swap[]): UpgradeStatus {
   })
   const gamesSince = phases[phases.length - 1].games
   const target = UPGRADE_EVERY_GAMES
-  return { gamesSince, target, ready: gamesSince >= target, round: swaps.length + 1, cards: swapCards(swaps.length), phases }
+  return { gamesSince, target, ready: gamesSince >= target, round: swaps.length + 1, cards: swapCards(swaps.length) + bonus, bonus, phases }
 }
 
 /** Maximum number of cards for the swap round after `done` completed rounds. */
@@ -129,7 +132,7 @@ export function bracketCheck(deckGames: number, done: boolean): BracketCheck {
 export function computeStats(
   allGames: Game[],
   deck: string,
-  { swaps = [], decklist }: { swaps?: Swap[]; decklist?: DeckEntry[] } = {},
+  { swaps = [], decklist, promotions = [] }: { swaps?: Swap[]; decklist?: DeckEntry[]; promotions?: Promotion[] } = {},
 ): Stats {
   const games = sortGames(allGames)
   const wins = games.filter((g) => g.result === 'win').length
@@ -149,7 +152,8 @@ export function computeStats(
     }
   })
 
-  const upgrade = upgradeStatus(deckGames, swapsOf(swaps, deck))
+  const deckSwaps = swapsOf(swaps, deck)
+  const upgrade = upgradeStatus(deckGames, deckSwaps, swapBonus(promotions, deckSwaps))
   const upgradeReady = upgrade.ready
   // Candidates only from cards that are still in the deck.
   const inDeck = decklist ? new Set(decklist.map((e) => normalize(e.name))) : null
