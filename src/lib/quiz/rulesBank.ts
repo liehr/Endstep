@@ -34,9 +34,9 @@ export const RULES_BANK: StaticQuestion[] = [
   },
   {
     id: 'pump-timing',
-    prompt: 'When is the best time to cast Overwhelming Stampede?',
+    prompt: 'When is the best time to cast a sorcery that pumps your team, like Overwhelming Stampede?',
     options: ['In the main phase before combat', 'After blockers are declared', 'In the combat damage step', 'In the end step'],
-    explanation: 'Overwhelming Stampede is a sorcery: it only works in your main phase. Pump effects belong before combat so they count when you attack.',
+    explanation: 'A sorcery only works in your main phase. Pump effects belong before combat so they count when you attack.',
   },
   {
     id: 'tax',
@@ -47,7 +47,7 @@ export const RULES_BANK: StaticQuestion[] = [
       '+2 mana per turn your commander sits in the command zone',
       'It doubles the cost',
     ],
-    explanation: 'Each previous cast from the command zone makes it {2} more expensive. Ghalta’s reduction lowers the tax too.',
+    explanation: 'Each previous cast from the command zone makes it {2} more expensive. Cost reductions on your commander lower the tax too.',
   },
   {
     id: 'stack',
@@ -114,11 +114,11 @@ export const RULES_BANK: StaticQuestion[] = [
     id: 'removal',
     prompt: 'What do you use your limited removal on?',
     options: ['Threats that end the game', 'The first annoying card', 'Always the strongest player', 'As early as possible, before it’s too late'],
-    explanation: 'Just because a card is annoying doesn’t mean it deserves removal. Your deck has little interaction, so use it carefully.',
+    explanation: 'Just because a card is annoying doesn’t mean it deserves removal. Interaction is limited, so use it carefully.',
   },
   {
     id: 'trample-assign',
-    prompt: 'Ghalta with Trample is blocked by two creatures. How do you assign the damage?',
+    prompt: 'Your creature with Trample is blocked by two creatures. How do you assign the damage?',
     options: [
       'Freely, but each blocker needs lethal damage before excess goes to the player',
       'Only to the first blocker, the rest goes to the player',

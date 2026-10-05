@@ -133,13 +133,36 @@ describe('Answers are correct', () => {
     expect(answers).toContain('Mulligan')
   })
 
-  it('Combat: trample damage is 12 minus lethal damage to blockers', () => {
+  it('Combat: trample damage is power minus lethal damage to blockers', () => {
     for (let seed = 1; seed <= 40; seed++) {
       for (const q of buildLesson('combat', ctx, seed).filter((q) => q.id.startsWith('trample-'))) {
         const blockers = [...q.prompt.matchAll(/(\d)\/\1/g)].map((m) => Number(m[1]))
         const deathtouch = q.prompt.includes('Deathtouch')
         const lethal = blockers.reduce((s, t) => s + (deathtouch ? 1 : t), 0)
         expect(correctLabel(q)).toBe(String(12 - lethal))
+        // Ghalta is the commander and shown as a card.
+        expect(q.prompt).toMatch(/^Ghalta \(12\/12, Trample/)
+      }
+    }
+  })
+
+  it('Combat: other decks get their own commander or a made-up trampler', () => {
+    const niv = { ...ctx, commander: 'Niv-Mizzet, Parun', decklist: [{ name: 'Island', qty: 50 }, { name: 'Guttersnipe', qty: 49 }] }
+    for (let seed = 1; seed <= 30; seed++) {
+      for (const q of buildLesson('combat', niv, seed)) {
+        expect(q.prompt).not.toContain('Ghalta')
+        if (q.id.startsWith('trample-') && !q.prompt.includes('Deathtouch')) {
+          const blockers = [...q.prompt.matchAll(/(\d)\/\1(?! creature)/g)].map((m) => Number(m[1]))
+          expect(q.prompt).toMatch(/^A 7\/7 creature with Trample/)
+          expect(correctLabel(q)).toBe(String(Math.max(0, 7 - blockers.reduce((s, b) => s + b, 0))))
+        }
+        if (q.id.startsWith('cmd-damage-')) {
+          // Niv-Mizzet (5/5) has no Trample: blocked means no damage.
+          const already = Number(q.prompt.match(/has (\d+) commander damage/)![1])
+          const dealt = q.prompt.includes('is blocked') ? 0 : 5
+          expect(correctLabel(q)).toBe(already + dealt >= 21 ? 'Yes, they lose' : 'No, not yet')
+        }
+        if (q.id === 'blocker-gone-plain') expect(q.prompt).toMatch(/^Guttersnipe \(2\/2\)/)
       }
     }
   })

@@ -124,11 +124,11 @@ export const ATTACK_PRIORITIES = [
 export const RULES = [
   {
     title: 'Commander tax',
-    text: '+2 generic mana for each previous cast from the command zone. Ghalta’s reduction lowers it too.',
+    text: '+2 generic mana for each previous cast from the command zone. Cost reductions on your commander lower it too.',
   },
   {
     title: 'Commander damage',
-    text: '21 combat damage from the same commander. Trample damage that gets through counts, fight damage doesn’t. Ghalta (12/12) against a 5/5 blocker: only 7 count.',
+    text: '21 combat damage from the same commander. Trample damage that gets through counts, fight damage doesn’t. A 12/12 trampler against a 5/5 blocker: only 7 count.',
   },
   {
     title: 'Trample',
@@ -148,6 +148,6 @@ export const RULES = [
   },
   {
     title: 'Combat steps',
-    text: 'Beginning → attackers → blockers → combat damage → end. Pump effects like Overwhelming Stampede go in the main phase before combat.',
+    text: 'Beginning → attackers → blockers → combat damage → end. Sorcery-speed pump effects go in the main phase before combat.',
   },
 ]
