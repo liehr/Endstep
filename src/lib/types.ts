@@ -182,6 +182,16 @@ export interface SavedDeck {
   bracket: Bracket
   bracketCheckDone: boolean
   tableIntro: string
+  /** When it was put aside (ISO), so cloud sync can tell a newer copy from an older one. */
+  savedAt?: string
+}
+
+/** When each part last changed (ISO, '' = never). Cloud sync keeps the newer part. */
+export interface SyncStamps {
+  /** Preferences on the settings page and the table. */
+  settings: string
+  /** The active deck: list, commander, name, bracket and table talk. */
+  deck: string
 }
 
 export interface AppData {
@@ -207,6 +217,9 @@ export interface AppData {
   quiz: QuizMemory
   /** Rank promotions, oldest first. Empty = Bronze. */
   promotions: Promotion[]
+  /** Deleted games, swaps and decks ("game:<id>" → ISO time), so cloud sync doesn't bring them back. */
+  deleted: Record<string, string>
+  stamps: SyncStamps
   /** Focus the wheel picked for the next game; null = follow the rotation. */
   spin: SkillId | null
 }

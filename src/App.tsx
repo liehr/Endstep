@@ -13,6 +13,7 @@ import { GameDetail, GameEdit, History } from './pages/History'
 import { Home } from './pages/Home'
 import { CheatSheet, GhaltaPage, More } from './pages/More'
 import { SettingsPage } from './pages/Settings'
+import { SyncPage } from './pages/Sync'
 import { Round, RoundDone, RoundStart } from './pages/Round'
 import { Ranks } from './pages/Ranks'
 import { RoundEnd } from './pages/RoundEnd'
@@ -43,6 +44,7 @@ function Page({ route }: { route: string }) {
   if ((m = route.match(/^\/spiel\/([^/]+)$/))) return <GameDetail id={m[1]} />
   if ((m = route.match(/^\/runde\/neu\/([^/]+)$/)) && SKILL_IDS.has(m[1])) return <RoundStart skill={m[1] as SkillId} />
   if ((m = route.match(/^\/runde\/fertig\/([^/]+)$/))) return <RoundDone id={m[1]} />
+  if ((m = route.match(/^\/sync\/([0-9A-Za-z-]+)$/))) return <SyncPage initialCode={m[1]} />
   if (route === '/training/scenario') return <Scenario />
   if (route === '/training/challenge') return <Challenge />
   if ((m = route.match(/^\/training\/([^/]+)$/)) && m[1] in LESSON_BY_ID) return <Lesson id={m[1] as LessonId} />
@@ -60,6 +62,8 @@ function Page({ route }: { route: string }) {
       return <More />
     case '/mehr/einstellungen':
       return <SettingsPage />
+    case '/mehr/sync':
+      return <SyncPage />
     case '/mehr/spickzettel':
       return <CheatSheet />
     case '/mehr/ghalta':
@@ -120,7 +124,8 @@ export function App() {
       <UpdateBanner />
       <main className={`${flow ? 'flow-main' : ''} ${dice ? 'with-dice' : ''}`}>
         <Suspense fallback={null}>
-          {deckChosen ? <Page key={route} route={route} /> : <DeckPicker welcome />}
+          {/* A new device can connect cloud sync before picking a deck. */}
+          {deckChosen || route === '/mehr/sync' || route.startsWith('/sync/') ? <Page key={route} route={route} /> : <DeckPicker welcome />}
         </Suspense>
       </main>
       {dice && <DiceButton flow={flow} />}

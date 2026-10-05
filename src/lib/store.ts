@@ -5,21 +5,39 @@ import { today } from './dates'
 import { nextFocus, upcomingFocus } from './focus'
 import { recordAnswer } from './quiz/memory'
 import { currentRank, promote, unlockedSkills } from './ranks'
+import { mergeSync, sameSyncData, trackChanges } from './sync/merge'
 import type { AppData, DeckEntry, Game, GameInput, LessonId, SavedDeck, Settings, SkillId, Swap, Tracker } from './types'
 
 // A small global store: data lives only on the device (localStorage).
 
 let data: AppData = loadData(localStorage)
 const listeners = new Set<() => void>()
+const changeListeners = new Set<() => void>()
 
-function commit(next: AppData) {
-  data = next
+/** Save a change. Changes made here are stamped for cloud sync; `fromSync` ones came from the cloud. */
+function commit(next: AppData, { fromSync = false } = {}) {
+  data = fromSync ? next : trackChanges(data, next)
   try {
     saveData(localStorage, data)
   } catch (err) {
     console.error('Saving failed', err)
   }
   listeners.forEach((l) => l())
+  if (!fromSync) changeListeners.forEach((l) => l())
+}
+
+export const getData = () => data
+
+/** Called after every change made on this device (cloud sync uploads it). */
+export function onLocalChange(listener: () => void) {
+  changeListeners.add(listener)
+  return () => changeListeners.delete(listener)
+}
+
+/** Take in data from the cloud. Merged with the current state, so changes made meanwhile stay. */
+export function applySynced(remote: AppData) {
+  const merged = mergeSync(data, remote)
+  if (!sameSyncData(merged, data)) commit(merged, { fromSync: true })
 }
 
 function subscribe(listener: () => void) {

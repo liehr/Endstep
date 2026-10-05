@@ -3743,3 +3743,77 @@ main.with-dice .screen.flow {
 .challenge-options .option {
   min-height: 72px;
 }
+
+/* Cloud sync status heading */
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sync-status svg {
+  flex-shrink: 0;
+  color: var(--brand);
+}
+.steps a {
+  color: var(--select);
+  font-weight: 800;
+}
+
+/* Sync sigil: a card with the join link as mana orbs. The orb and paper colors stay the same
+   in dark mode on purpose: cameras need dark orbs on light paper to read it. */
+:root {
+  --sigil-bg: #f7f0e1;
+  --sigil-frame: #2b2233;
+  --orb-w: #6b5310;
+  --orb-u: #1b4f8a;
+  --orb-b: #2b2233;
+  --orb-r: #9b2c1f;
+  --orb-g: #1f6b35;
+}
+.sigil-card {
+  margin: 0 auto;
+  width: min(100%, 300px);
+  padding: 10px;
+  border-radius: 16px;
+  background: var(--sigil-frame);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sigil-title,
+.sigil-type,
+.sigil-code {
+  border-radius: 8px;
+  background: var(--sigil-bg);
+  color: var(--sigil-frame);
+  padding: 6px 10px;
+  font-weight: 800;
+}
+.sigil-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sigil-pips {
+  display: flex;
+  gap: 3px;
+}
+.sigil-pips i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.sigil-art {
+  display: block;
+  width: 100%;
+  border-radius: 8px;
+}
+.sigil-type {
+  font-size: 13px;
+}
+.sigil-code {
+  text-align: center;
+  font-size: 22px;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}

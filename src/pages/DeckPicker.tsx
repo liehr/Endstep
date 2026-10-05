@@ -1,4 +1,4 @@
-import { CaretLeftIcon, CaretRightIcon, ClipboardTextIcon, LinkIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react'
+import { CaretLeftIcon, CaretRightIcon, ClipboardTextIcon, CloudArrowDownIcon, LinkIcon, TrashIcon, UploadSimpleIcon } from '@phosphor-icons/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BottomSheet, Button, ConfirmSheet, Field, IconButton } from '../components/ui'
 import { parseBackup } from '../lib/backup'
@@ -150,6 +150,9 @@ export function DeckPicker({ welcome = false }: { welcome?: boolean }) {
 
       {welcome && (
         <>
+          <Button variant="ghost" size="sm" icon={CloudArrowDownIcon} onClick={() => navigate('/mehr/sync')}>
+            Sync from another device
+          </Button>
           <Button variant="ghost" size="sm" icon={UploadSimpleIcon} onClick={() => fileInput.current?.click()}>
             Restore a backup
           </Button>

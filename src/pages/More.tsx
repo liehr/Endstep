@@ -5,6 +5,7 @@ import {
   CaretLeftIcon,
   CaretRightIcon,
   ChatCircleDotsIcon,
+  CloudCheckIcon,
   DeviceMobileIcon,
   DownloadSimpleIcon,
   SlidersHorizontalIcon,
@@ -28,6 +29,7 @@ import { deckSize } from '../lib/decklist'
 import { isStandalone } from '../lib/install'
 import { navigate } from '../lib/route'
 import { actions, useData } from '../lib/store'
+import { useSyncState } from '../lib/sync/cloud'
 import { toast } from '../lib/toast'
 import type { Bracket, Settings } from '../lib/types'
 
@@ -64,6 +66,7 @@ function Row({
 
 export function More() {
   const data = useData()
+  const sync = useSyncState()
   const { settings } = data
   const [sheet, setSheet] = useState<SheetId>(null)
   const [draft, setDraft] = useState<Settings>(settings)
@@ -137,6 +140,13 @@ export function More() {
         <h2 className="list-title">Data</h2>
         <ul className="list settings">
           <Row
+            icon={CloudCheckIcon}
+            color="var(--brand)"
+            label="Cloud sync"
+            value={sync.status === 'off' ? 'Off' : sync.status === 'error' ? 'Not synced' : 'On'}
+            onClick={() => navigate('/mehr/sync')}
+          />
+          <Row
             icon={DownloadSimpleIcon}
             color="var(--skill-sequencing)"
             label="Save backup"
@@ -145,7 +155,9 @@ export function More() {
           <Row icon={UploadSimpleIcon} color="var(--skill-sequencing)" label="Restore backup" onClick={() => fileInput.current?.click()} />
         </ul>
         <p className="list-footnote">
-          Your games are only stored on this phone. Back them up now and then, e.g. to iCloud Drive or Google Drive.
+          {sync.status === 'off'
+            ? 'Your games are only stored on this device. Turn on cloud sync, or back them up now and then.'
+            : 'Synced with your other devices. A backup file is still a good extra copy.'}
         </p>
         <input
           ref={fileInput}
