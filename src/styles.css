@@ -3224,3 +3224,27 @@ main.with-dice .screen.flow {
 .daily-goal .btn {
   margin-bottom: 0;
 }
+.warmup-tag {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--c) 14%, var(--surface));
+  color: var(--text);
+  font-weight: 800;
+}
+.question-note {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--warn-soft);
+  color: var(--warn-text);
+  font-weight: 700;
+}
+.daily-goal-next {
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

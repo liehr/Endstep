@@ -17,12 +17,13 @@ import { evaluateHand, ruleText } from '../sim/mulligan'
 import { mulberry32, shuffle } from '../sim/rng'
 import { today as todayIso } from '../dates'
 import type { Ruling } from '../scryfall'
-import type { LessonId, QuizMemory } from '../types'
+import { formatDate, addDays } from '../dates'
+import type { Game, LessonId, QuizMemory, SkillId } from '../types'
 import { classify, costVariants, faceOf, findGap, hideSelfName, KEYWORDS, ptVariants, ROLES, typeLabel, type Role } from './cardQuiz'
 import { combatQuestions } from './combatQuiz'
 import { ghaltaMathQuestions } from './ghaltaMath'
 import { orderQuestions, tapCardQuestions, tapCombatQuestions, tapGhaltaQuestion } from './interactive'
-import { mistakeKeys, selectQuestions, topicOf } from './memory'
+import { MISTAKE_DAYS, mistakeKeys, selectQuestions, topicOf } from './memory'
 import { RULES_BANK } from './rulesBank'
 
 // Duolingo-style quiz: each lesson generates a pool of candidate questions, and the question
@@ -832,9 +833,70 @@ export function buildLesson(
 }
 
 
+/** At least this share of deck cards must be loaded for card lessons and simulations. */
+export const MIN_COVERAGE = 0.9
+
+/** Can you play this lesson with the deck's card data as loaded? */
+export function lessonOpen(lesson: Lesson, deck: Omit<QuizContext, 'rng'> & { coverage: number }): boolean {
+  if (lesson.forCommander && !lesson.forCommander(deck.commander)) return false
+  const cardsReady = deck.coverage >= MIN_COVERAGE
+  if (lesson.needsCards && !cardsReady) return false
+  return !lesson.ready || lesson.ready(deck)
+}
+
 /** Lessons whose questions can come back in the mistakes lesson. */
 const reviewable = (ctx: Omit<QuizContext, 'rng'>) =>
   LESSONS.filter((l) => l.remember && !l.reviewOnly && !l.page && (!l.forCommander || l.forCommander(ctx.commander)) && (!l.ready || l.ready(ctx)))
+
+// --- Link to real games ---------------------------------------------------------------
+
+/** Which lesson trains each focus skill best (first one you can play wins). */
+export const WARM_UP: Record<SkillId, LessonId[]> = {
+  mulligan: ['mulligan', 'rules'],
+  sequencing: ['scenario', 'goldfish', 'rules'],
+  threat: ['rules', 'combat'],
+  combat: ['combat', 'ghalta'],
+  wipe: ['cards', 'rules'],
+  removal: ['cards', 'rulings', 'rules'],
+  politics: ['rules'],
+}
+
+/** The warm-up lesson for a skill, among the lessons you can play right now. */
+export function warmUpLesson(skill: SkillId, open: (id: LessonId) => boolean): LessonId {
+  return WARM_UP[skill].find(open) ?? 'rules'
+}
+
+/** Key in the question memory for "reviewed the decision from this game". */
+const gameKey = (game: Game) => `game-review:${game.id}`
+
+/**
+ * Recent games where you noted a decision you'd make differently (or lost to your own
+ * mistake): each brings questions about that skill into the mistakes lesson, until you
+ * get one right.
+ */
+export function gamesToReview(games: Game[], memory: QuizMemory, today: string): Game[] {
+  const since = addDays(today, -MISTAKE_DAYS)
+  return games
+    .filter((g) => g.playedAt >= since && (g.decisionSkill !== null || g.whyCategory === 'mistake'))
+    .filter((g) => (memory[gameKey(g)]?.box ?? 0) === 0)
+    .sort((a, b) => b.playedAt.localeCompare(a.playedAt) || b.createdAt.localeCompare(a.createdAt))
+}
+
+/** Your mistakes from the question memory (without the game reviews, which count per game). */
+const questionMistakes = (memory: QuizMemory, today: string) => mistakeKeys(memory, today).filter((k) => topicOf(k) !== 'game-review')
+
+/** Up to 2 questions about the skill from a game's decision. */
+function gameReviewQuestions(ctx: Omit<QuizContext, 'rng'>, game: Game, seed: number, memory: QuizMemory, today: string): Question[] {
+  const skill = game.decisionSkill ?? game.focus
+  const lessons = reviewable(ctx)
+  const id = warmUpLesson(skill, (l) => lessons.some((x) => x.id === l))
+  const lesson = LESSON_BY_ID[id]
+  if (!lessons.includes(lesson)) return []
+  const said = game.decision.trim()
+  const note = `From your game on ${formatDate(game.playedAt)}${said ? `: you’d change “${said}”` : ''}.`
+  return selectQuestions(lesson.build({ ...ctx, rng: mulberry32(seed) }), memory, today, 2).map((q) => ({ ...q, reviewOf: gameKey(game), note }))
+}
+
 
 /** How many seeds to search for the exact missed question before taking one of the same kind. */
 const MISTAKE_SEEDS = 12
@@ -845,8 +907,12 @@ const MISTAKE_SEEDS = 12
  * same kind stands in for them.
  */
 function mistakesLesson(ctx: Omit<QuizContext, 'rng'>, seed: number, memory: QuizMemory, today: string): Question[] {
-  const wanted = mistakeKeys(memory, today)
-  if (wanted.length === 0) return []
+  // Your games first: one decision per game, two questions each, at most 2 games.
+  const fromGames = gamesToReview(ctx.games ?? [], memory, today)
+    .slice(0, 2)
+    .flatMap((g, i) => gameReviewQuestions(ctx, g, seed + i, memory, today))
+  const wanted = questionMistakes(memory, today)
+  if (wanted.length === 0) return fromGames.slice(0, QUESTIONS_PER_LESSON)
   const topics = new Set(wanted.map(topicOf))
   const byKey = new Map<string, Question>()
   const byTopic = new Map<string, Question[]>()
@@ -867,9 +933,9 @@ function mistakesLesson(ctx: Omit<QuizContext, 'rng'>, seed: number, memory: Qui
     lessons = relevant
   }
 
-  const out: Question[] = []
-  const used = new Set<string>()
-  const groups = new Set<string>()
+  const out: Question[] = fromGames.slice(0, QUESTIONS_PER_LESSON - 1)
+  const used = new Set(out.map((q) => q.key))
+  const groups = new Set(out.flatMap((q) => (q.group !== undefined ? [q.group] : [])))
   const free = (q: Question) => !used.has(q.key) && (q.group === undefined || !groups.has(q.group))
   for (const key of wanted) {
     if (out.length >= QUESTIONS_PER_LESSON) break
@@ -883,5 +949,7 @@ function mistakesLesson(ctx: Omit<QuizContext, 'rng'>, seed: number, memory: Qui
   return out
 }
 
-/** How many mistakes the mistakes lesson has for you right now. */
-export const mistakeCount = (memory: QuizMemory, today: string = todayIso()) => mistakeKeys(memory, today).length
+/** What the mistakes lesson has for you right now. */
+export function reviewCount(memory: QuizMemory, games: Game[], today: string = todayIso()): { questions: number; games: number } {
+  return { questions: questionMistakes(memory, today).length, games: gamesToReview(games, memory, today).length }
+}

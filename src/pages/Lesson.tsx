@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { AnswerLabel, CardFrame, type Slot } from '../components/CardFrame'
 import { CardGrid, PickCardGrid, type PickState } from '../components/CardImage'
 import { Confetti } from '../components/Confetti'
-import { Button, IconButton, ProgressBar } from '../components/ui'
+import { Button, EmptyState, IconButton, ProgressBar } from '../components/ui'
 import { haptic } from '../lib/haptics'
 import type { FieldId } from '../lib/quiz/cardQuiz'
 import { buildLesson, LESSON_BY_ID, orderIsCorrect, selectIsCorrect, selectSolution, type Question } from '../lib/quiz/quiz'
@@ -30,9 +30,9 @@ interface Item {
 /** A lesson: question by question, like Duolingo. Wrong answers come back at the end. */
 export function Lesson({ id }: { id: LessonId }) {
   const deck = useDeckCards({ autoLoad: false })
-  const { quiz } = useData()
+  const { quiz, games } = useData()
   const build = (seed: number) =>
-    buildLesson(id, { decklist: deck.decklist, commander: deck.commander, lookup: deck.lookup, rulings: deck.rulings }, seed, quiz).map((question) => ({
+    buildLesson(id, { decklist: deck.decklist, commander: deck.commander, lookup: deck.lookup, rulings: deck.rulings, games }, seed, quiz).map((question) => ({
       question,
       retry: false,
     }))
@@ -71,6 +71,14 @@ export function Lesson({ id }: { id: LessonId }) {
   }
 
   if (done) return <LessonDone id={id} score={score} total={firstTryTotal} onAgain={restart} />
+  if (queue.length === 0)
+    return (
+      <div className="screen flow">
+        <EmptyState title="Nothing to review" text="No recent mistakes left. Nice work!">
+          <Button onClick={() => navigate('/training', { replace: true })}>Back to Training</Button>
+        </EmptyState>
+      </div>
+    )
   if (!item) return null
 
   const q = item.question
@@ -181,6 +189,7 @@ export function Lesson({ id }: { id: LessonId }) {
         <div className="question">
           {item.retry && <span className="retry-tag">Again</span>}
           <span className="eyebrow">{lesson.title}</span>
+          {q.note && <p className="question-note small">{q.note}</p>}
           <h1>{q.prompt}</h1>
           {q.context && <p className="muted">{q.context}</p>}
           <div className="question-body">

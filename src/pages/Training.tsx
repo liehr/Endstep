@@ -18,7 +18,9 @@ import {
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Button, EmptyState } from '../components/ui'
 import { shortName } from '../lib/commander'
-import { LESSONS, mistakeCount } from '../lib/quiz/quiz'
+import { SKILL_BY_ID } from '../lib/content'
+import { nextFocus } from '../lib/focus'
+import { LESSON_BY_ID, LESSONS, lessonOpen, MIN_COVERAGE, reviewCount, warmUpLesson } from '../lib/quiz/quiz'
 import { navigate } from '../lib/route'
 import { buildLibrary, seedFor, simCommander, simulateGame, summarize, type Distribution } from '../lib/sim/goldfish'
 import { randomSeed } from '../lib/sim/rng'
@@ -57,13 +59,15 @@ const LESSON_SKILL: Record<LessonId, SkillId> = {
 export const lessonStyle = (id: LessonId): CSSProperties => skillStyle(LESSON_SKILL[id])
 
 /** At least this share of deck cards must be loaded for simulations to make sense. */
-const MIN_COVERAGE = 0.9
 
 export function Training() {
-  const { training, quiz } = useData()
-  const mistakes = mistakeCount(quiz)
+  const { training, quiz, games } = useData()
+  const review = reviewCount(quiz, games)
+  const mistakes = review.questions + review.games
+  const focus = nextFocus(games)
   const deck = useDeckCards()
   const ready = deck.coverage >= MIN_COVERAGE
+  const warmUp = warmUpLesson(focus, (id) => lessonOpen(LESSON_BY_ID[id], deck))
 
   const totalCorrect = training.reduce((s, t) => s + t.correct, 0)
   const totalAnswered = training.reduce((s, t) => s + t.total, 0)
@@ -103,7 +107,7 @@ export function Training() {
           <span className="lesson-text">
             <strong>Your Mistakes</strong>
             <span className="muted small">
-              {mistakes} question{mistakes > 1 ? 's' : ''} you got wrong lately. Get {mistakes > 1 ? 'them' : 'it'} right this time.
+              {reviewText(review)}
             </span>
           </span>
           <PlayIcon weight="fill" className="lesson-play" aria-hidden="true" />
@@ -140,6 +144,9 @@ export function Training() {
                       : locked
                         ? "Needs your deck's card data."
                         : lesson.description}</span>
+                  {!locked && lesson.id === warmUp && (
+                    <span className="warmup-tag small">Warm-up for {SKILL_BY_ID[focus].name}, your next game’s focus</span>
+                  )}
                   {results.length > 0 && (
                     <span className="lesson-progress">
                       {Array.from({ length: 5 }, (_, i) => (
@@ -161,6 +168,14 @@ export function Training() {
       {ready && deck.lookup(deck.commander) ? <GoldfishLab /> : null}
     </div>
   )
+}
+
+function reviewText({ questions, games }: { questions: number; games: number }): string {
+  const parts = [
+    questions ? `${questions} question${questions > 1 ? 's' : ''} you got wrong lately` : '',
+    games ? `what you’d change from ${games > 1 ? `${games} recent games` : 'your last game'}` : '',
+  ].filter(Boolean)
+  return `${parts.join(', plus ')}. Get it right this time.`.replace(/^./, (c) => c.toUpperCase())
 }
 
 function CardDataNotice({ deck }: { deck: ReturnType<typeof useDeckCards> }) {

@@ -1,6 +1,9 @@
 import { BarbellIcon, CheckIcon, LightningIcon } from '@phosphor-icons/react'
 import { useState, type CSSProperties } from 'react'
 import { today } from '../lib/dates'
+import { nextFocus } from '../lib/focus'
+import { LESSON_BY_ID, lessonOpen, reviewCount, warmUpLesson } from '../lib/quiz/quiz'
+import { useDeckCards } from '../lib/useDeckCards'
 import { navigate } from '../lib/route'
 import { actions, useData } from '../lib/store'
 import { DAILY_GOALS, trainingDay } from '../lib/trainingStreak'
@@ -10,10 +13,15 @@ const lessons = (n: number) => `${n} lesson${n === 1 ? '' : 's'}`
 
 /** Today's training goal and the training streak, on the home page. */
 export function DailyGoal() {
-  const { training, settings } = useData()
+  const { training, settings, quiz, games } = useData()
+  const deck = useDeckCards({ autoLoad: false })
   const [open, setOpen] = useState(false)
   const day = trainingDay(training, today(), settings.dailyGoal)
   const progress = Math.min(1, day.done / day.goal)
+  // Mistakes first, otherwise a warm-up for the next game's focus skill.
+  const review = reviewCount(quiz, games)
+  const next = review.questions + review.games > 0 ? 'mistakes' : warmUpLesson(nextFocus(games), (id) => lessonOpen(LESSON_BY_ID[id], deck))
+  const nextLabel = next === 'mistakes' ? 'Your Mistakes' : `${LESSON_BY_ID[next].title} (warm-up)`
 
   return (
     <>
@@ -27,6 +35,7 @@ export function DailyGoal() {
             <span className="muted small">
               {Math.min(day.done, day.goal)} of {lessons(day.goal)} today
             </span>
+            {!day.met && <span className="small daily-goal-next">Next: {nextLabel}</span>}
           </span>
           <span className={`training-streak ${day.current > 0 ? 'on' : ''}`} title="Days in a row with your goal reached">
             <LightningIcon weight="fill" aria-hidden="true" />
@@ -35,7 +44,7 @@ export function DailyGoal() {
           </span>
         </button>
         {!day.met && (
-          <Button size="sm" onClick={() => navigate('/training')}>
+          <Button size="sm" onClick={() => navigate(`/training/${next}`)}>
             Train
           </Button>
         )}

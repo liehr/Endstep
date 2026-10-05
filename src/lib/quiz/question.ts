@@ -1,7 +1,7 @@
 import type { CardInfo } from '../cards'
 import type { Ruling } from '../scryfall'
 import { shuffle, type Rng } from '../sim/rng'
-import type { DeckEntry } from '../types'
+import type { DeckEntry, Game } from '../types'
 import type { CardFace, FieldId } from './cardQuiz'
 
 // Shared question types and helpers for all lessons.
@@ -34,6 +34,8 @@ export interface Question {
    * kind of question, other numbers). The answer counts for both.
    */
   reviewOf?: string
+  /** Shown above the question, e.g. which game it's about. */
+  note?: string
   /** Questions of the same group (e.g. about the same card) don't appear together. */
   group?: string
   /** “choice”: pick one answer; “build”: fill the blanks from the tile bank. */
@@ -69,6 +71,8 @@ export interface QuizContext {
   lookup: (name: string) => CardInfo | undefined
   /** Rulings per card (loaded in the background); missing for older callers and tests. */
   rulings?: (name: string) => Ruling[] | undefined
+  /** Your games, so the mistakes lesson can bring up what you'd change from recent ones. */
+  games?: Game[]
 }
 
 export const QUESTIONS_PER_LESSON = 5

@@ -3,7 +3,8 @@ import { cardKey, fromScryfall } from '../cards'
 import type { DeckEntry } from '../types'
 import { FIXTURE_CARDS, FIXTURE_RULINGS } from '../scryfall.fixture'
 import { evaluateHand } from '../sim/mulligan'
-import { buildLesson, cardCoverage, LESSON_BY_ID, LESSONS, rulingsReady, selectIsCorrect, selectSolution, type Question } from './quiz'
+import { buildLesson, cardCoverage, gamesToReview, LESSON_BY_ID, LESSONS, reviewCount, rulingsReady, selectIsCorrect, selectSolution, warmUpLesson, type Question } from './quiz'
+import { makeGame } from '../test-utils'
 import { mulberry32 } from '../sim/rng'
 import { mistakeKeys, recordAnswer, topicOf } from './memory'
 import { RULES_BANK } from './rulesBank'
@@ -328,5 +329,44 @@ describe('Mistakes lesson', () => {
       // Card questions have fixed keys (except tap questions with random cards): they come back exactly.
       for (const q of missed.slice(0, 2).filter((x) => !x.key.startsWith('tap-'))) expect(qs.some((x) => x.key === q.key)).toBe(true)
     }
+  })
+})
+
+describe('Link to real games', () => {
+  const today = '2026-10-05'
+  const all = () => true
+
+  it('picks a warm-up lesson for the next focus skill that you can play', () => {
+    expect(warmUpLesson('mulligan', all)).toBe('mulligan')
+    expect(warmUpLesson('sequencing', all)).toBe('scenario')
+    expect(warmUpLesson('sequencing', (id) => id !== 'scenario' && id !== 'goldfish')).toBe('rules')
+    expect(warmUpLesson('combat', (id) => id !== 'combat')).toBe('ghalta')
+    expect(warmUpLesson('politics', () => false)).toBe('rules')
+  })
+
+  it('reviews recent games with a decision to change, until you get one right', () => {
+    const recent = makeGame({ id: 'g1', playedAt: '2026-10-02', decisionSkill: 'combat', decision: 'Attacked into open mana' })
+    const old = makeGame({ id: 'g0', playedAt: '2026-09-01', decisionSkill: 'combat' })
+    const nothing = makeGame({ id: 'g2', playedAt: '2026-10-03', decisionSkill: null, whyCategory: 'luck' })
+    const ownMistake = makeGame({ id: 'g3', playedAt: '2026-10-04', decisionSkill: null, whyCategory: 'mistake', focus: 'mulligan' })
+    const games = [recent, old, nothing, ownMistake]
+    expect(gamesToReview(games, {}, today).map((g) => g.id)).toEqual(['g3', 'g1'])
+
+    const qs = buildLesson('mistakes', { ...ctx, games }, 5, {}, today)
+    expect(qs.length).toBeGreaterThanOrEqual(3)
+    qs.forEach(checkShape)
+    const fromG1 = qs.filter((q) => q.reviewOf === 'game-review:g1')
+    expect(fromG1.length).toBeGreaterThan(0)
+    expect(fromG1[0].note).toContain('Attacked into open mana')
+    // Combat questions for a combat decision.
+    const combatTopics = new Set(LESSON_BY_ID.combat.build({ ...ctx, rng: mulberry32(1) }).map((q) => topicOf(q.key)))
+    for (const q of fromG1) expect(combatTopics.has(topicOf(q.key))).toBe(true)
+
+    // A right answer settles the game; a wrong one keeps it.
+    let memory = recordAnswer({}, 'game-review:g1', false, today)
+    expect(gamesToReview(games, memory, today).map((g) => g.id)).toContain('g1')
+    memory = recordAnswer(memory, 'game-review:g1', true, today)
+    expect(gamesToReview(games, memory, today).map((g) => g.id)).toEqual(['g3'])
+    expect(reviewCount(memory, games, today)).toEqual({ questions: 0, games: 1 })
   })
 })
