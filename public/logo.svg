@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#0f2e1d"/>
+  <g fill="#a3e635" transform="translate(256 322) scale(0.95)">
+    <path d="M-52 18C-56-16-32-34 0-34S56-16 52 18C48 56 26 82 0 82S-48 56-52 18Z"/>
+    <path id="toe" d="M-21-66C-25-120-14-180 0-226C14-180 25-120 21-66C18-52 10-46 0-46S-18-52-21-66Z"/>
+    <use href="#toe" transform="rotate(-40)"/>
+    <use href="#toe" transform="rotate(40)"/>
+  </g>
+</svg>
