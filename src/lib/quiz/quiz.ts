@@ -185,62 +185,134 @@ function ghaltaLesson(ctx: QuizContext): Question[] {
 }
 
 // --- Lesson 2: Combat & Trample ---------------------------------------------------
+// Built from your own deck: your commander and creatures where they fit the question,
+// otherwise a made-up creature of the right kind.
 
 const BLOCKERS = [1, 2, 2, 3, 3, 4, 5, 6]
 
+interface Attacker {
+  /** Text in the question, e.g. "Ghalta (12/12, Trample)" or "a 7/7 creature with Trample". */
+  label: string
+  power: number
+  trample: boolean
+  /** Real card to show (name + P/T caption). */
+  card?: QuizCard
+}
+
+const hasTrample = (c: CardInfo) => c.keywords.includes('Trample') || /(^|\n)(Flying, )?trample\b/i.test(c.oracleText)
+
+function attackerOf(c: CardInfo): Attacker {
+  const trample = hasTrample(c)
+  return {
+    label: `${shortName(c.name)} (${ptOf(c)}${trample ? ', Trample' : ''})`,
+    power: c.power ?? 0,
+    trample,
+    card: { name: c.name, caption: ptOf(c) },
+  }
+}
+
+const madeUp = (power: number, trample: boolean): Attacker => ({
+  label: `a ${power}/${power} creature${trample ? ' with Trample' : ' without Trample'}`,
+  power,
+  trample,
+})
+
+const capitalize = (s: string) => s[0].toUpperCase() + s.slice(1)
+
+/** Your commander, if it's a creature with a printed power of at least 2. */
+function commanderCreature(ctx: QuizContext): CardInfo | null {
+  const c = ctx.lookup(ctx.commander)
+  return c && isCreature(c) && c.power !== null && c.power >= 2 && /^\d+$/.test(c.toughness ?? '') ? c : null
+}
+
+/** The trampler for trample questions: your commander, else your biggest trampler, else a made-up 7/7. */
+function trampler(ctx: QuizContext): Attacker {
+  const commander = commanderCreature(ctx)
+  if (commander && hasTrample(commander) && commander.power! >= 6) return attackerOf(commander)
+  const own = deckCreatures(ctx)
+    .filter((c) => hasTrample(c) && (c.power ?? 0) >= 6 && /^\d+$/.test(c.toughness ?? ''))
+    .sort((a, b) => (b.power ?? 0) - (a.power ?? 0))[0]
+  return own ? attackerOf(own) : madeUp(7, true)
+}
+
 function trampleQuestion(ctx: QuizContext, n: number, deathtouch = false): Question {
   const { rng } = ctx
-  const blockers = Array.from({ length: int(1, 2, rng) }, () => pick(BLOCKERS, rng))
+  const attacker = trampler(ctx)
+  const p = attacker.power
+  const blockers = Array.from({ length: int(1, 2, rng) }, () => pick(BLOCKERS.filter((b) => b < p), rng))
   const lethal = blockers.reduce((s, t) => s + (deathtouch ? 1 : t), 0)
-  const toPlayer = Math.max(0, 12 - lethal)
+  const toPlayer = Math.max(0, p - lethal)
   const blockerText = blockers.map((t) => `${t}/${t}`).join(' and a ')
-  const wrong = [12, Math.max(0, 12 - Math.max(...blockers)), 0, toPlayer + 1, Math.max(0, toPlayer - 1)].map(String)
+  const wrong = [p, Math.max(0, p - Math.max(...blockers)), 0, toPlayer + 1, Math.max(0, toPlayer - 1)].map(String)
+  const label = deathtouch ? attacker.label.replace(/\)$|$/, (end) => (end ? ', Deathtouch)' : ' and Deathtouch')) : attacker.label
   return {
     id: `trample-${n}`,
-    key: `${deathtouch ? 'deathtouch' : 'trample'}:${[...blockers].sort().join('+')}`,
-    prompt: `Ghalta (12/12, Trample${deathtouch ? ', Deathtouch' : ''}) is blocked by a ${blockerText}. What’s the most damage that can go to the player?`,
-    ...(ctx.lookup(ctx.commander) ? { cards: [{ name: ctx.commander, caption: '12/12' }] } : {}),
+    key: `${deathtouch ? 'deathtouch' : 'trample'}:${p}:${[...blockers].sort().join('+')}`,
+    prompt: `${capitalize(label)} is blocked by a ${blockerText}. What’s the most damage that can go to the player?`,
+    ...(attacker.card ? { cards: [attacker.card] } : {}),
     ...choice(rng, String(toPlayer), wrong),
     explanation: deathtouch
-      ? `With Deathtouch, 1 damage per blocker is enough: 12 − ${blockers.length} = ${toPlayer}. That counts as commander damage.`
-      : `Each blocker needs lethal damage (${blockers.join(' + ')} = ${lethal}). The remaining 12 − ${lethal} = ${toPlayer} goes through and counts as commander damage.`,
+      ? `With Deathtouch, 1 damage per blocker is enough: ${p} − ${blockers.length} = ${toPlayer}.`
+      : `Each blocker needs lethal damage (${blockers.join(' + ')} = ${lethal}). The remaining ${p} − ${lethal} = ${toPlayer} goes through.`,
   }
 }
 
 function commanderDamageQuestion(ctx: QuizContext, n: number): Question {
   const { rng } = ctx
-  const already = int(4, 16, rng)
-  const blocker = pick([0, 2, 3, 4, 5], rng)
-  const dealt = 12 - blocker
+  const own = commanderCreature(ctx)
+  const attacker = own ? attackerOf(own) : { ...madeUp(6, true), label: 'your commander (a 6/6 with Trample)' }
+  const p = attacker.power
+  const name = own ? shortName(own.name) : 'your commander'
+  const already = int(Math.max(1, 21 - p - 4), 20, rng)
+  const blocker = pick(attacker.trample ? [0, 2, 3, 4, 5].filter((b) => b < p) : [0, 0, 2], rng)
+  const dealt = blocker === 0 ? p : attacker.trample ? p - blocker : 0
   const dies = already + dealt >= 21
   return {
     id: `cmd-damage-${n}`,
-    key: `cmd-damage:${already}:${blocker}`,
-    prompt: `An opponent already has ${already} commander damage from Ghalta. Ghalta (12/12, Trample) attacks them${blocker ? ` and is blocked by a ${blocker}/${blocker}` : ' and isn’t blocked'}. Do they lose?`,
+    key: `cmd-damage:${p}:${attacker.trample ? 't' : ''}:${already}:${blocker}`,
+    prompt: `An opponent already has ${already} commander damage from ${name}. ${capitalize(attacker.label)} attacks them${blocker ? ` and is blocked by a ${blocker}/${blocker}` : ' and isn’t blocked'}. Do they lose?`,
+    ...(attacker.card ? { cards: [attacker.card] } : {}),
     ...ordered(['Yes, they lose', 'No, not yet'], dies ? 0 : 1),
-    explanation: `${already} + ${dealt} = ${already + dealt} commander damage. ${dies ? 'At 21 they lose, no matter how much life they have.' : `Still ${21 - already - dealt} short of 21.`}`,
+    explanation: `${blocker && !attacker.trample ? 'Without Trample, a blocked creature deals no damage to the player. ' : ''}${already} + ${dealt} = ${already + dealt} commander damage. ${dies ? 'At 21 they lose, no matter how much life they have.' : `Still ${21 - already - dealt} short of 21.`}`,
   }
 }
 
 function blockerGoneQuestion(ctx: QuizContext, trample: boolean): Question {
+  const plain = deckCreatures(ctx)
+    .filter((c) => !hasTrample(c) && (c.power ?? 0) >= 2 && /^\d+$/.test(c.toughness ?? ''))
+    .sort((a, b) => (b.power ?? 0) - (a.power ?? 0))[0]
+  const attacker = trample ? trampler(ctx) : plain ? attackerOf(plain) : madeUp(5, false)
+  const p = attacker.power
   return {
     id: `blocker-gone-${trample ? 'trample' : 'plain'}`,
     key: `blocker-gone:${trample ? 'trample' : 'plain'}`,
-    prompt: `${trample ? 'Ghalta (12/12, Trample)' : 'Steel Leaf Champion (5/4, no Trample)'} is blocked. The blocker is removed before damage. How much damage does it deal to the player?`,
-    ...choice(ctx.rng, trample ? '12' : '0', trample ? ['0', '6', '11'] : ['5', '4', '1']),
+    prompt: `${capitalize(attacker.label)} is blocked. The blocker is removed before damage. How much damage does it deal to the player?`,
+    ...(attacker.card ? { cards: [attacker.card] } : {}),
+    ...choice(ctx.rng, trample ? String(p) : '0', trample ? ['0', String(Math.ceil(p / 2)), String(p - 1)] : [String(p), String(p - 1), '1']),
     explanation: trample
       ? 'Blocked stays blocked, but with Trample and no blocker left, the full damage goes to the player.'
       : 'Blocked stays blocked: without Trample, the creature deals no damage at all if the blocker disappears.',
   }
 }
 
-function fightQuestion(): Question {
+const FIGHT_RE = /\bfights?\b|deals damage equal to its power to target/i
+
+function fightQuestion(ctx: QuizContext): Question {
+  // A fight spell from your deck, if there is one.
+  const spell = ctx.decklist
+    .map((e) => ctx.lookup(e.name))
+    .find((c): c is CardInfo => !!c && !isCreature(c) && !isLand(c) && FIGHT_RE.test(c.oracleText))
+  const own = commanderCreature(ctx)
+  const who = own ? shortName(own.name) : 'Your commander'
   return {
     id: 'fight',
     key: 'fight',
-    prompt: 'Ram Through: Ghalta fights a 4/4, and the excess (8) hits the player. Does that count as commander damage?',
+    prompt: spell && /excess/i.test(spell.oracleText)
+      ? `${spell.name}: ${who} fights a 4/4, and the excess hits the player. Does that count as commander damage?`
+      : `${spell ? `${spell.name}: ` : ''}${who} fights an opponent’s creature. Does the damage count toward the 21 commander damage?`,
+    ...(spell ? { cards: [{ name: spell.name }] } : {}),
     ...ordered(['Yes', 'No'], 1),
-    explanation: 'No. Commander damage is only combat damage. Fight damage (Ram Through, Bite Down) doesn’t count, not even the excess.',
+    explanation: 'No. Commander damage is only combat damage. Fight and “bite” damage doesn’t count, not even the excess.',
   }
 }
 
@@ -252,7 +324,7 @@ function combatLesson(ctx: QuizContext): Question[] {
       ...[0, 1, 2, 3].map((i) => commanderDamageQuestion(ctx, i)),
       blockerGoneQuestion(ctx, true),
       blockerGoneQuestion(ctx, false),
-      fightQuestion(),
+      fightQuestion(ctx),
     ],
     ctx.rng,
   )

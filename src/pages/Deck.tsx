@@ -27,6 +27,7 @@ import {
 } from '../lib/decklist'
 import { shortName } from '../lib/commander'
 import { haptic } from '../lib/haptics'
+import { fetchCommanderPage, parseSuggestions, type Suggestion } from '../lib/edhrec'
 import { fetchPreconDeck, PRECON_BY_FILE } from '../lib/precons'
 import { navigate } from '../lib/route'
 import { autocomplete, ensureCards } from '../lib/scryfall'
@@ -103,7 +104,7 @@ export function DeckPage() {
         </div>
       </div>
 
-      <div className="actions">
+      <div className="row">
         <Button icon={ArrowsLeftRightIcon} onClick={() => navigate('/mehr/deck/swap')}>
           Swap round
         </Button>
@@ -417,6 +418,14 @@ export function SwapFlow() {
 
       <p className="swap-out">− {out.join(', ')}</p>
       <CardSearch selected={into} max={out.length} onAdd={(n) => setInto((i) => [...i, n])} />
+      <Suggestions
+        commander={commander}
+        inDeck={[commander, ...decklist.map((e) => e.name)]}
+        gameChangers={settings.defaultBracket >= 3}
+        selected={into}
+        full={into.length >= out.length}
+        onToggle={(n) => setInto((i) => (i.includes(n) ? i.filter((x) => x !== n) : [...i, n]))}
+      />
       {into.length > 0 && (
         <ul className="chip-list">
           {into.map((n) => (
@@ -453,6 +462,88 @@ function SelectRow({ name, selected, badge, onToggle }: { name: string; selected
         {badge && <span className="tag inline">{badge}</span>}
       </button>
     </li>
+  )
+}
+
+type SuggestionState = { status: 'loading' } | { status: 'error'; error: string } | { status: 'ready'; cards: Suggestion[] }
+
+/** Popular cards for your commander on EDHREC, as a starting point for the "in" pick. */
+function Suggestions({
+  commander,
+  inDeck,
+  gameChangers,
+  selected,
+  full,
+  onToggle,
+}: {
+  commander: string
+  inDeck: string[]
+  gameChangers: boolean
+  selected: string[]
+  full: boolean
+  onToggle: (name: string) => void
+}) {
+  const [state, setState] = useState<SuggestionState>({ status: 'loading' })
+  const [shown, setShown] = useState(10)
+  const deckKey = inDeck.join('|')
+
+  useEffect(() => {
+    let active = true
+    setState({ status: 'loading' })
+    fetchCommanderPage(commander).then(
+      (page) => {
+        if (!active) return
+        try {
+          setState({ status: 'ready', cards: parseSuggestions(page, { inDeck: deckKey.split('|'), gameChangers }) })
+        } catch (err) {
+          setState({ status: 'error', error: err instanceof Error ? err.message : String(err) })
+        }
+      },
+      (err: unknown) => active && setState({ status: 'error', error: err instanceof Error ? err.message : String(err) }),
+    )
+    return () => {
+      active = false
+    }
+  }, [commander, deckKey, gameChangers])
+
+  return (
+    <section className="list-group">
+      <h2 className="list-title">Popular with {shortName(commander)}</h2>
+      {state.status === 'loading' && <p className="muted small">Loading suggestions from EDHREC…</p>}
+      {state.status === 'error' && <p className="muted small">{state.error}</p>}
+      {state.status === 'ready' && (
+        <>
+          <ul className="list">
+            {state.cards.slice(0, shown).map((c) => (
+              <SelectRow
+                key={c.name}
+                name={c.name}
+                selected={selected.includes(c.name)}
+                badge={`${Math.round(c.inclusion * 100)}%`}
+                onToggle={() => {
+                  if (full && !selected.includes(c.name)) {
+                    toast('All slots filled. Remove a card first.')
+                    return
+                  }
+                  haptic()
+                  onToggle(c.name)
+                }}
+              />
+            ))}
+          </ul>
+          {shown < state.cards.length && (
+            <Button variant="ghost" size="sm" onClick={() => setShown((n) => n + 10)}>
+              Show more
+            </Button>
+          )}
+          <p className="list-footnote">
+            Share of {shortName(commander)} decks on EDHREC that play the card.
+            {gameChangers ? '' : ' Game Changers are left out, so your deck stays in its bracket.'} Check that a suggestion fits your
+            plan before you swap.
+          </p>
+        </>
+      )}
+    </section>
   )
 }
 
