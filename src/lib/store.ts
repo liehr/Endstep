@@ -4,6 +4,7 @@ import { applySwap } from './decklist'
 import { today } from './dates'
 import { nextFocus } from './focus'
 import { recordAnswer } from './quiz/memory'
+import { currentRank, promote, unlockedSkills } from './ranks'
 import type { AppData, DeckEntry, Game, GameInput, LessonId, SavedDeck, Settings, SkillId, Swap, Tracker } from './types'
 
 // A small global store: data lives only on the device (localStorage).
@@ -36,7 +37,7 @@ function requestPersistence() {
 }
 
 export const actions = {
-  startDraft(focus: SkillId = nextFocus(data.games)) {
+  startDraft(focus: SkillId = nextFocus(data.games, unlockedSkills(currentRank(data.promotions)))) {
     commit({
       ...data,
       draft: {
@@ -132,5 +133,10 @@ export const actions = {
   /** Remember a first-try answer for the review schedule. */
   recordQuizAnswer(key: string, correct: boolean, group?: string) {
     commit({ ...data, quiz: recordAnswer(data.quiz, key, correct, today(), { at: Date.now(), group }) })
+  },
+
+  /** Rank exam passed: move up one rank. */
+  promote() {
+    commit({ ...data, promotions: promote(data.promotions) })
   },
 }

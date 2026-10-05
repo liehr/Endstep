@@ -8,10 +8,13 @@ export function sortGames(games: Game[]): Game[] {
   )
 }
 
-/** Next focus skill in the rotation, based on the most recently played game. */
-export function nextFocus(games: Game[]): SkillId {
+/**
+ * Next focus skill in the rotation, based on the most recently played game. Only the skills your
+ * rank has unlocked take part, in the order given (all skills in SKILLS order by default).
+ */
+export function nextFocus(games: Game[], unlocked: SkillId[] = SKILLS.map((s) => s.id)): SkillId {
+  if (unlocked.length === 0) return SKILLS[0].id
   const last = sortGames(games)[0]
-  if (!last) return SKILLS[0].id
-  const index = SKILLS.findIndex((s) => s.id === last.focus)
-  return SKILLS[(index + 1) % SKILLS.length].id
+  const index = last ? unlocked.indexOf(last.focus) : -1
+  return unlocked[(index + 1) % unlocked.length]
 }

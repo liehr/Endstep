@@ -16,7 +16,7 @@ import {
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Button, EmptyState } from '../components/ui'
 import { shortName } from '../lib/commander'
-import { LESSONS } from '../lib/quiz/quiz'
+import { LESSONS, type Lesson } from '../lib/quiz/quiz'
 import { navigate } from '../lib/route'
 import { buildLibrary, seedFor, simCommander, simulateGame, summarize, type Distribution } from '../lib/sim/goldfish'
 import { randomSeed } from '../lib/sim/rng'
@@ -52,6 +52,19 @@ export const lessonStyle = (id: LessonId): CSSProperties => skillStyle(LESSON_SK
 
 /** At least this share of deck cards must be loaded for simulations to make sense. */
 const MIN_COVERAGE = 0.9
+
+type DeckCards = ReturnType<typeof useDeckCards>
+
+/** Lesson can't be played yet: card data or rulings still missing. */
+export function lessonLocked(lesson: Lesson, deck: DeckCards): boolean {
+  const ready = deck.coverage >= MIN_COVERAGE
+  return (lesson.needsCards && !ready) || (ready && lesson.ready !== undefined && !lesson.ready(deck))
+}
+
+/** Lessons for your deck that can be played right now (for the rank exam). */
+export function openLessons(deck: DeckCards): LessonId[] {
+  return LESSONS.filter((l) => (!l.forCommander || l.forCommander(deck.commander)) && !lessonLocked(l, deck)).map((l) => l.id)
+}
 
 export function Training() {
   const { training } = useData()
@@ -94,7 +107,7 @@ export function Training() {
           const results = training.filter((t) => t.lessonId === lesson.id)
           const best = results.reduce((m, t) => Math.max(m, t.correct), 0)
           const needsRulings = ready && lesson.ready !== undefined && !lesson.ready(deck)
-          const locked = (lesson.needsCards && !ready) || needsRulings
+          const locked = lessonLocked(lesson, deck)
           return (
             <li key={lesson.id}>
               <button
