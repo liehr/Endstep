@@ -3250,3 +3250,145 @@ main.with-dice .screen.flow {
   align-items: center;
   padding-right: 6px;
 }
+
+/* Tap-on-board questions */
+.pick-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.pick-wrap {
+  position: relative;
+}
+.mtg-card.pickable .mtg-card-btn {
+  position: relative;
+  outline: 4px solid transparent;
+  outline-offset: 2px;
+  transition:
+    transform 70ms ease-out,
+    outline-color 70ms ease-out;
+}
+.mtg-card.pickable .mtg-card-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.mtg-card.pickable .mtg-card-btn:disabled {
+  cursor: default;
+}
+.mtg-card.pickable.selected .mtg-card-btn {
+  outline-color: var(--select);
+  transform: translateY(-3px);
+}
+.mtg-card.pickable.right .mtg-card-btn {
+  outline-color: var(--win);
+}
+.mtg-card.pickable.wrong .mtg-card-btn {
+  outline-color: var(--loss);
+}
+.mtg-card.pickable.missed .mtg-card-btn {
+  outline: 4px dashed var(--win);
+}
+.pick-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--select);
+  color: var(--on-brand);
+  font-size: 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+.mtg-card.pickable.right .pick-badge {
+  background: var(--win);
+}
+.mtg-card.pickable.wrong .pick-badge {
+  background: var(--loss);
+}
+.pick-zoom {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--surface), transparent 15%);
+  color: var(--text);
+  font-size: 15px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* Order questions: numbered slots, filled by tapping the chips below */
+.order-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.order-slot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 2px dashed var(--border);
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--subtle);
+  font-weight: 800;
+  text-align: left;
+}
+.order-slot .order-num {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--muted);
+  font-size: 14px;
+}
+.order-slot.filled {
+  border-style: solid;
+  border-color: var(--select-border);
+  background: var(--select-soft);
+  color: var(--select);
+}
+.order-slot.filled .order-num {
+  background: var(--select);
+  color: var(--on-brand);
+}
+.order-slot.right {
+  border-style: solid;
+  border-color: var(--win);
+  background: var(--win-soft);
+  color: var(--win-text);
+}
+.order-slot.right .order-num {
+  background: var(--win);
+  color: var(--on-brand);
+}
+.order-slot.wrong {
+  border-style: solid;
+  border-color: var(--loss);
+  background: var(--loss-soft);
+  color: var(--loss-text);
+}
+.order-slot.wrong .order-num {
+  background: var(--loss);
+  color: var(--on-brand);
+}
+.order-slot:disabled {
+  cursor: default;
+}
+.order-steps {
+  margin: 4px 0;
+  padding-left: 22px;
+}

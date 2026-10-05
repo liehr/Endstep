@@ -21,6 +21,7 @@ import type { LessonId, QuizMemory } from '../types'
 import { classify, costVariants, faceOf, findGap, hideSelfName, KEYWORDS, ptVariants, ROLES, typeLabel, type Role } from './cardQuiz'
 import { combatQuestions } from './combatQuiz'
 import { ghaltaMathQuestions } from './ghaltaMath'
+import { orderQuestions, tapCardQuestions, tapCombatQuestions, tapGhaltaQuestion } from './interactive'
 import { selectQuestions } from './memory'
 import { filterByLevel } from '../ranks'
 import { RULES_BANK } from './rulesBank'
@@ -112,7 +113,12 @@ function ghaltaThresholdQuestion(ctx: QuizContext, n: number): Question {
 
 function ghaltaLesson(ctx: QuizContext): Question[] {
   return shuffle(
-    [...Array.from({ length: 8 }, (_, i) => ghaltaCostQuestion(ctx, i)), ghaltaThresholdQuestion(ctx, 0), ...ghaltaMathQuestions(ctx)],
+    [
+      ...Array.from({ length: 8 }, (_, i) => ghaltaCostQuestion(ctx, i)),
+      ghaltaThresholdQuestion(ctx, 0),
+      ...ghaltaMathQuestions(ctx),
+      ...[0, 1, 2].map((i) => tapGhaltaQuestion(ctx, i)).filter((q): q is Question => q !== null),
+    ],
     ctx.rng,
   )
 }
@@ -259,6 +265,7 @@ function combatLesson(ctx: QuizContext): Question[] {
       blockerGoneQuestion(ctx, false),
       fightQuestion(ctx),
       ...combatQuestions(ctx),
+      ...tapCombatQuestions(ctx),
     ],
     ctx.rng,
   )
@@ -267,14 +274,15 @@ function combatLesson(ctx: QuizContext): Question[] {
 // --- Lesson 3: Commander Rules ----------------------------------------------------
 
 function rulesLesson(ctx: QuizContext): Question[] {
-  return shuffle(RULES_BANK, ctx.rng).map((q) => ({
-      id: q.id,
-      // Every rule is its own topic, so the memory alone decides.
-      key: `rule-${q.id}`,
-      prompt: q.prompt,
-      ...choice(ctx.rng, q.options[0], q.options.slice(1)),
-      explanation: q.explanation,
-    }))
+  const bank = RULES_BANK.map((q) => ({
+    id: q.id,
+    // Every rule is its own topic, so the memory alone decides.
+    key: `rule-${q.id}`,
+    prompt: q.prompt,
+    ...choice(ctx.rng, q.options[0], q.options.slice(1)),
+    explanation: q.explanation,
+  }))
+  return shuffle([...bank, ...orderQuestions(ctx)], ctx.rng)
 }
 
 // --- Lesson 4: Mulligan Trainer ---------------------------------------------------
@@ -677,6 +685,7 @@ function cardsLesson(ctx: QuizContext): Question[] {
     ])
       if (q) qs.push(q)
   })
+  qs.push(...tapCardQuestions(ctx))
   return shuffle(qs, ctx.rng)
 }
 
