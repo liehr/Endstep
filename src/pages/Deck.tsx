@@ -104,7 +104,7 @@ export function DeckPage() {
         </div>
       </div>
 
-      <div className="actions">
+      <div className="row">
         <Button icon={ArrowsLeftRightIcon} onClick={() => navigate('/mehr/deck/swap')}>
           Swap round
         </Button>
