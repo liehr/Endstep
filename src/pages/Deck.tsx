@@ -7,6 +7,7 @@ import {
   ClipboardTextIcon,
   CloudArrowDownIcon,
   CopyIcon,
+  EyeIcon,
   MagnifyingGlassIcon,
   SwapIcon,
   WarningIcon,
@@ -30,7 +31,7 @@ import { haptic } from '../lib/haptics'
 import { fetchCommanderPage, parseSuggestions, type Suggestion } from '../lib/edhrec'
 import { fetchPreconDeck, PRECON_BY_FILE } from '../lib/precons'
 import { navigate } from '../lib/route'
-import { autocomplete, ensureCards } from '../lib/scryfall'
+import { autocomplete, ensureCards, useCardState } from '../lib/scryfall'
 import { swapsOf } from '../lib/data'
 import { computeStats } from '../lib/stats'
 import { actions, useData } from '../lib/store'
@@ -258,8 +259,18 @@ async function resetToPrecon(file: string) {
 
 function CardDetail({ name }: { name: string }) {
   const deck = useDeckCards({ autoLoad: false })
+  const { status, notFound, error } = useCardState()
   const info = deck.lookup(name)
-  if (!info) return <p className="muted">No Scryfall data for this card yet.</p>
+  const unknown = notFound.some((n) => cardKey(n) === cardKey(name))
+  // Cards outside the deck (suggestions) load when you open them.
+  useEffect(() => {
+    if (!info && !unknown && status !== 'loading') void ensureCards([name])
+  }, [info, unknown, status, name])
+  if (!info) {
+    if (unknown) return <p className="muted">Scryfall doesn’t know this card.</p>
+    if (status === 'error' && error) return <p className="muted">{error}</p>
+    return <p className="muted">Loading card…</p>
+  }
   return (
     <div className="card-detail">
       {info.imageLarge && <img className="mtg-card-large" src={info.imageLarge} alt={info.name} />}
@@ -334,6 +345,12 @@ export function SwapFlow() {
   const [into, setInto] = useState<string[]>([])
   const [note, setNote] = useState('')
   const [query, setQuery] = useState('')
+  const [view, setView] = useState<string | null>(null)
+  const cardSheet = (
+    <BottomSheet open={view !== null} onClose={() => setView(null)} title={view ?? undefined}>
+      {view && <CardDetail name={view} />}
+    </BottomSheet>
+  )
 
   const stats = computeStats(games, settings.defaultDeck, { swaps: allSwaps, decklist })
   const maxCards = stats.upgrade.cards
@@ -380,7 +397,14 @@ export function SwapFlow() {
             <h2 className="list-title">Often dead in hand</h2>
             <ul className="list">
               {candidates.map((n) => (
-                <SelectRow key={n} name={n} selected={out.includes(n)} badge={`${deadCount.get(cardKey(n))}× dead`} onToggle={() => toggleOut(n)} />
+                <SelectRow
+                  key={n}
+                  name={n}
+                  selected={out.includes(n)}
+                  badge={`${deadCount.get(cardKey(n))}× dead`}
+                  onToggle={() => toggleOut(n)}
+                  onView={() => setView(n)}
+                />
               ))}
             </ul>
           </section>
@@ -392,10 +416,11 @@ export function SwapFlow() {
         </label>
         <ul className="list">
           {filtered.map((n) => (
-            <SelectRow key={n} name={n} selected={out.includes(n)} onToggle={() => toggleOut(n)} />
+            <SelectRow key={n} name={n} selected={out.includes(n)} onToggle={() => toggleOut(n)} onView={() => setView(n)} />
           ))}
         </ul>
 
+        {cardSheet}
         <footer className="flow-footer">
           <Button block disabled={out.length === 0} onClick={() => setStep('in')}>
             Continue{out.length ? ` (${out.length}/${maxCards} out)` : ''}
@@ -416,7 +441,17 @@ export function SwapFlow() {
         <p className="muted">Close the real gap first: interaction against artifacts and enchantments, protection against wipes.</p>
       </div>
 
-      <p className="swap-out">− {out.join(', ')}</p>
+      <p className="swap-out">
+        −{' '}
+        {out.map((n, i) => (
+          <span key={n}>
+            {i > 0 && ', '}
+            <button type="button" className="card-link" onClick={() => setView(n)}>
+              {n}
+            </button>
+          </span>
+        ))}
+      </p>
       <CardSearch selected={into} max={out.length} onAdd={(n) => setInto((i) => [...i, n])} />
       <Suggestions
         commander={commander}
@@ -425,12 +460,15 @@ export function SwapFlow() {
         selected={into}
         full={into.length >= out.length}
         onToggle={(n) => setInto((i) => (i.includes(n) ? i.filter((x) => x !== n) : [...i, n]))}
+        onView={setView}
       />
       {into.length > 0 && (
         <ul className="chip-list">
           {into.map((n) => (
             <li key={n} className="chip selected">
-              {n}
+              <button type="button" className="card-link" onClick={() => setView(n)}>
+                {n}
+              </button>
               <button type="button" aria-label={`Remove ${n}`} onClick={() => setInto((i) => i.filter((x) => x !== n))}>
                 <XIcon weight="bold" />
               </button>
@@ -442,6 +480,7 @@ export function SwapFlow() {
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. more protection against wipes" />
       </Field>
 
+      {cardSheet}
       <footer className="flow-footer">
         <Button block disabled={into.length !== out.length} onClick={save}>
           {into.length === out.length ? 'Save swap' : `${into.length} of ${out.length} chosen`}
@@ -451,9 +490,22 @@ export function SwapFlow() {
   )
 }
 
-function SelectRow({ name, selected, badge, onToggle }: { name: string; selected: boolean; badge?: string; onToggle: () => void }) {
+function SelectRow({
+  name,
+  selected,
+  badge,
+  onToggle,
+  onView,
+}: {
+  name: string
+  selected: boolean
+  badge?: string
+  onToggle: () => void
+  /** Show the card (image and rules text). */
+  onView?: () => void
+}) {
   return (
-    <li>
+    <li className={onView ? 'select-item' : undefined}>
       <button type="button" className={`select-row ${selected ? 'selected' : ''}`} role="checkbox" aria-checked={selected} onClick={onToggle}>
         <span className="select-box" aria-hidden="true">
           {selected && <CheckIcon weight="bold" />}
@@ -461,6 +513,7 @@ function SelectRow({ name, selected, badge, onToggle }: { name: string; selected
         <span className="deck-name">{name}</span>
         {badge && <span className="tag inline">{badge}</span>}
       </button>
+      {onView && <IconButton icon={EyeIcon} label={`Show ${name}`} onClick={onView} />}
     </li>
   )
 }
@@ -475,6 +528,7 @@ function Suggestions({
   selected,
   full,
   onToggle,
+  onView,
 }: {
   commander: string
   inDeck: string[]
@@ -482,6 +536,7 @@ function Suggestions({
   selected: string[]
   full: boolean
   onToggle: (name: string) => void
+  onView: (name: string) => void
 }) {
   const [state, setState] = useState<SuggestionState>({ status: 'loading' })
   const [shown, setShown] = useState(10)
@@ -528,6 +583,7 @@ function Suggestions({
                   haptic()
                   onToggle(c.name)
                 }}
+                onView={() => onView(c.name)}
               />
             ))}
           </ul>
