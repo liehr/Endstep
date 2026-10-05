@@ -1,5 +1,6 @@
 import { BarbellIcon, ChartBarIcon, ClockCounterClockwiseIcon, GearSixIcon, HouseIcon, type Icon } from '@phosphor-icons/react'
 import { lazy, Suspense, useEffect } from 'react'
+import { DiceButton } from './components/Dice'
 import { UpdateBanner } from './components/UpdateBanner'
 import { SKILLS } from './lib/content'
 import { useRoute } from './lib/route'
@@ -86,6 +87,8 @@ export function App() {
   const tab = activeTab(route)
   // First launch: pick a deck before anything else, without the tab bar.
   const flow = isFlow(route) || !deckChosen
+  // Dice are one tap away everywhere, except inside a quiz lesson and before a deck is chosen.
+  const dice = deckChosen && !route.startsWith('/training/')
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -94,11 +97,12 @@ export function App() {
   return (
     <>
       <UpdateBanner />
-      <main className={flow ? 'flow-main' : ''}>
+      <main className={`${flow ? 'flow-main' : ''} ${dice ? 'with-dice' : ''}`}>
         <Suspense fallback={null}>
           {deckChosen ? <Page key={route} route={route} /> : <DeckPicker welcome />}
         </Suspense>
       </main>
+      {dice && <DiceButton flow={flow} />}
       {message && (
         <div className={`toast ${flow ? 'flow' : ''}`} role="status">
           {message}

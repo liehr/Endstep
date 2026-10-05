@@ -1753,6 +1753,184 @@ select:focus {
   bottom: calc(var(--footer-h) + env(safe-area-inset-bottom) + 12px);
 }
 
+/* Dice: floating button on every screen, sheet with die, count and results. */
+.dice-fab {
+  --lip: var(--select-border);
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right));
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 16px);
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 2px solid var(--select-border);
+  border-radius: 18px;
+  background: var(--select-soft);
+  color: var(--select);
+  font-size: 30px;
+  box-shadow: 0 4px 0 var(--lip);
+  transition:
+    transform 70ms ease-out,
+    box-shadow 70ms ease-out;
+}
+.dice-fab.flow {
+  bottom: calc(var(--footer-h) + env(safe-area-inset-bottom) + 16px);
+}
+.dice-fab:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--lip);
+}
+/* Room below the last item so the button never covers it. */
+main.with-dice .screen {
+  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 96px);
+}
+main.with-dice .screen.flow {
+  padding-bottom: calc(var(--footer-h) + env(safe-area-inset-bottom) + 88px);
+}
+
+.dice-picker .option {
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 4px;
+  text-align: center;
+}
+.dice-picker .option-text {
+  align-items: center;
+}
+.dice-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 96px;
+  justify-content: center;
+}
+.dice-result.empty {
+  align-items: center;
+  padding: 12px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  text-align: center;
+}
+.dice-result.empty p {
+  margin: 0;
+}
+.dice-faces {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dice-faces.words {
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+}
+.dice-face {
+  display: grid;
+  place-items: center;
+  min-height: 52px;
+  padding: 4px;
+  border: 2px solid var(--border);
+  border-bottom-width: 4px;
+  border-radius: 14px;
+  background: var(--surface);
+  font-size: 22px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  animation: dice-roll 360ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.dice-faces.words .dice-face {
+  min-height: 44px;
+  font-size: 15px;
+}
+.dice-faces.single {
+  grid-template-columns: minmax(0, 160px);
+  justify-content: center;
+}
+.dice-faces.single .dice-face {
+  min-height: 112px;
+  font-size: 56px;
+}
+.dice-faces.single.words .dice-face {
+  font-size: 26px;
+}
+.dice-face.max {
+  border-color: var(--win);
+  background: var(--win-soft);
+  color: var(--win-text);
+}
+.dice-face.min {
+  border-color: var(--loss);
+  background: var(--loss-soft);
+  color: var(--loss-text);
+}
+.dice-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  margin: 0;
+}
+.dice-summary div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.dice-summary dt {
+  color: var(--muted);
+  font-size: 14px;
+}
+.dice-summary dd {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.dice-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+.dice-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dice-presets .chip {
+  min-width: 44px;
+  min-height: 40px;
+  justify-content: center;
+}
+.dice-presets .chip.selected {
+  padding-right: 12px;
+}
+.dice-roll {
+  position: sticky;
+  bottom: -20px;
+  z-index: 1;
+  margin: 0 -4px -20px;
+  padding: 8px 4px 20px;
+  background: var(--surface);
+}
+.dice-history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dice-history ol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 14px;
+}
+
 /* ==========================================================================
    Motion
    ========================================================================== */
@@ -1793,6 +1971,12 @@ select:focus {
 @keyframes pulse {
   50% {
     transform: scale(1.05);
+  }
+}
+@keyframes dice-roll {
+  from {
+    transform: rotate(-200deg) scale(0.4);
+    opacity: 0;
   }
 }
 @keyframes pop {
@@ -2615,6 +2799,14 @@ select:focus {
   }
   .toast.flow {
     left: 50%;
+  }
+
+  .dice-fab:not(.flow) {
+    right: calc(24px + env(safe-area-inset-right));
+    bottom: calc(env(safe-area-inset-bottom) + 24px);
+  }
+  main.with-dice .screen:not(.flow) {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 104px);
   }
 
   /* Bottom sheets become centered dialogs. */
