@@ -200,7 +200,7 @@ export function Stats() {
               ))}
             </tbody>
           </table>
-          <p className="muted small">Wenige Spiele sind noch kein Beweis: Erst nach 4–5 Spielen pro Version lohnt der Vergleich.</p>
+          <p className="muted small">Wenige Spiele sind noch kein Beweis: Erst nach etwa 8 Spielen pro Version lohnt der Vergleich.</p>
         </section>
       )}
 
