@@ -27,6 +27,7 @@ export function defaultSettings(): Settings {
     defaultBracket: 2,
     defaultPlayers: 4,
     tableIntro: DEFAULT_TABLE_INTRO,
+    bracketCheckDone: false,
   }
 }
 
@@ -149,6 +150,7 @@ function sanitizeSettings(raw: unknown): Settings {
     defaultBracket: oneOf(raw.defaultBracket, BRACKETS, defaults.defaultBracket),
     defaultPlayers: intOrNull(raw.defaultPlayers, 2, 8) ?? defaults.defaultPlayers,
     tableIntro: str(raw.tableIntro, defaults.tableIntro),
+    bracketCheckDone: raw.bracketCheckDone === true,
   }
 }
 

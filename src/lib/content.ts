@@ -87,11 +87,17 @@ export const FOCUS_RATINGS: { id: FocusRating; label: string }[] = [
   { id: 3, label: 'Gut umgesetzt' },
 ]
 
-/** Faustregel aus dem Lernplan: Upgrades erst nach etwa 8–10 Spielen mit dem unveränderten Deck. */
-export const UPGRADE_AFTER_GAMES = 8
+/** Upgrade-Truhe: alle 8 Spiele eine Swap-Runde (erste nach 8 Spielen mit dem unveränderten Deck). */
+export const UPGRADE_EVERY_GAMES = 8
 
-/** Nach jeder Swap-Runde wieder 4–5 Spiele testen, dann die nächste kleine Runde. */
-export const UPGRADE_AFTER_SWAP_GAMES = 5
+/**
+ * Höchstzahl Karten je Swap-Runde, in Stufen: erst einzeln tauschen, damit man die Wirkung sieht,
+ * später etwas mehr. Die letzte Stufe gilt für alle weiteren Runden.
+ */
+export const UPGRADE_CARDS = [1, 1, 2, 2, 3]
+
+/** Ab so vielen Spielen mit dem Deck fragt die App, ob die Runde ein höheres Bracket spielen will. */
+export const BRACKET_CHECK_GAMES = 64
 
 /** Erst wenn dasselbe Problem zum dritten Mal auftaucht, ist es ein Muster. */
 export const PATTERN_THRESHOLD = 3

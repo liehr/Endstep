@@ -16,6 +16,7 @@ import { CardImage } from '../components/CardImage'
 import { BottomSheet, Button, ConfirmSheet, Field, IconButton } from '../components/ui'
 import { cardKey, isArtifact, isCreature, isLand, type CardInfo } from '../lib/cards'
 import { formatDate } from '../lib/dates'
+import { UPGRADE_EVERY_GAMES } from '../lib/content'
 import {
   DEFAULT_COMMANDER,
   DEFAULT_DECKLIST,
@@ -314,6 +315,7 @@ export function SwapFlow() {
   const [query, setQuery] = useState('')
 
   const stats = computeStats(games, settings.defaultDeck, { swaps, decklist })
+  const maxCards = stats.upgrade.cards
   const deadCount = new Map(stats.deadCards.map((t) => [cardKey(t.name), t.count]))
   const names = deckCardNames(decklist)
   const hasForest = decklist.some((e) => /^forest$/i.test(e.name))
@@ -322,6 +324,10 @@ export function SwapFlow() {
   const filtered = all.filter((n) => !candidates.includes(n) && n.toLowerCase().includes(query.trim().toLowerCase()))
 
   const toggleOut = (name: string) => {
+    if (!out.includes(name) && out.length >= maxCards) {
+      toast(`In dieser Runde höchstens ${maxCards} Karte${maxCards > 1 ? 'n' : ''}.`)
+      return
+    }
     haptic()
     setOut((o) => (o.includes(name) ? o.filter((x) => x !== name) : [...o, name]))
   }
@@ -329,7 +335,7 @@ export function SwapFlow() {
   const save = () => {
     actions.addSwap(out, into, note.trim())
     void ensureCards(into)
-    toast(`Swap gespeichert. Jetzt ${5} Spiele testen.`)
+    toast(`Swap gespeichert. Jetzt ${UPGRADE_EVERY_GAMES} Spiele testen.`)
     navigate('/mehr/deck', { replace: true })
   }
 
@@ -342,7 +348,10 @@ export function SwapFlow() {
         </header>
         <div className="question">
           <h1>Was kommt raus?</h1>
-          <p className="muted">3–5 Karten pro Runde. Nie Länder, Ramp oder direkte Ghalta-Unterstützung streichen.</p>
+          <p className="muted">
+            Höchstens {maxCards} Karte{maxCards > 1 ? 'n' : ''} in dieser Runde, damit du die Wirkung siehst. Nie Länder, Ramp oder direkte
+            Ghalta-Unterstützung streichen.
+          </p>
         </div>
 
         {candidates.length > 0 && (
@@ -368,7 +377,7 @@ export function SwapFlow() {
 
         <footer className="flow-footer">
           <Button block disabled={out.length === 0} onClick={() => setStep('in')}>
-            Weiter{out.length ? ` (${out.length} raus)` : ''}
+            Weiter{out.length ? ` (${out.length}/${maxCards} raus)` : ''}
           </Button>
         </footer>
       </div>

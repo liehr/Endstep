@@ -1,4 +1,4 @@
-import { PATTERN_THRESHOLD, SKILLS, UPGRADE_AFTER_GAMES, UPGRADE_AFTER_SWAP_GAMES, WHY_CATEGORIES } from './content'
+import { BRACKET_CHECK_GAMES, PATTERN_THRESHOLD, SKILLS, UPGRADE_CARDS, UPGRADE_EVERY_GAMES, WHY_CATEGORIES } from './content'
 import { sortGames } from './focus'
 import type { DeckEntry, Game, Result, SkillId, Swap, WhyCategory } from './types'
 
@@ -49,8 +49,20 @@ export interface UpgradeStatus {
   /** Ab so vielen Spielen ist die nächste Swap-Runde dran. */
   target: number
   ready: boolean
+  /** Nummer der nächsten Swap-Runde (1 = erste). */
+  round: number
+  /** So viele Karten darf die nächste Swap-Runde höchstens tauschen. */
+  cards: number
   /** Spielstand je Deckversion, älteste zuerst. */
   phases: DeckPhase[]
+}
+
+export interface BracketCheck {
+  games: number
+  target: number
+  /** Meilenstein erreicht und noch nicht beantwortet. */
+  due: boolean
+  done: boolean
 }
 
 export interface Stats {
@@ -99,8 +111,18 @@ export function upgradeStatus(deckGames: Game[], swaps: Swap[]): UpgradeStatus {
     }
   })
   const gamesSince = phases[phases.length - 1].games
-  const target = swaps.length === 0 ? UPGRADE_AFTER_GAMES : UPGRADE_AFTER_SWAP_GAMES
-  return { gamesSince, target, ready: gamesSince >= target, phases }
+  const target = UPGRADE_EVERY_GAMES
+  return { gamesSince, target, ready: gamesSince >= target, round: swaps.length + 1, cards: swapCards(swaps.length), phases }
+}
+
+/** Höchstzahl Karten für die Swap-Runde nach `done` bereits erledigten Runden. */
+export function swapCards(done: number): number {
+  return UPGRADE_CARDS[Math.min(done, UPGRADE_CARDS.length - 1)]
+}
+
+/** Meilenstein „Bracket-Check“: nach genug Spielen mit dem Deck einmal nachfragen. */
+export function bracketCheck(deckGames: number, done: boolean): BracketCheck {
+  return { games: deckGames, target: BRACKET_CHECK_GAMES, due: !done && deckGames >= BRACKET_CHECK_GAMES, done }
 }
 
 export function computeStats(

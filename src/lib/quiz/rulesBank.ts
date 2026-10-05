@@ -130,7 +130,7 @@ export const RULES_BANK: StaticQuestion[] = [
   {
     id: 'upgrade',
     prompt: 'Wann ist die erste Upgrade-Runde für dein Precon sinnvoll?',
-    options: ['Nach etwa 8–10 Spielen, mit 3–5 Tauschs', 'Sofort vor dem ersten Spiel', 'Nach jedem verlorenen Spiel', 'Erst nach 50 Spielen'],
-    explanation: 'Erst Notizen sammeln, dann gezielt tauschen: Karten, die mindestens 3× tot waren, sind Kandidaten.',
+    options: ['Nach etwa 8 Spielen, erst mit 1 Karte', 'Sofort vor dem ersten Spiel', 'Nach jedem verlorenen Spiel', 'Erst nach 50 Spielen'],
+    explanation: 'Erst Notizen sammeln, dann gezielt tauschen: Karten, die mindestens 3× tot waren, sind Kandidaten. Anfangs einzeln tauschen, damit du die Wirkung siehst.',
   },
 ]

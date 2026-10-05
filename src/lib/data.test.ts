@@ -74,6 +74,8 @@ describe('neue Felder (Deck, Swaps, Training, Zähler)', () => {
     expect(data.swaps).toEqual([])
     expect(data.draft?.tracker).toEqual({ turn: 1, power: 0, casts: 0 })
     expect(data.games[0].turns).toBeNull()
+    expect(data.settings.bracketCheckDone).toBe(false)
+    expect(sanitizeData({ settings: { bracketCheckDone: true } }).settings.bracketCheckDone).toBe(true)
   })
 
   it('verwirft ungültige Swaps und Trainings', () => {

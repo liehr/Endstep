@@ -62,6 +62,8 @@ export interface Settings {
   defaultPlayers: number
   /** Der Satz, den man vor dem Spiel am Tisch sagt. */
   tableIntro: string
+  /** Bracket-Check (Meilenstein auf dem Pfad) schon beantwortet. */
+  bracketCheckDone: boolean
 }
 
 /** Zähler während einer Runde: aktueller Zug und Ghalta-Rechner. */

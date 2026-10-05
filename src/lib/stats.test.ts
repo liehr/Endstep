@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_DECK } from './content'
-import { computeStats, tallyCards, upgradeStatus } from './stats'
+import { bracketCheck, computeStats, swapCards, tallyCards, upgradeStatus } from './stats'
 import { makeGame } from './test-utils'
 
 describe('tallyCards', () => {
@@ -48,11 +48,11 @@ describe('computeStats', () => {
 describe('upgradeStatus', () => {
   const swap = (date: string, n: number) => ({ id: `s${n}`, date, out: [], in: [], note: '', createdAt: `${date}T10:00:0${n}Z` })
 
-  it('braucht ohne Swap 8 Spiele, danach 5 seit dem letzten Swap', () => {
+  it('braucht 8 Spiele seit dem letzten Swap und erlaubt dann die Karten der Stufe', () => {
     const games = Array.from({ length: 9 }, (_, i) => makeGame({ playedAt: `2026-09-${String(i + 1).padStart(2, '0')}` }))
-    expect(upgradeStatus(games, [])).toMatchObject({ gamesSince: 9, target: 8, ready: true })
+    expect(upgradeStatus(games, [])).toMatchObject({ gamesSince: 9, target: 8, ready: true, round: 1, cards: 1 })
     const after = upgradeStatus(games, [swap('2026-09-06', 1)])
-    expect(after).toMatchObject({ gamesSince: 4, target: 5, ready: false })
+    expect(after).toMatchObject({ gamesSince: 4, target: 8, ready: false, round: 2, cards: 1 })
     expect(after.phases.map((p) => [p.label, p.games])).toEqual([
       ['Original', 5],
       ['Nach Swap 1', 4],
@@ -72,5 +72,19 @@ describe('upgradeStatus', () => {
     const games = Array.from({ length: 3 }, () => makeGame({ deadCards: ['Harmonize', 'Colossal Majesty'] }))
     const s = computeStats(games, DEFAULT_DECK, { decklist: [{ name: 'Harmonize', qty: 1 }] })
     expect(s.upgradeCandidates.map((c) => c.name)).toEqual(['Harmonize'])
+  })
+})
+
+describe('swapCards', () => {
+  it('wächst in Stufen 1, 1, 2, 2 und bleibt dann bei 3', () => {
+    expect([0, 1, 2, 3, 4, 5, 10].map(swapCards)).toEqual([1, 1, 2, 2, 3, 3, 3])
+  })
+})
+
+describe('bracketCheck', () => {
+  it('ist ab 64 Spielen fällig, bis er beantwortet ist', () => {
+    expect(bracketCheck(63, false)).toMatchObject({ due: false, done: false, target: 64 })
+    expect(bracketCheck(64, false)).toMatchObject({ due: true, done: false })
+    expect(bracketCheck(80, true)).toMatchObject({ due: false, done: true })
   })
 })
